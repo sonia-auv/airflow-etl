@@ -24,12 +24,14 @@ function collectArgs() {
     DAGS_DIR = $1
 
     if [-f ${DAGS_DIR}]; then
-        AIRFLOW_DAG_DIR=DAG_DIR
+        export AIRFLOW_DAG_DIR=DAG_DIR
     else
-        AIRFLOW_DAG_DIR=${CURRENT_DIR}/dags
+        export AIRFLOW_DAG_DIR=${CURRENT_DIR}/dags
     fi
 
 }
+
+collectArgs || error "Error while defining airflow dags directory"
 
 
 if [! -f .env]; then
@@ -44,7 +46,7 @@ docker build . -t ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} ||err
 echo "#########################################################################"
 echo
 echo "Launching sonia-auv airflow docker containers"
-AIRFLOW_DAGS_DIR=${AIRFLOW_DAGS_DIR} docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d || error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
+docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
 
 
 echo "#########################################################################"

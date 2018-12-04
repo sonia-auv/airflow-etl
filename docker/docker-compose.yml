@@ -21,7 +21,7 @@ services:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
       - POSTGRES_DB
-      - POSTGRES_HOST=postgres
+      - POSTGRES_HOST
       - POSTGRES_PORT
       - AIRFLOW_FERNET_KEY
     volumes:

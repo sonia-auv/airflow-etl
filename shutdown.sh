@@ -23,7 +23,7 @@ echo "#########################################################################"
 echo
 echo "Shutting down sonia-auv aiflow docker containers"
 
-docker-compose -f ${DOCKER_DIR}/docker-compose.yml down || error "Error while shutting down sonia-auv airflow docker containers"
+AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} docker-compose -f ${DOCKER_DIR}/docker-compose.yml down || error "Error while shutting down sonia-auv airflow docker containers"
 
 
 echo "#########################################################################"
