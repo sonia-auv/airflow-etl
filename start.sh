@@ -44,7 +44,7 @@ docker build . -t ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} ||err
 echo "#########################################################################"
 echo
 echo "Launching sonia-auv airflow docker containers"
-AIRFLOW_DAGS_DIR=${AIRLFLOW_DAGS_DIR} docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d || error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
+AIRFLOW_DAGS_DIR=${AIRFLOW_DAGS_DIR} docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d || error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
 
 
 echo "#########################################################################"

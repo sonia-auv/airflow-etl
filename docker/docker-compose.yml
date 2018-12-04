@@ -22,14 +22,14 @@ services:
       - POSTGRES_PASSWORD
       - POSTGRES_DB
       - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
+      - POSTGRES_PORT
       - AIRFLOW_FERNET_KEY
     volumes:
-      - ../dags:/usr/local/airflow/dags
-      # Uncomment to include custom plugins
-      # - ./plugins:/usr/local/airflow/plugins
+      - $AIRFLOW_DAG_DIR:/usr/local/airflow/dags
+      - $PWD/data:/usr/local/airflow/data
+      - $PWD/logs:/usr/local/airflow/logs
     ports:
-      - "8080:8080"
+      - "4080:8080"
     command: webserver
     healthcheck:
       test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
