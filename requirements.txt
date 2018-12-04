@@ -5,4 +5,5 @@ ndg-httpsclient==0.5.0
 pyasn1==0.4.2
 git+https://github.com/apache/incubator-airflow#egg=apache-airflow[crypto,postgres,gcp_api,slack]
 google-api-python-client
+tensorflow==1.10
 tqdm==4.23.4

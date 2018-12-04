@@ -1,41 +1,41 @@
-version: '2.1'
+version: "3.1"
 services:
-    postgres:
-        image: postgres:9.6
-        environment:
-            - POSTGRES_USER
-            - POSTGRES_PASSWORD
-            - POSTGRES_DB
-            - POSTGRES_PORT
-            - PGDATA=/var/lib/postgresql/data
-        volumes:
-            - pg-data:/var/lib/postgresql/data
-            - pg-log:/var/log/postgresql
+  airflow-postgres:
+    image: postgres:9.6
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+      - POSTGRES_PORT
+      - PGDATA=/var/lib/postgresql/data
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - pg-log:/var/log/postgresql
 
-    webserver:
-        image: docker-ros-airflow:0.0.1
-        restart: always
-        depends_on:
-            - postgres
-        environment:
-            - POSTGRES_USER
-            - POSTGRES_PASSWORD
-            - POSTGRES_DB
-            - POSTGRES_HOST=postgres
-            - POSTGRES_PORT=5432
-            - AIRFLOW_FERNET_KEY
-        volumes:
-            - ../dags:/usr/local/airflow/dags
-            # Uncomment to include custom plugins
-            # - ./plugins:/usr/local/airflow/plugins
-        ports:
-            - "8080:8080"
-        command: webserver
-        healthcheck:
-            test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
-            interval: 30s
-            timeout: 30s
-            retries: 3
+  airflow-webserver:
+    image: sonia-auv/airflow:${AIRFLOW_DOCKER_IMAGE_TAG}
+    restart: always
+    depends_on:
+      - airflow-postgres
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - AIRFLOW_FERNET_KEY
+    volumes:
+      - ../dags:/usr/local/airflow/dags
+      # Uncomment to include custom plugins
+      # - ./plugins:/usr/local/airflow/plugins
+    ports:
+      - "8080:8080"
+    command: webserver
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
 volumes:
-    pg-data: {}
-    pg-log: {}
+  pg-data: {}
+  pg-log: {}

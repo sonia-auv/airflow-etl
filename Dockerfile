@@ -17,6 +17,7 @@ ENV TERM linux
 
 # Define Airflow specific environements var
 ENV AIRFLOW_HOME=/usr/local/airflow
+ENV SLUGIFY_USES_TEXT_UNIDECODE=yes
 
 # Define language settings
 ENV LANGUAGE en_US.UTF-8
@@ -46,14 +47,14 @@ RUN set -ex \
     && apt-get update -yqq \
     && apt-get upgrade -yqq \
     && apt-get install -yqq --no-install-recommends \
-        $buildDeps \
-        python3-pip \
-        python3-requests \
-        apt-utils \
-        curl \
-        rsync \
-        netcat \
-        locales \
+    $buildDeps \
+    python3-pip \
+    python3-requests \
+    apt-utils \
+    curl \
+    rsync \
+    netcat \
+    locales \
     && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
@@ -64,12 +65,12 @@ RUN set -ex \
     && apt-get autoremove -yqq --purge \
     && apt-get clean \
     && rm -rf \
-        /var/lib/apt/lists/* \
-        /tmp/* \
-        /var/tmp/* \
-        /usr/share/man \
-        /usr/share/doc \
-        /usr/share/doc-base
+    /var/lib/apt/lists/* \
+    /tmp/* \
+    /var/tmp/* \
+    /usr/share/man \
+    /usr/share/doc \
+    /usr/share/doc-base
 
 
 # *********************************************
