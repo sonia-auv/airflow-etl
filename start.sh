@@ -23,8 +23,8 @@ function error() {
 function collectArgs() {
     DAGS_DIR = $1
 
-    if [-f ${DAGS_DIR}]; then
-        export AIRFLOW_DAG_DIR=DAG_DIR
+    if [${DAGS_DIR}]; then
+        export AIRFLOW_DAG_DIR=DAGS_DIR
     else
         export AIRFLOW_DAG_DIR=${CURRENT_DIR}/dags
     fi
@@ -33,10 +33,7 @@ function collectArgs() {
 
 collectArgs || error "Error while defining airflow dags directory"
 
-
-if [! -f .env]; then
-    error "'.env' file does not exist in current directory! ($(pwd))"
-fi
+[ -f .env ] || error "'.env' file does not exist in current directory! ($(pwd))"
 
 echo "#########################################################################"
 echo
