@@ -3,7 +3,7 @@
 # DESCRIPTION: Airflow and ROS container
 # HIGHLY INSPIRED BY: https://github.com/puckel/docker-airflow
 
-FROM ros:melodic-ros-base-stretch
+FROM osrf/ros:melodic-desktop-bionic
 LABEL version="0.0.1"
 LABEL maintainer="gauthiermartin86@gmail.com"
 LABEL description="This image is an integration of Airflow and ROS"
@@ -18,13 +18,6 @@ ENV TERM linux
 # Define Airflow specific environements var
 ENV AIRFLOW_HOME=/usr/local/airflow
 ENV SLUGIFY_USES_TEXT_UNIDECODE=yes
-
-# Define language settings
-ENV LANGUAGE en_US.UTF-8
-ENV LANG en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
-ENV LC_CTYPE en_US.UTF-8
-ENV LC_MESSAGES en_US.UTF-8
 
 # *********************************************
 # Creating airflow logs folder
