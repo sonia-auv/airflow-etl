@@ -34,7 +34,7 @@ COPY requirements.txt requirements.txt
 ## Installing Airflow
 RUN set -ex \
     && buildDeps=' \
-    python3-dev \
+    python-dev \
     libkrb5-dev \
     libsasl2-dev \
     libssl-dev \
@@ -49,8 +49,8 @@ RUN set -ex \
     && apt-get upgrade -yqq \
     && apt-get install -yqq --no-install-recommends \
     $buildDeps \
-    python3-pip \
-    python3-requests \
+    python-pip \
+    python-requests \
     apt-utils \
     curl \
     rsync \
@@ -60,18 +60,18 @@ RUN set -ex \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow \
-    && pip3 install setuptools wheel \
-    && pip3 install -r requirements.txt \
-    && apt-get purge --auto-remove -yqq $buildDeps \
-    && apt-get autoremove -yqq --purge \
-    && apt-get clean \
-    && rm -rf \
-    /var/lib/apt/lists/* \
-    /tmp/* \
-    /var/tmp/* \
-    /usr/share/man \
-    /usr/share/doc \
-    /usr/share/doc-base
+    && pip install setuptools wheel \
+    && pip install -r requirements.txt
+##  && apt-get purge --auto-remove -yqq $buildDeps \
+##&& apt-get autoremove -yqq --purge \
+##&& apt-get clean \
+## && rm -rf \
+# /var/lib/apt/lists/* \
+# /tmp/* \
+# /var/tmp/* \
+# /usr/share/man \
+# /usr/share/doc \
+# /usr/share/doc-base
 
 # Installing google cloud sdk
 RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" && \

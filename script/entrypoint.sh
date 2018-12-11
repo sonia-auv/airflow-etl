@@ -19,6 +19,9 @@ if [ "$1" = "webserver" ] || [ "$1" = "worker" ] || [ "$1" = "scheduler" ] ; the
   done
 fi
 
+# setup ros environment
+source "/opt/ros/${ROS_DISTRO}/setup.bash"
+
 echo "Initialize database..."
 airflow initdb
 exec airflow webserver &
