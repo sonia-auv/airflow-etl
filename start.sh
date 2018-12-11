@@ -21,17 +21,15 @@ function error() {
 }
 
 function collectArgs() {
-    DAGS_DIR = $1
-
-    if [${DAGS_DIR}]; then
-        export AIRFLOW_DAG_DIR=DAGS_DIR
+    DAGS_DIR=$1
+    if [[ ! -z $DAGS_DIR ]]; then
+        AIRFLOW_DAG_DIR=${DAGS_DIR}
     else
-        export AIRFLOW_DAG_DIR=${CURRENT_DIR}/dags
+        AIRFLOW_DAG_DIR=$PWD/dags
     fi
-
 }
 
-collectArgs || error "Error while defining airflow dags directory"
+collectArgs $* || error "Error while defining airflow dags directory"
 
 [ -f .env ] || error "'.env' file does not exist in current directory! ($(pwd))"
 
@@ -43,7 +41,7 @@ docker build . -t ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} ||err
 echo "#########################################################################"
 echo
 echo "Launching sonia-auv airflow docker containers"
-docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
+AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
 
 
 echo "#########################################################################"

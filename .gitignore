@@ -112,3 +112,5 @@ dags/__pycache__
 # logs
 /logs/scheduler/
 /logs/webserver/
+
+.DS_Store
