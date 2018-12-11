@@ -54,17 +54,15 @@ RUN set -ex \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow \
     && pip install setuptools wheel \
-    && pip install -r requirements.txt
-##  && apt-get purge --auto-remove -yqq $buildDeps \
-##&& apt-get autoremove -yqq --purge \
-##&& apt-get clean \
-## && rm -rf \
-# /var/lib/apt/lists/* \
-# /tmp/* \
-# /var/tmp/* \
-# /usr/share/man \
-# /usr/share/doc \
-# /usr/share/doc-base
+    && pip install -r requirements.txt \
+    && apt-get clean \
+    && rm -rf \
+    /var/lib/apt/lists/* \
+    /tmp/* \
+    /var/tmp/* \
+    /usr/share/man \
+    /usr/share/doc \
+    /usr/share/doc-base
 
 # Installing google cloud sdk
 RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" && \
