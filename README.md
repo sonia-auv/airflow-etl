@@ -20,15 +20,6 @@ S.O.N.I.A's installation instruction are available at [SONIA's Installation](htt
 
 #### Developpement
 
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-    #TODO
-```
-
 ## Deployment
 
 Add additional notes about how to deploy this on a live system
