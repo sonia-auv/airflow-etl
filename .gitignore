@@ -109,10 +109,6 @@ ENV/
 # dags
 dags/__pycache__
 
-# data
-/data/staging/
-/data/output/
-
 # logs
 /logs/scheduler/
 /logs/webserver/
