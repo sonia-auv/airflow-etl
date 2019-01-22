@@ -43,3 +43,4 @@ volumes:
   pg-data: {}
   pg-log: {}
   gcloud-config: {}
+  ssh-keys: {}

@@ -30,9 +30,10 @@ This will pull the docker-ros-airflow image from the docker repository, and star
 ./start.sh
 ```
 
-#TODO: Gcloud config init
-#TODO: Start server and ssh into it
-#TODO: Shutdown server
+docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud init
+docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute instances start deep-training-1
+docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute ssh deep-training-1
+docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute instances stop  deep-training-1
 
 
 #### Developpement
