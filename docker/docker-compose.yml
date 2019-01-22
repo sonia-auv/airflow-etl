@@ -13,7 +13,7 @@ services:
       - pg-log:/var/log/postgresql
 
   airflow-webserver:
-    image: soniaauvets/airflow-ros-tensorflow:1.0
+    image: ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG}
     restart: always
     depends_on:
       - airflow-postgres
