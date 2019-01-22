@@ -18,6 +18,23 @@ S.O.N.I.A's installation instruction are available at [SONIA's Installation](htt
 
 ### Installing
 
+First of all you must have docker and docker-composed install on your system using the provided links
+[Docker installation](https://docs.docker.com/install/linux/docker-ce/ubuntu/)
+[Docker-Compose installation](https://docs.docker.com/compose/install/)
+
+
+After you have installed docker and docker-compose you must run this command in you shell.
+This will pull the docker-ros-airflow image from the docker repository, and start the containers locally.
+
+```bash
+./start.sh
+```
+
+#TODO: Gcloud config init
+#TODO: Start server and ssh into it
+#TODO: Shutdown server
+
+
 #### Developpement
 
 ## Deployment

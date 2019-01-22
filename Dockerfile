@@ -4,7 +4,7 @@
 # HIGHLY INSPIRED BY: https://github.com/puckel/docker-airflow
 
 FROM osrf/ros:melodic-desktop-bionic
-LABEL version="1.1.1"
+LABEL version="1.1.3"
 LABEL maintainer="gauthiermartin86@gmail.com"
 LABEL description="This image is an integration of Airflow and ROS"
 

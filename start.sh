@@ -7,7 +7,7 @@ BOLD="$(tput bold)"
 RESET="$(tput sgr0)"
 
 export AIRFLOW_DOCKER_IMAGE_NAME="soniaauvets/airflow-ros-tensorflow"
-export AIRFLOW_DOCKER_IMAGE_TAG="1.1.1"
+export AIRFLOW_DOCKER_IMAGE_TAG="1.1.3"
 
 CURRENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 DOCKER_DIR="${CURRENT_DIR}/docker"
@@ -34,10 +34,14 @@ collectArgs $* || error "Error while defining airflow dags directory"
 
 [ -f .env ] || error "'.env' file does not exist in current directory! ($(pwd))"
 
+#TODO: Fix this
+##[[ ! $(which docker) ]] || error "You must install docker to be able to use this script"
+
 echo "#########################################################################"
 echo
 echo " Generating '${AIRFLOW_DOCKER_IMAGE_NAME}' image using tag '${AIRFLOW_DOCKER_IMAGE_TAG}'"
-docker build . -t ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} --pull ||error "Error building '${AIRLFLOW_DOCKER_IMAGE_NAME}'"
+docker pull ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} ||error "Error pulling '${AIRLFLOW_DOCKER_IMAGE_NAME}'"
+
 
 echo "#########################################################################"
 echo
