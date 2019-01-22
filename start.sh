@@ -37,7 +37,7 @@ collectArgs $* || error "Error while defining airflow dags directory"
 echo "#########################################################################"
 echo
 echo " Generating '${AIRFLOW_DOCKER_IMAGE_NAME}' image using tag '${AIRFLOW_DOCKER_IMAGE_TAG}'"
-docker build . -t ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} ||error "Error building '${AIRLFLOW_DOCKER_IMAGE_NAME}'"
+docker build . -t ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} --pull ||error "Error building '${AIRLFLOW_DOCKER_IMAGE_NAME}'"
 
 echo "#########################################################################"
 echo
