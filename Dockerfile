@@ -46,6 +46,7 @@ RUN set -ex \
     python-requests \
     apt-utils \
     curl \
+    openssh-client \
     rsync \
     netcat \
     locales \
