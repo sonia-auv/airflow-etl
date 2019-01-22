@@ -7,7 +7,7 @@ BOLD="$(tput bold)"
 RESET="$(tput sgr0)"
 
 export AIRFLOW_DOCKER_IMAGE_NAME="soniaauvets/airflow-ros-tensorflow"
-export AIRFLOW_DOCKER_IMAGE_TAG="1.1"
+export AIRFLOW_DOCKER_IMAGE_TAG="local"
 
 CURRENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 DOCKER_DIR="${CURRENT_DIR}/docker"
