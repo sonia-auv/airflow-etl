@@ -78,6 +78,7 @@ RUN mkdir -p ${AIRFLOW_HOME}/.config/gcloud/
 # *********************************************
 #Copying our airflow config and setting ownership
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
+# COPY config/webserver_config.py ${AIRFLOW_HOME}/webserver_config.py
 RUN chown -R airflow: ${AIRFLOW_HOME}
 
 # *********************************************

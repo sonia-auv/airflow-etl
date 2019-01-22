@@ -13,7 +13,7 @@ services:
       - pg-log:/var/log/postgresql
 
   airflow-webserver:
-    image: soniaauvets/airflow-ros-tensorflow:1.0
+    image: sonia-auv/airflow:${AIRFLOW_DOCKER_IMAGE_TAG}
     restart: always
     depends_on:
       - airflow-postgres
@@ -24,6 +24,7 @@ services:
       - POSTGRES_HOST
       - POSTGRES_PORT
       - AIRFLOW_FERNET_KEY
+      - AIRFLOW__WEBSERVER__RBAC=true
     volumes:
       - $AIRFLOW_DAG_DIR:/usr/local/airflow/dags
       - $PWD/data:/usr/local/airflow/data
