@@ -34,8 +34,11 @@ collectArgs $* || error "Error while defining airflow dags directory"
 
 [ -f .env ] || error "'.env' file does not exist in current directory! ($(pwd))"
 
-#TODO: Fix this
-##[[ ! $(which docker) ]] || error "You must install docker to be able to use this script"
+docker_status=
+
+if [[ ! "$(docker -v)" ]]; then
+     error "You must install docker to be able to use this script"
+fi
 
 echo "#########################################################################"
 echo
