@@ -45,6 +45,12 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
         task_id="task_export_images_to_gcs_dataset", bash_command=command, dag=dag
     )
 
+    command = "rm -rf  {src_folder}".format(src_folder=INPUT_DATA_LOCATION)
+
+    task_delete_input_files_from_local_storage = BashOperator(
+        task_id="task_delete_input_files_from_local_storage", bash_command=command, dag=dag
+    )
+
     task_notify_export_success = SlackAPIPostOperator(
         task_id="task_notify_export_to_gcs_success",
         channel="#airflow",
@@ -64,5 +70,6 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
     )
 
     task_notify_start.set_downstream(task_export_images_to_gcs_dataset)
-    task_export_images_to_gcs_dataset.set_downstream(task_notify_export_success)
+    task_export_images_to_gcs_dataset.set_downstream(task_delete_input_files_from_local_storage)
+    task_delete_input_files_from_local_storage.set_downstream(task_notify_export_success)
     task_export_images_to_gcs_dataset.set_downstream(task_notify_export_failure)
