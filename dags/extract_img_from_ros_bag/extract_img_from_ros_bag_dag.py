@@ -13,8 +13,8 @@ from airflow.operators.slack_operator import SlackAPIPostOperator
 from extract_img_from_ros_bag import extract_img_from_ros_bag
 from utils import file_ops
 
-INPUT_DATA_FOLDER = "/usr/local/airflow/data/input/ros_bag"
-OUTPUT_DATA_FOLDER = "/usr/local/airflow/data/output/ros_image/"
+INPUT_DATA_LOCATION = "/usr/local/airflow/data/input/ros_bag"
+OUTPUT_DATA_LOCATION = "/usr/local/airflow/data/output/ros_image/"
 ROS_IMAGE_TOPICS = [
     "/provider_vision/Front_GigE/compressed",
     "/provider_vision/Bottom_GigE/compressed",
@@ -46,7 +46,7 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
 
     task_sense_new_file = FileSensor(
         task_id="task_sense_new_file",
-        filepath=INPUT_DATA_FOLDER,
+        filepath=INPUT_DATA_LOCATION,
         fs_conn_id="fs_default",
         dag=dag,
         timeout=20,
@@ -55,7 +55,7 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
     task_detect_file_type_match = BranchPythonOperator(
         task_id="task_detect_file_type_match",
         python_callable=extract_img_from_ros_bag.dir_contains_bag_file,
-        op_kwargs={"bag_folder": INPUT_DATA_FOLDER},
+        op_kwargs={"bag_folder": INPUT_DATA_LOCATION},
         trigger_rule="all_success",
         dag=dag,
     )
@@ -73,9 +73,9 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
         provide_context=False,
         python_callable=extract_img_from_ros_bag.extract_images_from_bag,
         op_kwargs={
-            "bag_folder": INPUT_DATA_FOLDER,
+            "bag_folder": INPUT_DATA_LOCATION,
             "topics": ROS_IMAGE_TOPICS,
-            "output_dir": OUTPUT_DATA_FOLDER,
+            "output_dir": OUTPUT_DATA_LOCATION,
         },
         trigger_rule="all_success",
         dag=dag,

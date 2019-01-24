@@ -12,6 +12,9 @@ from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.operators.slack_operator import SlackAPIPostOperator
 
 
+INPUT_DATA_LOCATION = "/usr/local/airflow/data/output/ros_image/"
+OUTPUT_DATA_LOCATION = "gs://robosub-2019-dataset/dataset/"
+
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
@@ -22,10 +25,6 @@ default_args = {
     "retries": 0,
 }
 
-
-INPUT_DATA_FOLDER = "/usr/local/airflow/data/output/ros_image/"
-
-GCS_BUCKET = "gs://robosub-2019-dataset/dataset/"
 
 with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_args) as dag:
 
@@ -40,7 +39,7 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
     )
 
     command = "gsutil -m cp -r {src_folder} {dest_bucket}".format(
-        src_folder=INPUT_DATA_FOLDER, dest_bucket=GCS_BUCKET
+        src_folder=INPUT_DATA_LOCATION, dest_bucket=OUTPUT_DATA_LOCATION
     )
     task_export_images_to_gcs_dataset = BashOperator(
         task_id="task_export_images_to_gcs_dataset", bash_command=command, dag=dag
