@@ -11,9 +11,9 @@ from airflow.operators.python_operator import PythonOperator, BranchPythonOperat
 from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.operators.slack_operator import SlackAPIPostOperator
 
-INPUT_DATA_LOCATION = "/usr/local/airflow/data/output/ros_image/"
-STATING_DATA_LOCATION = "/usr/local/airflow/data/staging/"
-OUTPUT_DATA_LOCATION = "gs://robosub-2019-dataset/dataset/record/"
+INPUT_DATA_LOCATION = ""
+STATING_DATA_LOCATION = ""
+OUTPUT_DATA_LOCATION = ""
 
 default_args = {
     "owner": "airflow",
@@ -26,15 +26,10 @@ default_args = {
 }
 
 
-with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=default_args) as dag:
+with DAG(
+    "extract_data_from_labelbox_or_simulator", catchup=False, default_args=default_args
+) as dag:
     # t1, t2 and t3 are examples of tasks created by instantiating operators
-
-    # TODO: look for JSON file
-    # TODO: Download images
-    # TODO: Create annotations, filelist, label_map
-    # TODO: Create tf_record
-    # TODO: Upload tf_record on GCP
-    # TODO: Cleanup staging
 
     t1 = BashOperator(task_id="print_date", bash_command="date", dag=dag)
 
