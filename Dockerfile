@@ -8,6 +8,8 @@ LABEL version="1.1.3"
 LABEL maintainer="gauthiermartin86@gmail.com"
 LABEL description="This image is an integration of Airflow and ROS"
 
+ARG TENSORFLOW_OBJECT_DETECTION_API_TAG=v1.13.0
+
 # *********************************************
 # Declaring environements variables
 
@@ -50,6 +52,10 @@ RUN set -ex \
     rsync \
     netcat \
     locales \
+    protobuf-compiler \
+    python-pil \
+    python-lxml \
+    python-tk \
     && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
@@ -83,6 +89,15 @@ COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
 RUN chown -R airflow: ${AIRFLOW_HOME}
 
 # *********************************************
+# Installing requirements for tensorflow object detection API
+COPY dependencies/models-1.13.0.tar.gz ${AIRFLOW_HOME}/models-1.13.0.tar.gz
+RUN tar -xvzf ${AIRFLOW_HOME}/models-1.13.0.tar.gz -C ${AIRFLOW_HOME}
+WORKDIR ${AIRFLOW_HOME}/models-1.13.0/research/
+RUN protoc object_detection/protos/*.proto --python_out=.
+ENV PYTHONPATH=$PYTHONPATH:${AIRFLOW_HOME}/models-1.13.0/research/:${AIRFLOW_HOME}/models-1.13.0/research/slim
+# #Testing installation of the API
+RUN python object_detection/builders/model_builder_test.py
+
 # Copying our docker entrypoint
 COPY script/entrypoint.sh /entrypoint.sh
 
