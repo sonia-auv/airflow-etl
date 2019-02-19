@@ -95,7 +95,7 @@ RUN tar -xvzf ${AIRFLOW_HOME}/models-1.13.0.tar.gz -C ${AIRFLOW_HOME}
 WORKDIR ${AIRFLOW_HOME}/models-1.13.0/research/
 RUN protoc object_detection/protos/*.proto --python_out=.
 ENV PYTHONPATH=$PYTHONPATH:${AIRFLOW_HOME}/models-1.13.0/research/:${AIRFLOW_HOME}/models-1.13.0/research/slim
-# #Testing installation of the API
+#Testing installation of the API
 RUN python object_detection/builders/model_builder_test.py
 
 # Copying our docker entrypoint
