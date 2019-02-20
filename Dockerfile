@@ -8,8 +8,6 @@ LABEL version="1.1.3"
 LABEL maintainer="gauthiermartin86@gmail.com"
 LABEL description="This image is an integration of Airflow and ROS"
 
-ARG TENSORFLOW_OBJECT_DETECTION_API_TAG=v1.13.0
-
 # *********************************************
 # Declaring environements variables
 
