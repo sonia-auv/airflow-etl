@@ -47,7 +47,6 @@ RUN set -ex \
     python-pip \
     python-requests \
     apt-utils \
-    curl \
     openssh-client \
     rsync \
     netcat \
@@ -56,6 +55,7 @@ RUN set -ex \
     python-pil \
     python-lxml \
     python-tk \
+    wget \
     && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
@@ -90,12 +90,11 @@ RUN chown -R airflow: ${AIRFLOW_HOME}
 
 # *********************************************
 # Installing requirements for tensorflow object detection API
-COPY dependencies/models-1.13.0.tar.gz ${AIRFLOW_HOME}/models-1.13.0.tar.gz
-RUN tar -xvzf ${AIRFLOW_HOME}/models-1.13.0.tar.gz -C ${AIRFLOW_HOME}
+RUN wget -c https://github.com/tensorflow/models/archive/v1.13.0.tar.gz -O - | tar -xz -C ${AIRFLOW_HOME}
 WORKDIR ${AIRFLOW_HOME}/models-1.13.0/research/
 RUN protoc object_detection/protos/*.proto --python_out=.
 ENV PYTHONPATH=$PYTHONPATH:${AIRFLOW_HOME}/models-1.13.0/research/:${AIRFLOW_HOME}/models-1.13.0/research/slim
-#Testing installation of the API
+# Testing installation of the API
 RUN python object_detection/builders/model_builder_test.py
 
 # Copying our docker entrypoint
