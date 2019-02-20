@@ -8,7 +8,6 @@ env:
     - secure: h+2LXocf6EgBeQee21vVieULEk/9xg71F1/+A4azC1Z9aDUKKFhAqmw6Z72i9+m4iMXPpfx7iRQaHjTctd1AqPnNuGgJeI6lc70SeiaxyoWGwjRRMzMa01YyK5554cYgSAwlLj8kzu27/uaU4lkxcwKsftu1KzmoIZg2Xv9K9Suz72RGUctAlnNcxhGYZWKQkZ2xsRnm6RgM1vJLDgX2C20eBfbDyVSYS2YV/1roAUiEzFBQpoh6+WCJ7UVJz3dO8gskOBptd2TekQoviyAbT5cAK56UFYq6735ArSeItNrO5OImuBSl6pLSUBgv7A3W3+WCne4uN6tc57UhFYKwS8RQCqJnyK98NeTucHriY5VXLphCkCkSWPt4z4bnFeYFzYQWtL6vIwE8kNGo65gDa5MNw+fllBygMJAthxo6igIj6+o0lhK+d3aqJguRt7DUCa4bg/vCOpubIi/XJKleSR53OcilmgX7DOWLS5puviJO/pRZIe0GLJbRo2zsQyZc+0fImRfbU0ZIZoTMK26mZsQWD2dd3xShpGRhULdmXIsCF4j/YYSOOQ2gQYDuv9PoNzxd5gOdMsJlwW/Vl458t/gtx33OHLWUZ3rhFyuoXGht/h/5R7UskmuUXYrgxcuOAL8NdQUrAskfTKLK6pZj8NL4NQ0dfw0WHrIOjMSUdPo=
 before_script:
   - version="$(cat VERSION)"
-  - docker pull "$IMAGE_NAME" || true0m
 script:
   - docker build --pull --cache-from "$IMAGE_NAME" --tag "$IMAGE_NAME" .
 after_script:
