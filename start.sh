@@ -30,6 +30,26 @@ function collectArgs() {
     fi
 }
 
+function checkRequiredFolderExist() {
+    declare -a List=(
+                 "${CURRENT_DIR}/dags"
+                 "${CURRENT_DIR}/data"
+                 "${CURRENT_DIR}/logs"
+                 "${CURRENT_DIR}/plugins"
+                )
+
+    for folder_path in "${List[@]}"
+    do
+        if [ ! -d ${folder_path} ]; then
+            mkdir ${folder_path}
+            echo "${folder_path}....${GREEN}${BOLD}CREATED!${GREEN}${BOLD}${RESET}"
+        else
+            echo "${folder_path}....${GREEN}${BOLD}FOUND!${GREEN}${BOLD}${RESET}"
+        fi
+
+    done
+}
+
 collectArgs $* || error "Error while defining airflow dags directory"
 
 [ -f .env ] || error "'.env' file does not exist in current directory! ($(pwd))"
@@ -42,7 +62,15 @@ fi
 
 echo "#########################################################################"
 echo
-echo " Generating '${AIRFLOW_DOCKER_IMAGE_NAME}' image using tag '${AIRFLOW_DOCKER_IMAGE_TAG}'"
+echo "Validating presence of airflow required folder and creating missing folders"
+echo
+checkRequiredFolderExist ||error "Error while creating folder required by airflow on localhost"
+echo
+echo
+
+echo "#########################################################################"
+echo
+echo "Generating '${AIRFLOW_DOCKER_IMAGE_NAME}' image using tag '${AIRFLOW_DOCKER_IMAGE_TAG}'"
 docker pull ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} ||error "Error pulling '${AIRLFLOW_DOCKER_IMAGE_NAME}'"
 
 
