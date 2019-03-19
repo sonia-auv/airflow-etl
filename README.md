@@ -28,14 +28,25 @@ docker login
 
 ### Installation
 
-After you have installed docker and docker-compose you must run this command in you shell.
-This will pull the docker-ros-airflow image from the docker repository, and start the containers locally.
+#### .env file
 
-This command will start both the airflow container as the postgres container use to store airflow metadata.
+After you have installed docker and docker-compose you must create an environment file. Simply copy .env.template with destination file name .env
+
+```
+cp .env.template .env
+```
+
+#### start.sh script
+
+Once you have your configuration file, run this command in you shell:
+
 
 ```bash
 ./start.sh
 ```
+
+This will pull the docker-ros-airflow image from the docker repository, and start the containers locally.
+It will start both the airflow container as the postgres container use to store airflow metadata.
 
 The output of the script should look like this
 
