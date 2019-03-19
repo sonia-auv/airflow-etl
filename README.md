@@ -98,6 +98,15 @@ docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute instances s
 
 Add additional notes about how to deploy this on a live system
 
+## Troubleshooting
+
+### Permission denied on the logs directory
+This error is caused by your logs directory being owned by root. It produces the following logs(https://pastebin.com/HWpXu83w). To fix, change the owner of the root directory to the current user:
+
+```
+chown -R [user]:[user] logs
+```
+
 ## Built With
 
 - [ROS](http://www.ros.org/) - ROS Robotic Operating System
