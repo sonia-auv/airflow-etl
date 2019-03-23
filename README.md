@@ -86,7 +86,12 @@ And you must set you default region to *us-east-1-c*
 
 ### Usage
 
-//TODO: Complete
+#### Extract bags img from bags(extract_img_from_ros_bag_dag)
+1. Create a directory that will contain your bags in the `data/input/ros_bag` directory
+2. Add your bag in the folder
+3. Launch the extract_img_from_ros_bag DAG
+
+## TODO: Complete
 docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute instances start deep-training-1
 docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute ssh deep-training-1
 docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute instances stop  deep-training-1
