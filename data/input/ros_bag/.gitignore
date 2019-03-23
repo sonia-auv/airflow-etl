@@ -2,6 +2,3 @@
 *
 # Except this file
 !.gitignore
-!labelbox
-!simulator
-!ros_bag
