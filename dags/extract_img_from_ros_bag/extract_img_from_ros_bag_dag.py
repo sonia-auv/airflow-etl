@@ -14,7 +14,7 @@ from airflow.models import Variable
 from extract_img_from_ros_bag import extract_img_from_ros_bag
 from utils import file_ops
 
-DATASET_NAME = Variable.get("Dataset")
+DATASET_NAME = str(Variable.get("Dataset"))
 BAG_FOLDER = "/usr/local/airflow/data/Bags/"
 IMAGE_FOLDER = "/usr/local/airflow/data/Images/"
 
@@ -40,6 +40,9 @@ default_args = {
 with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args) as dag:
 
     logging.info("Sensing for folder changes")
+
+    logging.info("bags folder: " + BAG_LOCATION)
+    logging.info("images folder: " + IMAGE_LOCATION)
 
     task_notify_start = SlackAPIPostOperator(
         task_id="task_notify_start",
