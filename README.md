@@ -91,6 +91,15 @@ And you must set you default region to *us-east-1-c*
 2. Add your bag in the folder
 3. Launch the extract_img_from_ros_bag DAG
 
+
+### Admin Variables
+Our project defines admin variables to change the behavior and configuration of DAGS
+
+
+#### NotifySlack
+Values: True, False
+This variable defines if DAGs should notify to the slack channel about the status of various operations. Set to False when debugging your project to avoid clutering the channel
+
 ## TODO: Complete
 docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute instances start deep-training-1
 docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute ssh deep-training-1
