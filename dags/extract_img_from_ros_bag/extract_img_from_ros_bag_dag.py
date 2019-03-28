@@ -41,8 +41,7 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
 
     logging.info("Sensing for folder changes")
 
-    logging.info("bags folder: " + BAG_LOCATION)
-    logging.info("images folder: " + IMAGE_LOCATION)
+    notify_slack = Variable.get("NotifySlack")
 
     task_notify_start = SlackAPIPostOperator(
         task_id="task_notify_start",
@@ -97,8 +96,12 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
         dag=dag,
     )
 
-    task_notify_start.set_downstream(task_sense_new_file)
+    if (notify_slack == "True"):
+        task_notify_start.set_downstream(task_sense_new_file)
+
     task_sense_new_file.set_downstream(task_detect_file_type_match)
     task_detect_file_type_match.set_downstream(task_notify_file_with_ext_failure)
     task_detect_file_type_match.set_downstream(task_extract_image)
-    task_extract_image.set_downstream(task_notify_extraction_success)
+
+    if (notify_slack == "True"):
+        task_extract_image.set_downstream(task_notify_extraction_success)
