@@ -3,6 +3,7 @@
 """
 
 import logging
+import os
 from datetime import datetime, timedelta
 
 from airflow import DAG
@@ -14,12 +15,8 @@ from airflow.models import Variable
 from extract_img_from_ros_bag import extract_img_from_ros_bag
 from utils import file_ops
 
-DATASET_NAME = str(Variable.get("Dataset"))
-BAG_FOLDER = "/usr/local/airflow/data/Bags/"
-IMAGE_FOLDER = "/usr/local/airflow/data/Images/"
-
-BAG_LOCATION = BAG_FOLDER + DATASET_NAME
-IMAGE_LOCATION = IMAGE_FOLDER + DATASET_NAME
+ROOT_FOLDER = "/usr/local/airflow/data/"
+# OUTPUT_DATA_LOCATION = "/usr/local/airflow/data/output/ros_image/"
 ROS_IMAGE_TOPICS = [
     "/provider_vision/Front_GigE/compressed",
     "/provider_vision/Bottom_GigE/compressed",
@@ -39,10 +36,16 @@ default_args = {
 
 with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args) as dag:
 
-    logging.info("Sensing for folder changes")
+    # Get Admin variables
+    notify_slack = Variable.get("NotifySlack")
+    bags_folder = Variable.get("BagsFolder")
+    images_folder = Variable.get("ImagesFolder")
+    dataset = Variable.get("Dataset")
 
-    logging.info("bags folder: " + BAG_LOCATION)
-    logging.info("images folder: " + IMAGE_LOCATION)
+    # Build folder paths
+    bags_path = os.path.join(ROOT_FOLDER, bags_folder)
+    images_path = os.path.join(ROOT_FOLDER, images_folder)
+    bag_path = os.path.join(bags_path, dataset) + ".bag"
 
     task_notify_start = SlackAPIPostOperator(
         task_id="task_notify_start",
@@ -52,19 +55,18 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
         dag=dag,
     )
 
-    task_sense_new_file = FileSensor(
-        task_id="task_sense_new_file",
-        filepath=BAG_LOCATION,
-        fs_conn_id="fs_default",
+    task_detect_bag = BranchPythonOperator(
+        task_id="task_detect_bag",
+        python_callable=extract_img_from_ros_bag.bag_file_exists,
+        op_kwargs={"bags_path": bags_path, "dataset": dataset},
+        trigger_rule="all_success",
         dag=dag,
-        timeout=20,
     )
 
-    task_detect_file_type_match = BranchPythonOperator(
-        task_id="task_detect_file_type_match",
-        python_callable=extract_img_from_ros_bag.dir_contains_bag_file,
-        op_kwargs={"bag_folder": BAG_LOCATION},
-        trigger_rule="all_success",
+    task_bag_not_detected = PythonOperator(
+        task_id="task_bag_not_detected",
+        python_callable=extract_img_from_ros_bag.bag_not_detected,
+        op_kwargs={"bags_path": bags_path, "dataset": dataset},
         dag=dag,
     )
 
@@ -72,18 +74,19 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
         task_id="task_notify_file_with_ext_failure",
         channel="#airflow",
         token="xoxp-6204505398-237247190021-380986807988-97ab748d120f996289f735c370cbac46",
-        text=":heavy_multiplication_x: [FAILURE] DAG (extract_image_from_ros_bag): Detected file did not match bag extension type ",
+        text=":heavy_multiplication_x: [FAILURE] DAG (extract_image_from_ros_bag): The bag file {} was not detected".format(bag_path),
         dag=dag,
     )
 
-    task_extract_image = PythonOperator(
-        task_id="task_extract_image",
+    task_extract_images_from_bag = PythonOperator(
+        task_id="task_extract_images_from_bag",
         provide_context=False,
         python_callable=extract_img_from_ros_bag.extract_images_from_bag,
         op_kwargs={
-            "bag_folder": BAG_LOCATION,
+            "bags_path": bags_path,
+            "images_path": images_path,
+            "dataset": dataset,
             "topics": ROS_IMAGE_TOPICS,
-            "output_dir": IMAGE_LOCATION,
         },
         trigger_rule="all_success",
         dag=dag,
@@ -97,8 +100,14 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
         dag=dag,
     )
 
-    task_notify_start.set_downstream(task_sense_new_file)
-    task_sense_new_file.set_downstream(task_detect_file_type_match)
-    task_detect_file_type_match.set_downstream(task_notify_file_with_ext_failure)
-    task_detect_file_type_match.set_downstream(task_extract_image)
-    task_extract_image.set_downstream(task_notify_extraction_success)
+    if (notify_slack == "True"):
+        task_notify_start.set_downstream(task_detect_bag)
+
+    task_detect_bag.set_downstream(task_bag_not_detected)
+    task_detect_bag.set_downstream(task_extract_images_from_bag)
+
+    if (notify_slack == "True"):
+        task_bag_not_detected.set_downstream(task_notify_file_with_ext_failure)
+
+    if (notify_slack == "True"):
+        task_extract_images_from_bag.set_downstream(task_notify_extraction_success)

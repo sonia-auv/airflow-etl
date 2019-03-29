@@ -18,51 +18,43 @@ def generate_uuid1_name():
 
     return uuid_formated_name
 
-
-def dir_contains_bag_file(bag_folder):
+def bag_file_exists(bags_path, dataset):
     """
-     Validate a given directory does contain an file with a given extension.
-    :param dir_path: folder path
-    :param extension:  wanted file extension
-    :return: file with given extension found or not status
+    Check if the bag file exists
+    :param bag_path: Location of the bag path
     """
-    files = glob(os.path.join(bag_folder, "*.bag"))
-    logging.info(files)
-
-    if len(files) > 0:
-        logging.info("New bag file detected in folder")
-        return "task_extract_image"
+    bag_path = os.path.join(bags_path, dataset) + ".bag"
+    if os.path.exists(bag_path):
+        logging.info("Bag found at {}".format(bag_path))
+        return "task_extract_images_from_bag"
     else:
-        logging.info("New bag file not detected in folder")
-        return "task_notify_file_with_ext_failure"
+        return "task_bag_not_detected"
 
 
-def extract_images_from_bag(bag_folder, topics, output_dir):
+def bag_not_detected(bags_path, dataset):
+    bag_path = os.path.join(bags_path, dataset) + ".bag"
+    return "Bag file {} not detected".format(bag_path)
 
+def extract_images_from_bag(bags_path, images_path, dataset, topics):
+    # Create output dir if it doesn't exist
+    image_output_dir = os.path.join(images_path, dataset)
+    if not os.path.exists(image_output_dir):
+        os.makedirs(image_output_dir)
+
+    # Extract images from bag
+    bag_file = os.path.join(bags_path, dataset) + ".bag"
     bridge = CvBridge()
 
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        logging.info("Output image directory created at{}".format(output_dir))
+    for topic in topics:
+        with rosbag.Bag(bag_file, "r") as bag:
+            logging.info("Extracting images from {} on topic {}".format(bag_file, topic))
+            for topic, msg, _ in bag.read_messages(topics=[topic]):
 
-    bag_files = glob(os.path.join(bag_folder, "*.bag"))
+                img_name = generate_uuid1_name()
+                extraction_path = os.path.join(image_output_dir, img_name)
 
-    logging.info("Bag founds:{}".format(bag_files))
-
-    for bag_file in bag_files:
-        for topic in topics:
-            logging.info("Extracting images from {} on topic {}".format(bag_file, topics))
-
-            with rosbag.Bag(bag_file, "r") as bag:
-                for topic, msg, _ in bag.read_messages(topics=[topic]):
-
-                    img_name = generate_uuid1_name()
-                    extraction_path = os.path.join(output_dir, img_name)
-
-                    cv_img = bridge.compressed_imgmsg_to_cv2(
-                        msg, desired_encoding="passthrough"
-                    )
-                    cv2.imwrite(extraction_path, cv_img)
-                    logging.info("Extracted image {} to {}".format(img_name, extraction_path))
-
-        logging.info("Extraction of all bags complete with success")
+                cv_img = bridge.compressed_imgmsg_to_cv2(
+                    msg, desired_encoding="passthrough"
+                )
+                cv2.imwrite(extraction_path, cv_img)
+                logging.info("Extracted image {} to {}".format(img_name, extraction_path))
