@@ -100,14 +100,8 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
         dag=dag,
     )
 
-    if (notify_slack == "True"):
-        task_notify_start.set_downstream(task_detect_bag)
-
+    task_notify_start.set_downstream(task_detect_bag)
     task_detect_bag.set_downstream(task_bag_not_detected)
     task_detect_bag.set_downstream(task_extract_images_from_bag)
-
-    if (notify_slack == "True"):
-        task_bag_not_detected.set_downstream(task_notify_file_with_ext_failure)
-
-    if (notify_slack == "True"):
-        task_extract_images_from_bag.set_downstream(task_notify_extraction_success)
+    task_bag_not_detected.set_downstream(task_notify_file_with_ext_failure)
+    task_extract_images_from_bag.set_downstream(task_notify_extraction_success)
