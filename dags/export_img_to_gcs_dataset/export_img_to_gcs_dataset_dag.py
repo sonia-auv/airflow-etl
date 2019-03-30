@@ -3,6 +3,7 @@
 """
 
 import logging
+import os
 from datetime import datetime, timedelta
 
 from airflow import DAG
@@ -10,10 +11,10 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
 from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.operators.slack_operator import SlackAPIPostOperator
+from airflow.models import Variable
 
 
-INPUT_DATA_LOCATION = "/usr/local/airflow/data/output/ros_image/"
-OUTPUT_DATA_LOCATION = "gs://robosub-2019-dataset/dataset/"
+ROOT_FOLDER = "/usr/local/airflow/data/"
 
 default_args = {
     "owner": "airflow",
@@ -30,6 +31,15 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
 
     logging.info("Starting images export to google cloud storage")
 
+    images_folder = Variable.get("ImagesFolder")
+    images_path = os.path.join(ROOT_FOLDER, images_folder)
+    storage_name = Variable.get("StorageName")
+    dataset = Variable.get("Dataset")
+    notify_slack = Variable.get("NotifySlack")
+
+    input_location = os.path.join(images_folder, dataset)
+    output_location = "gs://" + os.path.join(storage_name, dataset)
+
     task_notify_start = SlackAPIPostOperator(
         task_id="task_notify_start",
         channel="#airflow",
@@ -39,16 +49,10 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
     )
 
     command = "gsutil -m cp -r {src_folder} {dest_bucket}".format(
-        src_folder=INPUT_DATA_LOCATION, dest_bucket=OUTPUT_DATA_LOCATION
+        src_folder=input_location, dest_bucket=output_location
     )
     task_export_images_to_gcs_dataset = BashOperator(
         task_id="task_export_images_to_gcs_dataset", bash_command=command, dag=dag
-    )
-
-    command = "rm -rf  {src_folder}".format(src_folder=INPUT_DATA_LOCATION)
-
-    task_delete_input_files_from_local_storage = BashOperator(
-        task_id="task_delete_input_files_from_local_storage", bash_command=command, dag=dag
     )
 
     task_notify_export_success = SlackAPIPostOperator(
@@ -70,6 +74,5 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
     )
 
     task_notify_start.set_downstream(task_export_images_to_gcs_dataset)
-    task_export_images_to_gcs_dataset.set_downstream(task_delete_input_files_from_local_storage)
-    task_delete_input_files_from_local_storage.set_downstream(task_notify_export_success)
+    task_export_images_to_gcs_dataset.set_downstream(task_notify_export_success)
     task_export_images_to_gcs_dataset.set_downstream(task_notify_export_failure)
