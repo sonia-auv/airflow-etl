@@ -4,3 +4,4 @@
 !.gitignore
 !bags
 !images
+!tfrecords
