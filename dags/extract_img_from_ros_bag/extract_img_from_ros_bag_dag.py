@@ -37,7 +37,6 @@ default_args = {
 with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args) as dag:
 
     # Get Admin variables
-    notify_slack = Variable.get("NotifySlack")
     bags_folder = Variable.get("BagsFolder")
     images_folder = Variable.get("ImagesFolder")
     dataset = Variable.get("Dataset")

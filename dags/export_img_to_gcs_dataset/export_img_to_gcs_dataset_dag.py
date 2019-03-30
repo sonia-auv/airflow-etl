@@ -35,7 +35,6 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
     images_path = os.path.join(ROOT_FOLDER, images_folder)
     storage_name = Variable.get("StorageName")
     dataset = Variable.get("Dataset")
-    notify_slack = Variable.get("NotifySlack")
 
     input_location = os.path.join(images_folder, dataset)
     output_location = "gs://" + os.path.join(storage_name, dataset)
