@@ -36,7 +36,7 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
     storage_name = Variable.get("StorageName")
     dataset = Variable.get("Dataset")
 
-    input_location = os.path.join(images_folder, dataset)
+    input_location = os.path.join(images_path, dataset)
     output_location = "gs://" + os.path.join(storage_name, dataset)
 
     task_notify_start = SlackAPIPostOperator(
