@@ -112,6 +112,9 @@ Name of the folder containing the subdirectories of images
 Values: String
 Represents the name of the bag you want to extract into a series of images. The dataset variable is also used for naming the output images folder
 
+#### Topics
+Comma-separated list of ROS Topics that the images will be extracted from. See variables.json for an example.
+
 ## TODO: Complete
 docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute instances start deep-training-1
 docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute ssh deep-training-1
