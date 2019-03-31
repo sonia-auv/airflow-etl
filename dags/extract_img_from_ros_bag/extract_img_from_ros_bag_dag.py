@@ -16,12 +16,6 @@ from extract_img_from_ros_bag import extract_img_from_ros_bag
 from utils import file_ops
 
 ROOT_FOLDER = "/usr/local/airflow/data/"
-# OUTPUT_DATA_LOCATION = "/usr/local/airflow/data/output/ros_image/"
-ROS_IMAGE_TOPICS = [
-    "/provider_vision/Front_GigE/compressed",
-    "/provider_vision/Bottom_GigE/compressed",
-]
-
 
 default_args = {
     "owner": "airflow",
