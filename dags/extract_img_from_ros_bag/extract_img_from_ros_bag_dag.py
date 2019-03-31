@@ -41,6 +41,10 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
     images_folder = Variable.get("ImagesFolder")
     dataset = Variable.get("Dataset")
 
+    # Extract topics list
+    topics_string = Variable.get("Topics")
+    topics = topics_string.split(",")
+
     # Build folder paths
     bags_path = os.path.join(ROOT_FOLDER, bags_folder)
     images_path = os.path.join(ROOT_FOLDER, images_folder)
@@ -85,7 +89,7 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
             "bags_path": bags_path,
             "images_path": images_path,
             "dataset": dataset,
-            "topics": ROS_IMAGE_TOPICS,
+            "topics": topics,
         },
         trigger_rule="all_success",
         dag=dag,
