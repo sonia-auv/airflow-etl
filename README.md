@@ -95,21 +95,13 @@ And you must set you default region to *us-east-1-c*
 ### Admin Variables
 Our project defines admin variables to change the behavior and configuration of DAGS. In the Admin->Variables section of Airflow, you can import from json file. For an example of a variables set, see the variables.json file at the root of the repository.
 
-
-#### NotifySlack
-Values: True, False
-This variable defines if DAGs should notify to the slack channel about the status of various operations. Set to False when debugging your project to avoid clutering the channel
-
 #### BagsFolder
-Values: String
 Name of the folder containing the input bags
 
 #### ImagesFolder
-Values: String
 Name of the folder containing the subdirectories of images
 
 #### Dataset
-Values: String
 Represents the name of the bag you want to extract into a series of images. The dataset variable is also used for naming the output images folder
 
 #### Topics
