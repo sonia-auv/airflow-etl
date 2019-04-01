@@ -16,6 +16,8 @@ from extract_img_from_ros_bag import extract_img_from_ros_bag
 from utils import file_ops
 
 ROOT_FOLDER = "/usr/local/airflow/data/"
+BAG_FOLDER = os.path.join(ROOT_FOLDER, "bags")
+IMAGE_FOLDER = os.path.join(ROOT_FOLDER, "images")
 
 default_args = {
     "owner": "airflow",
@@ -31,8 +33,6 @@ default_args = {
 with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args) as dag:
 
     # Get Admin variables
-    bags_folder = Variable.get("BagsFolder")
-    images_folder = Variable.get("ImagesFolder")
     dataset = Variable.get("Dataset")
 
     # Extract topics list
@@ -40,8 +40,8 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
     topics = topics_string.split(",")
 
     # Build folder paths
-    bags_path = os.path.join(ROOT_FOLDER, bags_folder)
-    images_path = os.path.join(ROOT_FOLDER, images_folder)
+    bags_path = os.path.join(BAG_FOLDER, dataset)
+    images_path = os.path.join(IMAGE_FOLDER, dataset)
     bag_path = os.path.join(bags_path, dataset) + ".bag"
 
     task_notify_start = SlackAPIPostOperator(

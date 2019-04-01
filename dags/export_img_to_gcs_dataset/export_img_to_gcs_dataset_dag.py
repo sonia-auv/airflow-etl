@@ -37,7 +37,7 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
     csv_folder = Variable.get("CsvFolder")
     images_path = os.path.join(ROOT_FOLDER, images_folder)
     csv_path = os.path.join(ROOT_FOLDER, csv_folder)
-    storage_name = Variable.get("StorageName")
+    storage_name = Variable.get("Bucket")
     dataset = Variable.get("Dataset")
 
     # Build GCS path
