@@ -16,6 +16,8 @@ from airflow.models import Variable
 from export_img_to_gcs_dataset import export_img_to_gcs_dataset
 
 ROOT_FOLDER = "/usr/local/airflow/data/"
+IMAGE_FOLDER = os.path.join(ROOT_FOLDER, "images")
+CSV_FOLDER = os.path.join(ROOT_FOLDER, "csv")
 BASE_URL = "https://storage.cloud.google.com/"
 
 default_args = {
@@ -33,17 +35,13 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
 
     logging.info("Starting images export to google cloud storage")
 
-    images_folder = Variable.get("ImagesFolder")
-    csv_folder = Variable.get("CsvFolder")
-    images_path = os.path.join(ROOT_FOLDER, images_folder)
-    csv_path = os.path.join(ROOT_FOLDER, csv_folder)
     storage_name = Variable.get("Bucket")
     dataset = Variable.get("Dataset")
 
     # Build GCS path
     gcs_images_path = BASE_URL + os.path.join(storage_name, dataset)
 
-    input_location = os.path.join(images_path, dataset)
+    input_location = os.path.join(IMAGE_FOLDER, dataset)
     output_location = "gs://" + os.path.join(storage_name, dataset)
 
     task_notify_start = SlackAPIPostOperator(
@@ -65,10 +63,10 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
         task_id="task_create_csv",
         python_callable=export_img_to_gcs_dataset.create_csv,
         op_kwargs={
-            "images_path": images_path, 
+            "images_path": IMAGE_FOLDER, 
             "dataset": dataset,
             "gcs_images_path": gcs_images_path,
-            "csv_path": csv_path
+            "csv_path": CSV_FOLDER
         },
         dag=dag,
     )
