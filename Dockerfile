@@ -43,6 +43,7 @@ RUN set -ex \
     && apt-get install -yqq --no-install-recommends \
     $buildDeps \
     python-pip \
+    python3-pip\
     python-requests \
     apt-utils \
     openssh-client \
@@ -60,6 +61,7 @@ RUN set -ex \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow \
     && pip install setuptools wheel \
     && pip install -r requirements.txt \
+    && pip3 install setuptools wheel labelbox\
     && apt-get clean \
     && rm -rf \
     /var/lib/apt/lists/* \
