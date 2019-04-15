@@ -13,18 +13,16 @@ from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.operators.slack_operator import SlackAPIPostOperator
 from airflow.models import Variable
 
-import labelbox.exporters.voc_exporter as lb2pa
-
 from create_tf_record_from_labaled_data import create_tf_record_from_labaled_data
 from utils import file_ops
 
 ROOT_FOLDER = "/usr/local/airflow/data/"
 
-JSON_FOLDER = os.path.join(ROOT_FOLDER, "json")
-TRAIN_JSON_FOLDER = os.path.join(ROOT_FOLDER, "train_json")
-VOC_FOLDER = os.path.join(ROOT_FOLDER, "voc")
-TF_RECORD_FOLDER = os.path.join(ROOT_FOLDER, "tf_record")
-TRAIN_IMG_FOLDER = os.path.join(ROOT_FOLDER, "train_images")
+JSON_FOLDER = os.path.join(ROOT_FOLDER, "json/")
+TRAIN_JSON_FOLDER = os.path.join(ROOT_FOLDER, "train_json/")
+VOC_FOLDER = os.path.join(ROOT_FOLDER, "voc/")
+TF_RECORD_FOLDER = os.path.join(ROOT_FOLDER, "tf_record/")
+TRAIN_IMG_FOLDER = os.path.join(ROOT_FOLDER, "train_images/")
 
 default_args = {
     "owner": "airflow",
@@ -54,6 +52,12 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
     train_img_path = os.path.join(TRAIN_IMG_FOLDER, trainset)
     tf_record_path = os.path.join(TF_RECORD_FOLDER, trainset) + ".tf"
 
+    #create missing directories
+    if not os.path.exists(str(voc_path)):
+        os.mkdir(str(voc_path))
+
+    if not os.path.exists(str(train_img_path)):
+        os.mkdir(str(train_img_path))
 
     task_notify_start = SlackAPIPostOperator(
         task_id="task_notify_start",
@@ -63,6 +67,8 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
         dag=dag,
     )
 
+    print(datasets)
+
     task_json_concat = PythonOperator(
         task_id="task_json_concat",
         python_callable=file_ops.concat_json,
@@ -70,9 +76,11 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
         dag=dag,
     )
 
-    command = "python3 -c \"import labelbox.exporters.voc_exporter as lb2pa; lb2pa.from_json({json_file}, {voc_dir}, {image_dir}, label_format='XY')\"".format(
+    command = "python3 -c \"import labelbox.exporters.voc_exporter as lb2pa; lb2pa.from_json(\'{json_file}\', \'{voc_dir}\', \'{image_dir}\', label_format='XY')\"".format(
         json_file=json_path, voc_dir=voc_path, image_dir=train_img_path
     )
+
+    print(command)
     task_json_to_voc = BashOperator(
         task_id="task_json_to_voc", bash_command=command, dag=dag
     )
