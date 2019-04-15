@@ -3,6 +3,7 @@
 """
 
 import logging
+import os
 from datetime import datetime, timedelta
 
 from airflow import DAG
@@ -10,10 +11,20 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
 from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.operators.slack_operator import SlackAPIPostOperator
+from airflow.models import Variable
 
-INPUT_DATA_LOCATION = "/usr/local/airflow/data/output/ros_image/"
-STATING_DATA_LOCATION = "/usr/local/airflow/data/staging/"
-OUTPUT_DATA_LOCATION = "gs://robosub-2019-dataset/dataset/record/"
+import labelbox.exporters.voc_exporter as lb2pa
+
+from create_tf_record_from_labaled_data import create_tf_record_from_labaled_data
+from utils import file_ops
+
+ROOT_FOLDER = "/usr/local/airflow/data/"
+
+JSON_FOLDER = os.path.join(ROOT_FOLDER, "json")
+TRAIN_JSON_FOLDER = os.path.join(ROOT_FOLDER, "train_json")
+VOC_FOLDER = os.path.join(ROOT_FOLDER, "voc")
+TF_RECORD_FOLDER = os.path.join(ROOT_FOLDER, "tf_record")
+TRAIN_IMG_FOLDER = os.path.join(ROOT_FOLDER, "train_images")
 
 default_args = {
     "owner": "airflow",
@@ -27,33 +38,52 @@ default_args = {
 
 
 with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=default_args) as dag:
-    # t1, t2 and t3 are examples of tasks created by instantiating operators
+    # Get Admin variables
+    
+    trainset = Variable.get("Trainset")
 
-    # TODO: look for JSON file
-    # TODO: Download images
-    # TODO: Create annotations, filelist, label_map
-    # TODO: Create tf_record
-    # TODO: Upload tf_record on GCP
-    # TODO: Cleanup staging
+    # Extract topics list
+    datasets_string = Variable.get("Dataset_to_Trainset")
+    datasets = datasets_string.split(",")
 
-    t1 = BashOperator(task_id="print_date", bash_command="date", dag=dag)
+    # Build folder paths
+    for i in range(len(datasets)):
+        datasets[i] = JSON_FOLDER + datasets[i] + ".json"
+    json_path = os.path.join(TRAIN_JSON_FOLDER, trainset) + ".json"
+    voc_path = os.path.join(VOC_FOLDER, trainset)
+    train_img_path = os.path.join(TRAIN_IMG_FOLDER, trainset)
+    tf_record_path = os.path.join(TF_RECORD_FOLDER, trainset) + ".tf"
 
-    t2 = BashOperator(task_id="sleep", bash_command="sleep 5", retries=3, dag=dag)
 
-    templated_command = """
-        {% for i in range(5) %}
-            echo "{{ ds }}"
-            echo "{{ macros.ds_add(ds, 7)}}"
-            echo "{{ params.my_param }}"
-        {% endfor %}
-    """
-
-    t3 = BashOperator(
-        task_id="templated",
-        bash_command=templated_command,
-        params={"my_param": "Parameter I passed in"},
+    task_notify_start = SlackAPIPostOperator(
+        task_id="task_notify_start",
+        channel="#airflow",
+        token="xoxp-6204505398-237247190021-380986807988-97ab748d120f996289f735c370cbac46",
+        text=" :dolphin:[PROCESSING] DAG (create_tf_record_from_labaled_data): create tf_record",
         dag=dag,
     )
 
-    t2.set_upstream(t1)
-    t3.set_upstream(t1)
+    task_json_concat = PythonOperator(
+        task_id="task_json_concat",
+        python_callable=file_ops.concat_json,
+        op_kwargs={"json_files": datasets, "output_path": json_path},
+        dag=dag,
+    )
+
+    command = "python3 -c \"import labelbox.exporters.voc_exporter as lb2pa; lb2pa.from_json({json_file}, {voc_dir}, {image_dir}, label_format='XY')\"".format(
+        json_file=json_path, voc_dir=voc_path, image_dir=train_img_path
+    )
+    task_json_to_voc = BashOperator(
+        task_id="task_json_to_voc", bash_command=command, dag=dag
+    )
+
+    task_notify_extraction_success = SlackAPIPostOperator(
+        task_id="task_notify_extraction_success",
+        channel="#airflow",
+        token="xoxp-6204505398-237247190021-380986807988-97ab748d120f996289f735c370cbac46",
+        text=":heavy_check_mark: [SUCCESS] DAG (create_tf_record_from_labaled_data): succeed to create tf_record",
+        trigger_rule="all_success",
+        dag=dag,
+    )
+
+    task_notify_start >> task_json_concat >> task_json_to_voc >> task_notify_extraction_success

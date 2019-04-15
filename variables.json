@@ -2,6 +2,6 @@
     "BagsFolder": "bags", 
     "Dataset": "2018-07-31-11-41-35", 
     "ImagesFolder": "images", 
-    "NotifySlack": "True", 
-    "StorageName": "sonia-test"
+    "StorageName": "sonia-test", 
+    "Topics": "/provider_vision/Front_GigE/compressed,/provider_vision/Bottom_GigE/compressed"
 }

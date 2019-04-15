@@ -16,12 +16,8 @@ from extract_img_from_ros_bag import extract_img_from_ros_bag
 from utils import file_ops
 
 ROOT_FOLDER = "/usr/local/airflow/data/"
-# OUTPUT_DATA_LOCATION = "/usr/local/airflow/data/output/ros_image/"
-ROS_IMAGE_TOPICS = [
-    "/provider_vision/Front_GigE/compressed",
-    "/provider_vision/Bottom_GigE/compressed",
-]
-
+BAG_FOLDER = os.path.join(ROOT_FOLDER, "bags")
+IMAGE_FOLDER = os.path.join(ROOT_FOLDER, "images")
 
 default_args = {
     "owner": "airflow",
@@ -37,15 +33,15 @@ default_args = {
 with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args) as dag:
 
     # Get Admin variables
-    notify_slack = Variable.get("NotifySlack")
-    bags_folder = Variable.get("BagsFolder")
-    images_folder = Variable.get("ImagesFolder")
     dataset = Variable.get("Dataset")
 
+    # Extract topics list
+    topics_string = Variable.get("Topics")
+    topics = topics_string.split(",")
+
     # Build folder paths
-    bags_path = os.path.join(ROOT_FOLDER, bags_folder)
-    images_path = os.path.join(ROOT_FOLDER, images_folder)
-    bag_path = os.path.join(bags_path, dataset) + ".bag"
+    images_path = os.path.join(IMAGE_FOLDER, dataset)
+    bag_path = os.path.join(BAG_FOLDER, dataset) + ".bag"
 
     task_notify_start = SlackAPIPostOperator(
         task_id="task_notify_start",
@@ -58,7 +54,7 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
     task_detect_bag = BranchPythonOperator(
         task_id="task_detect_bag",
         python_callable=extract_img_from_ros_bag.bag_file_exists,
-        op_kwargs={"bags_path": bags_path, "dataset": dataset},
+        op_kwargs={"bags_path": BAG_FOLDER, "dataset": dataset},
         trigger_rule="all_success",
         dag=dag,
     )
@@ -66,7 +62,7 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
     task_bag_not_detected = PythonOperator(
         task_id="task_bag_not_detected",
         python_callable=extract_img_from_ros_bag.bag_not_detected,
-        op_kwargs={"bags_path": bags_path, "dataset": dataset},
+        op_kwargs={"bags_path": BAG_FOLDER, "dataset": dataset},
         dag=dag,
     )
 
@@ -83,10 +79,10 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
         provide_context=False,
         python_callable=extract_img_from_ros_bag.extract_images_from_bag,
         op_kwargs={
-            "bags_path": bags_path,
-            "images_path": images_path,
+            "bags_path": BAG_FOLDER,
+            "images_path": IMAGE_FOLDER,
             "dataset": dataset,
-            "topics": ROS_IMAGE_TOPICS,
+            "topics": topics,
         },
         trigger_rule="all_success",
         dag=dag,

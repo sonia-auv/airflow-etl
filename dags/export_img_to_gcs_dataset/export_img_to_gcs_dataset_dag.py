@@ -13,8 +13,12 @@ from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.operators.slack_operator import SlackAPIPostOperator
 from airflow.models import Variable
 
+from export_img_to_gcs_dataset import export_img_to_gcs_dataset
 
 ROOT_FOLDER = "/usr/local/airflow/data/"
+IMAGE_FOLDER = os.path.join(ROOT_FOLDER, "images")
+CSV_FOLDER = os.path.join(ROOT_FOLDER, "csv")
+BASE_URL = "https://storage.cloud.google.com/"
 
 default_args = {
     "owner": "airflow",
@@ -31,13 +35,13 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
 
     logging.info("Starting images export to google cloud storage")
 
-    images_folder = Variable.get("ImagesFolder")
-    images_path = os.path.join(ROOT_FOLDER, images_folder)
-    storage_name = Variable.get("StorageName")
+    storage_name = Variable.get("Bucket")
     dataset = Variable.get("Dataset")
-    notify_slack = Variable.get("NotifySlack")
 
-    input_location = os.path.join(images_folder, dataset)
+    # Build GCS path
+    gcs_images_path = BASE_URL + os.path.join(storage_name, dataset)
+
+    input_location = os.path.join(IMAGE_FOLDER, dataset)
     output_location = "gs://" + os.path.join(storage_name, dataset)
 
     task_notify_start = SlackAPIPostOperator(
@@ -53,6 +57,18 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
     )
     task_export_images_to_gcs_dataset = BashOperator(
         task_id="task_export_images_to_gcs_dataset", bash_command=command, dag=dag
+    )
+
+    task_create_csv = PythonOperator(
+        task_id="task_create_csv",
+        python_callable=export_img_to_gcs_dataset.create_csv,
+        op_kwargs={
+            "images_path": IMAGE_FOLDER, 
+            "dataset": dataset,
+            "gcs_images_path": gcs_images_path,
+            "csv_path": CSV_FOLDER
+        },
+        dag=dag,
     )
 
     task_notify_export_success = SlackAPIPostOperator(
@@ -74,5 +90,6 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
     )
 
     task_notify_start.set_downstream(task_export_images_to_gcs_dataset)
-    task_export_images_to_gcs_dataset.set_downstream(task_notify_export_success)
-    task_export_images_to_gcs_dataset.set_downstream(task_notify_export_failure)
+    task_export_images_to_gcs_dataset.set_downstream(task_create_csv)
+    task_create_csv.set_downstream(task_notify_export_success)
+    task_create_csv.set_downstream(task_notify_export_failure)
