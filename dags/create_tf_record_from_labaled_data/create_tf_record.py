@@ -187,7 +187,8 @@ def main(_):
     val_examples = examples_list[num_train:]
     logging.info("%d training and %d validation examples.", len(train_examples), len(val_examples))
 
-    os.makedirs(output_dir)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     train_output_path = os.path.join(output_dir, "train.record")
     val_output_path = os.path.join(output_dir, "val.record")
     label_map_output_path = os.path.join(output_dir, "label_map.pbtxt")
