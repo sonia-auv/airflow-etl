@@ -86,8 +86,6 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
         task_id="task_json_to_voc", bash_command=command, dag=dag
     )
 
-    print(os.getcwd())
-
     command = "python /usr/local/airflow/dags/create_tf_record_from_labaled_data/create_tf_record.py --annotation_dir={voc_dir} --image_dir={img_dir} --label_map_file={label_map_path} --trainval_file={trainval_path} --output_dir={tf_dir}".format(
         voc_dir=voc_path, img_dir=train_img_path, tf_dir=tf_record_path, label_map_path=label_map_path, trainval_path=trainval_path
     )
