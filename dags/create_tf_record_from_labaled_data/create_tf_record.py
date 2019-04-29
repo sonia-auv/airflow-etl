@@ -132,7 +132,7 @@ def create_tf_record(output_filename, label_map_dict, annotations_dir, image_dir
     for idx, example in enumerate(examples):
         if idx % 100 == 0:
             logging.info("On image %d of %d", idx, len(examples))
-        path = os.path.join(annotations_dir, "pascal_voc", example + ".xml")
+        path = os.path.join(annotations_dir, example + ".xml")
 
         if not os.path.exists(path):
             logging.warning("Could not find %s, ignoring example.", path)
