@@ -95,17 +95,24 @@ And you must set you default region to *us-east-1-c*
 ### Admin Variables
 Our project defines admin variables to change the behavior and configuration of DAGS. In the Admin->Variables section of Airflow, you can import from json file. For an example of a variables set, see the variables.json file at the root of the repository.
 
-#### BagsFolder
-Name of the folder containing the input bags
-
-#### ImagesFolder
-Name of the folder containing the subdirectories of images
-
 #### Dataset
 Represents the name of the bag you want to extract into a series of images. The dataset variable is also used for naming the output images folder
 
+### Bucket
+link to the targeted bucket. See variables.json for an example.
+
+### Dataset_to_Trainset
+Comma-separated list of Dataset to convert into Trainset. See variables.json for an example.
+
+### Trainset
+Represent the name of your final tf_record directory. See variables.json for an example.
+
 #### Topics
 Comma-separated list of ROS Topics that the images will be extracted from. See variables.json for an example.
+
+### Before generating tf_record file
+before generating the tf_record file be sure to have the label_map file, it must have the name `<name of your Trainset>.pbtxt` for an example
+of label_map file refer to this [file](https://github.com/EdjeElectronics/TensorFlow-Object-Detection-API-Tutorial-Train-Multiple-Objects-Windows-10/blob/master/training/labelmap.pbtxt)
 
 ## TODO: Complete
 docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute instances start deep-training-1
