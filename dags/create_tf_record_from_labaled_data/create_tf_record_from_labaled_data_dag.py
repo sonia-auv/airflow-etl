@@ -86,6 +86,16 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
         task_id="task_json_to_voc", bash_command=command, dag=dag
     )
 
+    task_create_trainval = PythonOperator(
+        task_id="task_create_trainval",
+        python_callable=create_tf_record_from_labaled_data.generate_trainval_file,
+        op_kwargs={
+            "annotation_dir": voc_path, 
+            "output_file": trainval_path
+        },
+        dag=dag,
+    )
+
     command = "python /usr/local/airflow/dags/create_tf_record_from_labaled_data/create_tf_record.py --annotation_dir={voc_dir} --image_dir={img_dir} --label_map_file={label_map_path} --trainval_file={trainval_path} --output_dir={tf_dir}".format(
         voc_dir=voc_path, img_dir=train_img_path, tf_dir=tf_record_path, label_map_path=label_map_path, trainval_path=trainval_path
     )
@@ -103,4 +113,4 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
         dag=dag,
     )
 
-    task_notify_start >> task_json_concat >> task_json_to_voc >> task_voc_to_tf >> task_notify_extraction_success
+    task_notify_start >> task_json_concat >> task_json_to_voc >> task_create_trainval >> task_voc_to_tf >> task_notify_extraction_success
