@@ -21,8 +21,10 @@ ROOT_FOLDER = "/usr/local/airflow/data/"
 JSON_FOLDER = os.path.join(ROOT_FOLDER, "json/")
 TRAIN_JSON_FOLDER = os.path.join(ROOT_FOLDER, "train_json/")
 VOC_FOLDER = os.path.join(ROOT_FOLDER, "voc/")
-TF_RECORD_FOLDER = os.path.join(ROOT_FOLDER, "tf_record/")
+TF_RECORD_FOLDER = os.path.join(ROOT_FOLDER, "tfrecords/")
 TRAIN_IMG_FOLDER = os.path.join(ROOT_FOLDER, "train_images/")
+LABEL_MAP_FOLDER = os.path.join(ROOT_FOLDER, "label_map/")
+TRAINVAL_FOLDER = os.path.join(ROOT_FOLDER, "trainval/")
 
 default_args = {
     "owner": "airflow",
@@ -50,7 +52,9 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
     json_path = os.path.join(TRAIN_JSON_FOLDER, trainset) + ".json"
     voc_path = os.path.join(VOC_FOLDER, trainset)
     train_img_path = os.path.join(TRAIN_IMG_FOLDER, trainset)
-    tf_record_path = os.path.join(TF_RECORD_FOLDER, trainset) + ".tf"
+    tf_record_path = os.path.join(TF_RECORD_FOLDER, trainset)
+    label_map_path = os.path.join(LABEL_MAP_FOLDER, trainset) + ".pbtxt"
+    trainval_path = os.path.join(TRAINVAL_FOLDER, trainset) + ".txt"
 
     #create missing directories
     if not os.path.exists(str(voc_path)):
@@ -67,8 +71,6 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
         dag=dag,
     )
 
-    print(datasets)
-
     task_json_concat = PythonOperator(
         task_id="task_json_concat",
         python_callable=file_ops.concat_json,
@@ -80,9 +82,26 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
         json_file=json_path, voc_dir=voc_path, image_dir=train_img_path
     )
 
-    print(command)
     task_json_to_voc = BashOperator(
         task_id="task_json_to_voc", bash_command=command, dag=dag
+    )
+
+    task_create_trainval = PythonOperator(
+        task_id="task_create_trainval",
+        python_callable=create_tf_record_from_labaled_data.generate_trainval_file,
+        op_kwargs={
+            "annotation_dir": voc_path, 
+            "output_file": trainval_path
+        },
+        dag=dag,
+    )
+
+    command = "python /usr/local/airflow/dags/create_tf_record_from_labaled_data/create_tf_record.py --annotation_dir={voc_dir} --image_dir={img_dir} --label_map_file={label_map_path} --trainval_file={trainval_path} --output_dir={tf_dir}".format(
+        voc_dir=voc_path, img_dir=train_img_path, tf_dir=tf_record_path, label_map_path=label_map_path, trainval_path=trainval_path
+    )
+
+    task_voc_to_tf = BashOperator(
+        task_id="task_voc_to_tf", bash_command=command, dag=dag
     )
 
     task_notify_extraction_success = SlackAPIPostOperator(
@@ -94,4 +113,4 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
         dag=dag,
     )
 
-    task_notify_start >> task_json_concat >> task_json_to_voc >> task_notify_extraction_success
+    task_notify_start >> task_json_concat >> task_json_to_voc >> task_create_trainval >> task_voc_to_tf >> task_notify_extraction_success
