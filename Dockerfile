@@ -61,7 +61,7 @@ RUN set -ex \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow \
     && pip install setuptools wheel \
     && pip install -r requirements.txt \
-    && pip3 install setuptools wheel labelbox\
+    && pip3 install setuptools wheel\
     && apt-get clean \
     && rm -rf \
     /var/lib/apt/lists/* \
