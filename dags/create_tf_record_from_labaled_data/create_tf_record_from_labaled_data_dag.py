@@ -78,7 +78,7 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
         dag=dag,
     )
 
-    command = "python3 -c \"import labelbox.exporters.voc_exporter as lb2pa; lb2pa.from_json(\'{json_file}\', \'{voc_dir}\', \'{image_dir}\', label_format='XY')\"".format(
+    command = "cd /usr/local/airflow/dags/create_tf_record_from_labaled_data/; python3 -c \"import lb.exporters.voc_exporter as lb2pa; lb2pa.from_json(\'{json_file}\', \'{voc_dir}\', \'{image_dir}\', label_format='XY')\"".format(
         json_file=json_path, voc_dir=voc_path, image_dir=train_img_path
     )
 
