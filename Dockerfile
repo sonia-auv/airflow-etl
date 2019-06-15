@@ -23,6 +23,7 @@ ENV SLUGIFY_USES_TEXT_UNIDECODE=yes
 # Creating airflow logs folder
 WORKDIR /tmp
 COPY requirements.txt requirements.txt
+COPY requirements3.txt requirements3.txt
 
 ## Installing Airflow
 RUN set -ex \
