@@ -60,9 +60,9 @@ RUN set -ex \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow \
-    && pip install setuptools wheel opencv-python \
+    && pip install setuptools wheel \
     && pip install -r requirements.txt \
-    && pip3 install setuptools wheel \
+    && pip3 install setuptools wheel opencv-python \
     && pip3 install -r requirements3.txt \
     && apt-get clean \
     && rm -rf \
