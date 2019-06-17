@@ -80,19 +80,23 @@ def dict_to_tf_example(data, label_map_dict, image_subdirectory, ignore_difficul
     truncated = []
     poses = []
     difficult_obj = []
-    for obj in data["object"]:
-        difficult_obj.append(int(0))
+    try:
+        for obj in data["object"]:
+            difficult_obj.append(int(0))
 
-        xmin.append(float(obj["bndbox"]["xmin"]) / width)
-        ymin.append(float(obj["bndbox"]["ymin"]) / height)
-        xmax.append(float(obj["bndbox"]["xmax"]) / width)
-        ymax.append(float(obj["bndbox"]["ymax"]) / height)
+            xmin.append(float(obj["bndbox"]["xmin"]) / width)
+            ymin.append(float(obj["bndbox"]["ymin"]) / height)
+            xmax.append(float(obj["bndbox"]["xmax"]) / width)
+            ymax.append(float(obj["bndbox"]["ymax"]) / height)
 
-        class_name = obj["name"]
-        classes_text.append(class_name.encode("utf8"))
-        classes.append(label_map_dict[class_name])
-        truncated.append(int(0))
-        poses.append("Unspecified".encode("utf8"))
+            class_name = obj["name"]
+            classes_text.append(class_name.encode("utf8"))
+            classes.append(label_map_dict[class_name])
+            truncated.append(int(0))
+            poses.append("Unspecified".encode("utf8"))
+    except KeyError as e:
+        print(img_path)
+        return None
 
     example = tf.train.Example(
         features=tf.train.Features(
@@ -143,7 +147,9 @@ def create_tf_record(output_filename, label_map_dict, annotations_dir, image_dir
         data = dataset_util.recursive_parse_xml_to_dict(xml)["annotation"]
 
         tf_example = dict_to_tf_example(data, label_map_dict, image_dir)
-        writer.write(tf_example.SerializeToString())
+
+        if tf_example != None:
+            writer.write(tf_example.SerializeToString())
 
     writer.close()
 
