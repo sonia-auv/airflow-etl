@@ -9,7 +9,7 @@ class Writer:
     "Class for writing Pascal VOC annotation formats."
     def __init__(self, path, width, height):
         environment = Environment(
-            loader=PackageLoader('labelbox.exporters', package_path='pascal_voc_writer/templates'),
+            loader=PackageLoader('lb.exporters', package_path='pascal_voc_writer/templates'),
             keep_trailing_newline=True)
         self.annotation_template = environment.get_template('annotation.xml')
 

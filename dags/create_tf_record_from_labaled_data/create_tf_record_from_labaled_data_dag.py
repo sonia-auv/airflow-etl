@@ -22,6 +22,7 @@ JSON_FOLDER = os.path.join(ROOT_FOLDER, "json/")
 TRAIN_JSON_FOLDER = os.path.join(ROOT_FOLDER, "train_json/")
 VOC_FOLDER = os.path.join(ROOT_FOLDER, "voc/")
 TF_RECORD_FOLDER = os.path.join(ROOT_FOLDER, "tfrecords/")
+IMG_FOLDER = os.path.join(ROOT_FOLDER, "images/")
 TRAIN_IMG_FOLDER = os.path.join(ROOT_FOLDER, "train_images/")
 LABEL_MAP_FOLDER = os.path.join(ROOT_FOLDER, "label_map/")
 TRAINVAL_FOLDER = os.path.join(ROOT_FOLDER, "trainval/")
@@ -78,8 +79,8 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
         dag=dag,
     )
 
-    command = "cd /usr/local/airflow/dags/create_tf_record_from_labaled_data/; python3 -c \"import lb.exporters.voc_exporter as lb2pa; lb2pa.from_json(\'{json_file}\', \'{voc_dir}\', \'{image_dir}\', label_format='XY')\"".format(
-        json_file=json_path, voc_dir=voc_path, image_dir=train_img_path
+    command = "cd /usr/local/airflow/dags/create_tf_record_from_labaled_data/; python3 -c \"import lb.exporters.voc_exporter as lb2pa; lb2pa.from_json(\'{image_input_dir}\', \'{json_file}\', \'{voc_dir}\', \'{image_dir}\', label_format='XY')\"".format(
+        json_file=json_path, voc_dir=voc_path, image_dir=train_img_path, image_input_dir=IMG_FOLDER
     )
 
     task_json_to_voc = BashOperator(

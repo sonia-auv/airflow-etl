@@ -14,14 +14,14 @@ from shapely import wkt
 import cv2
 import numpy as np
 
-from labelbox.exceptions import UnknownFormatError
-from labelbox.exporters.pascal_voc_writer import Writer as PascalWriter
+from lb.exceptions import UnknownFormatError
+from lb.exporters.pascal_voc_writer import Writer as PascalWriter
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-def from_json(labeled_data, annotations_output_dir, images_output_dir,
+def from_json(images_input_dir, labeled_data, annotations_output_dir, images_output_dir,
               label_format='WKT'):
     """Convert Labelbox JSON export to Pascal VOC format.
 
@@ -50,6 +50,7 @@ def from_json(labeled_data, annotations_output_dir, images_output_dir,
     for data in label_data:
         try:
             write_label(
+                images_input_dir,
                 data['ID'],
                 data['Labeled Data'],
                 data['Label'],
@@ -66,7 +67,7 @@ def from_json(labeled_data, annotations_output_dir, images_output_dir,
 
 
 def write_label(  # pylint: disable-msg=too-many-arguments
-        label_id: str, image_url: str, labels: Dict[str, Any], label_format: str,
+        images_input_dir: str, label_id: str, image_url: str, labels: Dict[str, Any], label_format: str,
         images_output_dir: str, annotations_output_dir: str):
     """Writes a single Pascal VOC formatted image and label pair to disk.
 
@@ -80,18 +81,25 @@ def write_label(  # pylint: disable-msg=too-many-arguments
                                 annotation files.
         images_output_dir: File path of directory to write images.
     """
-    # Download image and save it
-    response = requests.get(image_url, stream=True)
-    response.raw.decode_content = True
-    image = Image.open(response.raw)
+    #find image
+    url_list = image_url.split("/")
+    image_input_fqn = os.path.join(
+        images_input_dir,
+        '{image_dir}/{filename}'.format(image_dir=url_list[-2], filename=url_list[-1]))
+    
+    image = Image.open(image_input_fqn)
+
     image_fqn = os.path.join(
         images_output_dir,
         '{img_id}.{ext}'.format(img_id=label_id, ext=image.format.lower()))
+    
     image.save(image_fqn, format=image.format)
+    
+    print(image_fqn)
 
     # resize the image
     width, height = 300, 300
-    resize_image(image_fqn, width, height)
+    x_factor, y_factor, pad_top = resize_image(image_fqn, width, height)
 
     # generate image annotation in Pascal VOC
     xml_writer = PascalWriter(image_fqn, width, height)
@@ -107,7 +115,7 @@ def write_label(  # pylint: disable-msg=too-many-arguments
             xml_writer = _add_pascal_object_from_wkt(
                 xml_writer, wkt_data=paths, label=category_name)
         elif label_format == 'XY':
-            xml_writer = _add_pascal_object_from_xy(xml_writer, polygons=paths, label=category_name)
+            xml_writer = _add_pascal_object_from_xy(xml_writer, polygons=paths, label=category_name, x_factor=x_factor, y_factor=y_factor, pad_top=pad_top)
         else:
             exc = UnknownFormatError(label_format=label_format)
             logging.exception(exc.message)
@@ -135,7 +143,7 @@ def _add_pascal_object_from_wkt(xml_writer, wkt_data, label):
     return xml_writer
 
 
-def _add_pascal_object_from_xy(xml_writer, polygons, label):
+def _add_pascal_object_from_xy(xml_writer, polygons, label, x_factor, y_factor, pad_top):
     if not isinstance(polygons, list):
         LOGGER.warning('polygons is not [{geometry: [xy]}] nor [[xy]], skipping')
         return xml_writer
@@ -149,7 +157,7 @@ def _add_pascal_object_from_xy(xml_writer, polygons, label):
 
         xy_coords = []
         for point in polygon:
-            xy_coords.extend([point['x'], point['y']])
+            xy_coords.extend([point['x']/x_factor, ((point['y']/y_factor)+pad_top)])
         xml_writer.add_object(name=label, xy_coords=xy_coords)
     return xml_writer
 
@@ -208,3 +216,5 @@ def resize_image(image_path, required_img_height, required_img_width):
         cv2.imwrite(image_path, scaled_img)
         LOGGER.info('Resized image at {}'.format(
             image_path))
+        
+        return x_factor, y_factor, pad_top
