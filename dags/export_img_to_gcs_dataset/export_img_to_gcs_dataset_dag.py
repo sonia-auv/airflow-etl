@@ -12,6 +12,8 @@ from airflow.operators.python_operator import PythonOperator, BranchPythonOperat
 from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.operators.slack_operator import SlackAPIPostOperator
 from airflow.models import Variable
+from airflow.hooks.base_hook import BaseHook
+from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
 from export_img_to_gcs_dataset import export_img_to_gcs_dataset
 
@@ -19,6 +21,7 @@ ROOT_FOLDER = "/usr/local/airflow/data/"
 IMAGE_FOLDER = os.path.join(ROOT_FOLDER, "images")
 CSV_FOLDER = os.path.join(ROOT_FOLDER, "csv")
 BASE_URL = "https://storage.cloud.google.com/"
+slack_webhook_token = BaseHook.get_connection('slack').password
 
 default_args = {
     "owner": "airflow",
@@ -44,11 +47,12 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
     input_location = os.path.join(IMAGE_FOLDER, dataset)
     output_location = "gs://" + os.path.join(storage_name, dataset)
 
-    task_notify_start = SlackAPIPostOperator(
+    task_notify_start = SlackWebhookOperator(
         task_id="task_notify_start",
-        channel="#airflow",
-        token="xoxp-6204505398-237247190021-380986807988-97ab748d120f996289f735c370cbac46",
-        text=" :dolphin:[PROCESSING] DAG (export_img_to_gcs_dataset): Exporting image to GCP dataset folder",
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        username='airflow',
+        message=" :dolphin:[PROCESSING] DAG (export_img_to_gcs_dataset): Exporting image to GCP dataset folder",
         dag=dag,
     )
 
@@ -71,20 +75,22 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
         dag=dag,
     )
 
-    task_notify_export_success = SlackAPIPostOperator(
+    task_notify_export_success = SlackWebhookOperator(
         task_id="task_notify_export_to_gcs_success",
-        channel="#airflow",
-        token="xoxp-6204505398-237247190021-380986807988-97ab748d120f996289f735c370cbac46",
-        text=":heavy_check_mark: [SUCCESS] DAG (export_img_to_gcs_dataset): Images were exported to google cloud storage",
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        username='airflow',
+        message=":heavy_check_mark: [SUCCESS] DAG (export_img_to_gcs_dataset): Images were exported to google cloud storage",
         trigger_rule="all_success",
         dag=dag,
     )
 
-    task_notify_export_failure = SlackAPIPostOperator(
+    task_notify_export_failure = SlackWebhookOperator(
         task_id="task_notify_export_to_gcs_failure",
-        channel="#airflow",
-        token="xoxp-6204505398-237247190021-380986807988-97ab748d120f996289f735c370cbac46",
-        text=":heavy_multiplication_x: [FAILURE] DAG (export_img_to_gcs_dataset): There was an error while exporting image to google cloud storage",
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        username='airflow',
+        message=":heavy_multiplication_x: [FAILURE] DAG (export_img_to_gcs_dataset): There was an error while exporting image to google cloud storage",
         trigger_rule="one_failed",
         dag=dag,
     )
