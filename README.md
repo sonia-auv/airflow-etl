@@ -84,6 +84,10 @@ Once it's done you should be prompted to input the project name which should be 
 
 And you must set you default region to *us-east-1-c*
 
+#### add slack connection
+
+You need to add a slack connection to be able to use slack in airflow.
+
 ### Usage
 
 #### Extract bags img from bags(extract_img_from_ros_bag_dag)
@@ -113,11 +117,6 @@ Comma-separated list of ROS Topics that the images will be extracted from. See v
 ### Before generating tf_record file
 before generating the tf_record file be sure to have the label_map file, it must have the name `<name of your Trainset>.pbtxt` for an example
 of label_map file refer to this [file](https://github.com/EdjeElectronics/TensorFlow-Object-Detection-API-Tutorial-Train-Multiple-Objects-Windows-10/blob/master/training/labelmap.pbtxt)
-
-## TODO: Complete
-docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute instances start deep-training-1
-docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute ssh deep-training-1
-docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud compute instances stop  deep-training-1
 
 
 #### Developpement
