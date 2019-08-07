@@ -12,6 +12,8 @@ from airflow.operators.python_operator import PythonOperator, BranchPythonOperat
 from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.operators.slack_operator import SlackAPIPostOperator
 from airflow.models import Variable
+from airflow.hooks.base_hook import BaseHook
+from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
 from create_tf_record_from_labaled_data import create_tf_record_from_labaled_data
 from utils import file_ops
@@ -26,6 +28,7 @@ IMG_FOLDER = os.path.join(ROOT_FOLDER, "images/")
 TRAIN_IMG_FOLDER = os.path.join(ROOT_FOLDER, "train_images/")
 LABEL_MAP_FOLDER = os.path.join(ROOT_FOLDER, "label_map/")
 TRAINVAL_FOLDER = os.path.join(ROOT_FOLDER, "trainval/")
+slack_webhook_token = BaseHook.get_connection('slack').password
 
 default_args = {
     "owner": "airflow",
@@ -64,11 +67,12 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
     if not os.path.exists(str(train_img_path)):
         os.mkdir(str(train_img_path))
 
-    task_notify_start = SlackAPIPostOperator(
+    task_notify_start = SlackWebhookOperator(
         task_id="task_notify_start",
-        channel="#airflow",
-        token="xoxp-6204505398-237247190021-380986807988-97ab748d120f996289f735c370cbac46",
-        text=" :dolphin:[PROCESSING] DAG (create_tf_record_from_labaled_data): create tf_record",
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        username='airflow',
+        message=" :dolphin:[PROCESSING] DAG (create_tf_record_from_labaled_data): create tf_record",
         dag=dag,
     )
 
@@ -105,11 +109,12 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
         task_id="task_voc_to_tf", bash_command=command, dag=dag
     )
 
-    task_notify_extraction_success = SlackAPIPostOperator(
+    task_notify_extraction_success = SlackWebhookOperator(
         task_id="task_notify_extraction_success",
-        channel="#airflow",
-        token="xoxp-6204505398-237247190021-380986807988-97ab748d120f996289f735c370cbac46",
-        text=":heavy_check_mark: [SUCCESS] DAG (create_tf_record_from_labaled_data): succeed to create tf_record",
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        username='airflow',
+        message=":heavy_check_mark: [SUCCESS] DAG (create_tf_record_from_labaled_data): succeed to create tf_record",
         trigger_rule="all_success",
         dag=dag,
     )

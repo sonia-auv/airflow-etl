@@ -98,7 +98,7 @@ def write_label(  # pylint: disable-msg=too-many-arguments
     print(image_fqn)
 
     # resize the image
-    width, height = 300, 300
+    width, height = 640, 640
     x_factor, y_factor, pad_top = resize_image(image_fqn, width, height)
 
     # generate image annotation in Pascal VOC
