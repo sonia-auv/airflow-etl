@@ -1,10 +1,8 @@
-# VERSION 0.0.1
 # AUTHOR: Martin Gauthier
 # DESCRIPTION: Airflow and ROS container
 # HIGHLY INSPIRED BY: https://github.com/puckel/docker-airflow
 
 FROM osrf/ros:melodic-desktop-bionic
-LABEL version="1.1.3"
 LABEL maintainer="gauthiermartin86@gmail.com"
 LABEL description="This image is an integration of Airflow and ROS"
 
@@ -20,12 +18,8 @@ ENV AIRFLOW_HOME=/usr/local/airflow
 ENV SLUGIFY_USES_TEXT_UNIDECODE=yes
 
 # *********************************************
-# Creating airflow logs folder
-WORKDIR /tmp
-COPY requirements.txt requirements.txt
-COPY requirements3.txt requirements3.txt
 
-## Installing Airflow
+# Updating system
 RUN set -ex \
     && buildDeps=' \
     python-dev \
@@ -60,10 +54,6 @@ RUN set -ex \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow \
-    && pip install setuptools wheel \
-    && pip install -r requirements.txt \
-    && pip3 install setuptools wheel opencv-python \
-    && pip3 install -r requirements3.txt \
     && apt-get clean \
     && rm -rf \
     /var/lib/apt/lists/* \
@@ -72,6 +62,16 @@ RUN set -ex \
     /usr/share/man \
     /usr/share/doc \
     /usr/share/doc-base
+
+# Installing Airflow and other pythons requirements
+COPY requirements.txt /tmp/requirements.txt
+COPY requirements3.txt /tmp/requirements3.txt
+
+RUN pip install setuptools wheel && \
+    pip install -r /tmp/requirements.txt
+
+RUN pip3 install setuptools wheel opencv-python && \
+    pip3 install -r /tmp/requirements3.txt
 
 # Installing google cloud sdk
 RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" && \
@@ -92,17 +92,18 @@ RUN chown -R airflow: ${AIRFLOW_HOME}
 
 # *********************************************
 # Installing requirements for tensorflow object detection API
-RUN wget -c https://github.com/tensorflow/models/archive/v1.13.0.tar.gz -O - | tar -xz -C ${AIRFLOW_HOME}
-WORKDIR ${AIRFLOW_HOME}/models-1.13.0/research/
-RUN protoc object_detection/protos/*.proto --python_out=.
-ENV PYTHONPATH=$PYTHONPATH:${AIRFLOW_HOME}/models-1.13.0/research/:${AIRFLOW_HOME}/models-1.13.0/research/slim
-# Testing installation of the API
-RUN python object_detection/builders/model_builder_test.py
+# RUN wget -c https://github.com/tensorflow/models/archive/v1.13.0.tar.gz -O - | tar -xz -C ${AIRFLOW_HOME}
+# WORKDIR ${AIRFLOW_HOME}/models-1.13.0/research/
+# RUN protoc object_detection/protos/*.proto --python_out=.
+# ENV PYTHONPATH=$PYTHONPATH:${AIRFLOW_HOME}/models-1.13.0/research/:${AIRFLOW_HOME}/models-1.13.0/research/slim
+# # Testing installation of the API
+# RUN python object_detection/builders/model_builder_test.py
 
 # Copying our docker entrypoint
 COPY script/entrypoint.sh /entrypoint.sh
 
-EXPOSE 8080 5555 8793
+EXPOSE 8080
+# 5555 8793
 
 USER airflow
 WORKDIR ${AIRFLOW_HOME}
