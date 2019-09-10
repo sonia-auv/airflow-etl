@@ -1,6 +1,7 @@
-#Docker(ROS-Airflow-Google Cloud SDK)
+# S.O.N.I.A's ETL
 
-This module is S.O.N.I.A's object detection module using our vison server based on [ROS](http://www.ros.org/)
+This is S.O.N.I.A's ETL engine to orchestrate our machine learning jobs
+using [Apache-Airflow](https://airflow.apache.org/)
 
 ## Getting Started
 
@@ -135,7 +136,7 @@ chown -R [user]:[user] logs
 ```
 
 ## Built With
-
+- [Apache-Airflow](https://airflow.apache.org/) - Apache-Airflow
 - [ROS](http://www.ros.org/) - ROS Robotic Operating System
 - [TENSORFLOW](http://tensorflow.com) - Tensorflow Deep learning library
 
@@ -156,7 +157,3 @@ See also the list of [contributors](https://github.com/your/project/contributors
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-
-## Acknowledgments
-
-- This repository is highly inspred on [GustavZ repository](https://github.com/GustavZ?tab=repositories) Original part used from this project are still copyrighted by him. Such part have been identified in our code.
