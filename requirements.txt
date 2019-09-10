@@ -3,7 +3,7 @@
 # pyOpenSSL==17.5.0
 # ndg-httpsclient==0.5.0
 # pyasn1==0.4.2
-apache-airflow[crypto,postgres,gcp_api,slack]~=1.10.1
+apache-airflow[crypto,postgres,gcp_api,slack]~=1.10.5
 google-api-python-client~=1.17.11
 tensorflow==1.12
 # numpy==1.16.0
