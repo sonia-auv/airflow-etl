@@ -23,6 +23,7 @@ ENV SLUGIFY_USES_TEXT_UNIDECODE=yes
 # Creating airflow logs folder
 WORKDIR /tmp
 COPY requirements.txt requirements.txt
+COPY requirements3.txt requirements3.txt
 
 ## Installing Airflow
 RUN set -ex \
@@ -61,7 +62,8 @@ RUN set -ex \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow \
     && pip install setuptools wheel \
     && pip install -r requirements.txt \
-    && pip3 install setuptools wheel\
+    && pip3 install setuptools wheel opencv-python \
+    && pip3 install -r requirements3.txt \
     && apt-get clean \
     && rm -rf \
     /var/lib/apt/lists/* \

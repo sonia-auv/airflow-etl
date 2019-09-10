@@ -12,6 +12,8 @@ from airflow.operators.python_operator import PythonOperator, BranchPythonOperat
 from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.operators.slack_operator import SlackAPIPostOperator
 from airflow.models import Variable
+from airflow.hooks.base_hook import BaseHook
+from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
 from create_tf_record_from_labaled_data import create_tf_record_from_labaled_data
 from utils import file_ops
@@ -22,9 +24,11 @@ JSON_FOLDER = os.path.join(ROOT_FOLDER, "json/")
 TRAIN_JSON_FOLDER = os.path.join(ROOT_FOLDER, "train_json/")
 VOC_FOLDER = os.path.join(ROOT_FOLDER, "voc/")
 TF_RECORD_FOLDER = os.path.join(ROOT_FOLDER, "tfrecords/")
+IMG_FOLDER = os.path.join(ROOT_FOLDER, "images/")
 TRAIN_IMG_FOLDER = os.path.join(ROOT_FOLDER, "train_images/")
 LABEL_MAP_FOLDER = os.path.join(ROOT_FOLDER, "label_map/")
 TRAINVAL_FOLDER = os.path.join(ROOT_FOLDER, "trainval/")
+slack_webhook_token = BaseHook.get_connection('slack').password
 
 default_args = {
     "owner": "airflow",
@@ -63,11 +67,12 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
     if not os.path.exists(str(train_img_path)):
         os.mkdir(str(train_img_path))
 
-    task_notify_start = SlackAPIPostOperator(
+    task_notify_start = SlackWebhookOperator(
         task_id="task_notify_start",
-        channel="#airflow",
-        token="xoxp-6204505398-237247190021-380986807988-97ab748d120f996289f735c370cbac46",
-        text=" :dolphin:[PROCESSING] DAG (create_tf_record_from_labaled_data): create tf_record",
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        username='airflow',
+        message=" :dolphin:[PROCESSING] DAG (create_tf_record_from_labaled_data): create tf_record",
         dag=dag,
     )
 
@@ -78,8 +83,8 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
         dag=dag,
     )
 
-    command = "python3 -c \"import labelbox.exporters.voc_exporter as lb2pa; lb2pa.from_json(\'{json_file}\', \'{voc_dir}\', \'{image_dir}\', label_format='XY')\"".format(
-        json_file=json_path, voc_dir=voc_path, image_dir=train_img_path
+    command = "cd /usr/local/airflow/dags/create_tf_record_from_labaled_data/; python3 -c \"import lb.exporters.voc_exporter as lb2pa; lb2pa.from_json(\'{image_input_dir}\', \'{json_file}\', \'{voc_dir}\', \'{image_dir}\', label_format='XY')\"".format(
+        json_file=json_path, voc_dir=voc_path, image_dir=train_img_path, image_input_dir=IMG_FOLDER
     )
 
     task_json_to_voc = BashOperator(
@@ -104,11 +109,12 @@ with DAG("create_tf_record_from_labaled_data", catchup=False, default_args=defau
         task_id="task_voc_to_tf", bash_command=command, dag=dag
     )
 
-    task_notify_extraction_success = SlackAPIPostOperator(
+    task_notify_extraction_success = SlackWebhookOperator(
         task_id="task_notify_extraction_success",
-        channel="#airflow",
-        token="xoxp-6204505398-237247190021-380986807988-97ab748d120f996289f735c370cbac46",
-        text=":heavy_check_mark: [SUCCESS] DAG (create_tf_record_from_labaled_data): succeed to create tf_record",
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        username='airflow',
+        message=":heavy_check_mark: [SUCCESS] DAG (create_tf_record_from_labaled_data): succeed to create tf_record",
         trigger_rule="all_success",
         dag=dag,
     )

@@ -11,6 +11,8 @@ from airflow.operators.python_operator import PythonOperator, BranchPythonOperat
 from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.operators.slack_operator import SlackAPIPostOperator
 from airflow.models import Variable
+from airflow.hooks.base_hook import BaseHook
+from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
 from extract_img_from_ros_bag import extract_img_from_ros_bag
 from utils import file_ops
@@ -18,6 +20,7 @@ from utils import file_ops
 ROOT_FOLDER = "/usr/local/airflow/data/"
 BAG_FOLDER = os.path.join(ROOT_FOLDER, "bags")
 IMAGE_FOLDER = os.path.join(ROOT_FOLDER, "images")
+slack_webhook_token = BaseHook.get_connection('slack').password
 
 default_args = {
     "owner": "airflow",
@@ -43,11 +46,12 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
     images_path = os.path.join(IMAGE_FOLDER, dataset)
     bag_path = os.path.join(BAG_FOLDER, dataset) + ".bag"
 
-    task_notify_start = SlackAPIPostOperator(
+    task_notify_start = SlackWebhookOperator(
         task_id="task_notify_start",
-        channel="#airflow",
-        token="xoxp-6204505398-237247190021-380986807988-97ab748d120f996289f735c370cbac46",
-        text=" :dolphin:[PROCESSING] DAG (extract_image_from_bag): Extract images from ROS bag",
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        username='airflow',
+        message=" :dolphin:[PROCESSING] DAG (extract_image_from_bag): Extract images from ROS bag",
         dag=dag,
     )
 
@@ -66,11 +70,12 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
         dag=dag,
     )
 
-    task_notify_file_with_ext_failure = SlackAPIPostOperator(
+    task_notify_file_with_ext_failure = SlackWebhookOperator(
         task_id="task_notify_file_with_ext_failure",
-        channel="#airflow",
-        token="xoxp-6204505398-237247190021-380986807988-97ab748d120f996289f735c370cbac46",
-        text=":heavy_multiplication_x: [FAILURE] DAG (extract_image_from_ros_bag): The bag file {} was not detected".format(bag_path),
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        username='airflow',
+        message=":heavy_multiplication_x: [FAILURE] DAG (extract_image_from_ros_bag): The bag file {} was not detected".format(bag_path),
         dag=dag,
     )
 
@@ -87,11 +92,12 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
         trigger_rule="all_success",
         dag=dag,
     )
-    task_notify_extraction_success = SlackAPIPostOperator(
+    task_notify_extraction_success =  SlackWebhookOperator(
         task_id="task_notify_extraction_success",
-        channel="#airflow",
-        token="xoxp-6204505398-237247190021-380986807988-97ab748d120f996289f735c370cbac46",
-        text=":heavy_check_mark: [SUCCESS] DAG (extract_image_from_ros_bag): Images were successfully extracted from ROS bag",
+        http_conn_id='slack',
+        webhook_token=slack_webhook_token,
+        username='airflow',
+        message=":heavy_check_mark: [SUCCESS] DAG (extract_image_from_ros_bag): Images were successfully extracted from ROS bag",
         trigger_rule="all_success",
         dag=dag,
     )
