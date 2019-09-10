@@ -1,13 +1,13 @@
-Cython==0.28.2
-pytz==2018.4
-pyOpenSSL==17.5.0
-ndg-httpsclient==0.5.0
-pyasn1==0.4.2
-apache-airflow[crypto,postgres,gcp_api,slack]==1.10.1
-google-api-python-client
+# Cython==0.28.2
+# pytz==2018.4
+# pyOpenSSL==17.5.0
+# ndg-httpsclient==0.5.0
+# pyasn1==0.4.2
+apache-airflow[crypto,postgres,gcp_api,slack]~=1.10.1
+google-api-python-client~=1.17.11
 tensorflow==1.12
-numpy==1.16.0
-tqdm==4.23.4
-contextlib2
-matplotlib
-ipython
+# numpy==1.16.0
+# tqdm==4.23.4
+# contextlib2
+# matplotlib
+# ipython
