@@ -6,9 +6,9 @@ from graphqlclient import GraphQLClient
 # client.inject_token('Bearer <API-KEY-HERE>')
 
 
-def _get_client(api_url, api_key):
-    client = GraphQLClient(api_url)
-    client.inject_token(api_key)
+def _get_client(url, key):
+    client = GraphQLClient(url)
+    client.inject_token(key)
     return client
 
     # ontology = {
@@ -54,8 +54,8 @@ def _get_client(api_url, api_key):
 #     return res['data']['user']
 
 
-def create_dataset(api_url, api_key, name):
-    client = _get_client(api_url, api_key)
+def create_dataset(url, key, name):
+    client = _get_client(url, key)
     res_str = client.execute("""
     mutation CreateDatasetFromAPI($name: String!) {
       createDataset(data:{
@@ -70,8 +70,8 @@ def create_dataset(api_url, api_key, name):
     return res['data']['createDataset']['id']
 
 
-def create_project(name):
-    client = _get_client(api_url, api_key)
+def create_project(url, key, name):
+    client = _get_client(url, key)
     res_str = client.execute("""
     mutation CreateProjectFromAPI($name: String!) {
       createProject(data:{
@@ -87,7 +87,7 @@ def create_project(name):
 
 
 def complete_project_setup(project_id, dataset_id, labeling_frontend_id):
-    client = _get_client(api_url, api_key)
+    client = _get_client(url, key)
     res_str = client.execute("""
     mutation CompleteSetupOfProject($projectId: ID!, $datasetId: ID!, $labelingFrontendId: ID!){
       updateProject(
@@ -122,7 +122,7 @@ def complete_project_setup(project_id, dataset_id, labeling_frontend_id):
 
 
 def configure_interface_for_project(ontology, project_id, interface_id, organization_id):
-    client = _get_client(api_url, api_key)
+    client = _get_client(url, key)
     res_str = client.execute("""
       mutation ConfigureInterfaceFromAPI($projectId: ID!, $customizationOptions: String!, $labelingFrontendId: ID!, $organizationId: ID!) {
         createLabelingFrontendOptions(data:{
@@ -158,7 +158,7 @@ def configure_interface_for_project(ontology, project_id, interface_id, organiza
 
 
 def get_image_labeling_interface_id():
-    client = _get_client(api_url, api_key)
+    client = _get_client(url, key)
     res_str = client.execute("""
       query GetImageLabelingInterfaceId {
         labelingFrontends(where:{
@@ -174,7 +174,7 @@ def get_image_labeling_interface_id():
 
 
 # def create_datarow(row_data, external_id, dataset_id):
-#     client = _get_client(api_url, api_key)
+#     client = _get_client(url, key)
 #     res_str = client.execute("""
 #       mutation CreateDataRowFromAPI(
 #         $rowData: String!,
