@@ -1,3 +1,4 @@
+from airflow import DAG
 import json
 from graphqlclient import GraphQLClient
 
@@ -10,10 +11,32 @@ def _get_client(api_url, api_key):
     client.inject_token(api_key)
     return client
 
-
-def _create_ontology():
-    pass
-    # TODO: create anthology
+    # ontology = {
+    #     "tools": [
+    #         {
+    #             "name": "jiangshi",
+    #             "color": "#2A00FF",
+    #             "tool": "rectangle",
+    #             "featureSchemaId": "cb8ddbb0-e818-40c9-99f0-6a2ffc735d7b",
+    #             "schemaNodeId": "e129fbf9-f3db-4a91-a686-6d1a5658e97b"
+    #         },
+    #         {
+    #             "name": "draugr",
+    #             "color": "#FF0000",
+    #             "tool": "rectangle",
+    #             "featureSchemaId": "32ff2be3-9b01-4843-ab1f-d4d4f4b0acfc",
+    #             "schemaNodeId": "d6b7b829-4fb8-4cd4-a62c-c442237cc6f4"
+    #         },
+    #         {
+    #             "name": "vetalas",
+    #             "color": "#00FFFF",
+    #             "tool": "rectangle",
+    #             "featureSchemaId": "13319115-6011-49d9-8c16-55d75580fafc",
+    #             "schemaNodeId": "a771ffb8-012b-4824-a225-72819e860c3b"
+    #         }
+    #     ],
+    #     "classifications": []
+    # }
 
 # def me():
 #     res_str = client.execute("""
@@ -31,7 +54,7 @@ def _create_ontology():
 #     return res['data']['user']
 
 
-def createDataset(api_url, api_key, name):
+def create_dataset(api_url, api_key, name):
     client = _get_client(api_url, api_key)
     res_str = client.execute("""
     mutation CreateDatasetFromAPI($name: String!) {
@@ -47,7 +70,7 @@ def createDataset(api_url, api_key, name):
     return res['data']['createDataset']['id']
 
 
-def createProject(name):
+def create_project(name):
     client = _get_client(api_url, api_key)
     res_str = client.execute("""
     mutation CreateProjectFromAPI($name: String!) {
@@ -63,7 +86,7 @@ def createProject(name):
     return res['data']['createProject']['id']
 
 
-def completeSetupOfProject(project_id, dataset_id, labeling_frontend_id):
+def complete_project_setup(project_id, dataset_id, labeling_frontend_id):
     client = _get_client(api_url, api_key)
     res_str = client.execute("""
     mutation CompleteSetupOfProject($projectId: ID!, $datasetId: ID!, $labelingFrontendId: ID!){
@@ -178,3 +201,6 @@ def get_image_labeling_interface_id():
 
 #     res = json.loads(res_str)
 #     return res['data']['createDataRow']['id']
+"""
+ This DAG will handle project creation into labelbox
+"""
