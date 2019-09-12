@@ -15,13 +15,12 @@ after_script:
 before_deploy:
   - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
   - docker tag "$IMAGE_NAME" "${IMAGE_NAME}:latest"
-  - docker tag "$IMAGE_NAME" "${IMAGE_NAME}:${version}"
 deploy:
   - provider: script
-    script: docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:${version}"
-    on:
-      branch: master
-  - provider: script
-    script: docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:dev"
+    script: docker tag "$IMAGE_NAME" "${IMAGE_NAME}:dev" && docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:dev"
     on:
       branch: dev
+  - provider: script
+    script: docker tag "$IMAGE_NAME" "${IMAGE_NAME}:${version}" && docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:${version}"
+    on:
+      branch: master
