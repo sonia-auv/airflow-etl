@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 # Airflow
-ARG AIRFLOW_HOME=/usr/local/airflow
+ENV AIRFLOW_HOME=/usr/local/airflow
 
 # Define en_US.
 ENV LANGUAGE en_US.UTF-8
@@ -84,7 +84,7 @@ RUN pip install -r /tmp/requirements.txt
 
 # *********************************************
 # Creating airflow logs folder
-RUN mkdir ${AIRFLOW_HOME}/logs
+RUN mkdir -p ${AIRFLOW_HOME}/logs
 RUN mkdir -p ${AIRFLOW_HOME}/.config/gcloud/
 
 # *********************************************
