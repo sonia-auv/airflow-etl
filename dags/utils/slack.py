@@ -41,7 +41,8 @@ def dag_notify_start_slack_alert(dag):
         http_conn_id='slack',
         webhook_token=slack_webhook_token,
         message=slack_msg,
-        username='airflow')
+        username='airflow',
+        dag=dag)
     return success_alert
 
 
@@ -58,5 +59,6 @@ def dag_notify_success_slack_alert(dag):
         http_conn_id='slack',
         webhook_token=slack_webhook_token,
         message=slack_msg,
-        username='airflow')
+        username='airflow',
+        dag=dag)
     return success_alert

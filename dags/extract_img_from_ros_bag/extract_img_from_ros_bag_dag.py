@@ -43,42 +43,52 @@ default_args = {
 dag = DAG("extract_image_from_ros_bag",
           catchup=False, default_args=default_args)
 
-task_notify_start = SlackWebhookOperator(
-    task_id="task_notify_start",
-    http_conn_id='slack',
-    webhook_token=slack_webhook_token,
-    username='airflow',
-    message=" :dolphin:[PROCESSING] DAG (extract_image_from_bag): Extract images from ROS bag",
-    dag=dag,
-)
+# task_notify_start = SlackWebhookOperator(
+#     task_id="task_notify_start",
+#     http_conn_id='slack',
+#     webhook_token=slack_webhook_token,
+#     username='airflow',
+#     message=" :dolphin:[PROCESSING] DAG (extract_image_from_bag): Extract images from ROS bag",
+#     dag=dag,
+# )
 
-task_detect_bag = BranchPythonOperator(
+task_notify_start = slack.dag_notify_start_slack_alert(dag=dag)
+
+task_detect_bag = PythonOperator(
     task_id="task_detect_bag",
     python_callable=extract_img_from_ros_bag.bag_file_exists,
     op_kwargs={"bags_path": BAG_FOLDER},
-    trigger_rule="all_success",
     provide_context=True,
     dag=dag,
 )
 
-task_bag_not_detected = PythonOperator(
-    task_id="task_bag_not_detected",
-    python_callable=extract_img_from_ros_bag.bag_not_detected,
-    op_kwargs={"bags_path": BAG_FOLDER},
-    provide_context=True,
-    dag=dag,
-)
+# task_detect_bag = BranchPythonOperator(
+#     task_id="task_detect_bag",
+#     python_callable=extract_img_from_ros_bag.bag_file_exists,
+#     op_kwargs={"bags_path": BAG_FOLDER},
+#     trigger_rule="all_success",
+#     provide_context=True,
+#     dag=dag,
+# )
 
-task_notify_file_with_ext_failure = SlackWebhookOperator(
-    task_id="task_notify_file_with_ext_failure",
-    http_conn_id='slack',
-    webhook_token=slack_webhook_token,
-    username='airflow',
-    message=":heavy_multiplication_x: [FAILURE] DAG (extract_image_from_ros_bag): No bag file detected in".format(
-        BAG_FOLDER),
-    provide_context=True,
-    dag=dag,
-)
+# task_bag_not_detected = PythonOperator(
+#     task_id="task_bag_not_detected",
+#     python_callable=extract_img_from_ros_bag.bag_not_detected,
+#     op_kwargs={"bags_path": BAG_FOLDER},
+#     provide_context=True,
+#     dag=dag,
+# )
+
+# task_notify_file_with_ext_failure = SlackWebhookOperator(
+#     task_id="task_notify_file_with_ext_failure",
+#     http_conn_id='slack',
+#     webhook_token=slack_webhook_token,
+#     username='airflow',
+#     message=":heavy_multiplication_x: [FAILURE] DAG (extract_image_from_ros_bag): No bag file detected in".format(
+#         BAG_FOLDER),
+#     provide_context=True,
+#     dag=dag,
+# )
 
 task_extract_images_from_bag = DockerOperator(
     task_id="task_extract_images_from_bag",
@@ -94,19 +104,21 @@ task_extract_images_from_bag = DockerOperator(
     dag=dag,
 )
 
-task_notify_extraction_success = SlackWebhookOperator(
-    task_id="task_notify_extraction_success",
-    http_conn_id='slack',
-    webhook_token=slack_webhook_token,
-    username='airflow',
-    message=":heavy_check_mark: [SUCCESS] DAG (extract_image_from_ros_bag): Images were successfully extracted from ROS bag",
-    trigger_rule="all_success",
-    provide_context=True,
-    dag=dag,
-)
+task_notify_extraction_success = slack.dag_notify_success_slack_alert(dag=dag)
+# task_notify_extraction_success = SlackWebhookOperator(
+#     task_id="task_notify_extraction_success",
+#     http_conn_id='slack',
+#     webhook_token=slack_webhook_token,
+#     username='airflow',
+#     message=":heavy_check_mark: [SUCCESS] DAG (extract_image_from_ros_bag): Images were successfully extracted from ROS bag",
+#     trigger_rule="all_success",
+#     provide_context=True,
+#     dag=dag,
+# )
 
-task_notify_start.set_downstream(task_detect_bag)
-task_detect_bag.set_downstream(task_bag_not_detected)
-task_detect_bag.set_downstream(task_extract_images_from_bag)
-task_bag_not_detected.set_downstream(task_notify_file_with_ext_failure)
-task_extract_images_from_bag.set_downstream(task_notify_extraction_success)
+task_notify_start >> task_detect_bag >> task_extract_images_from_bag >> task_notify_extraction_success
+# task_notify_start.set_downstream(task_detect_bag)
+# task_detect_bag.set_downstream(task_bag_not_detected)
+# task_detect_bag.set_downstream(task_extract_images_from_bag)
+# task_bag_not_detected.set_downstream(task_notify_file_with_ext_failure)
+# task_extract_images_from_bag.set_downstream(task_notify_extraction_success)
