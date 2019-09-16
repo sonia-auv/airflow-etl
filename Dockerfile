@@ -14,7 +14,9 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 # Airflow
+ARG DOCKER_GROUP_ID=999
 ENV AIRFLOW_HOME=/usr/local/airflow
+
 
 # Define en_US.
 ENV LANGUAGE en_US.UTF-8
@@ -38,6 +40,9 @@ RUN set -ex \
     git \
     lsb-release \
     gnupg2 \
+    apt-transport-https \
+    ca-certificates \
+    software-properties-common \
     ' \
     && apt-get update -yqq \
     && apt-get upgrade -yqq \
@@ -54,7 +59,8 @@ RUN set -ex \
     && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
-    && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow \
+    && addgroup --gid ${DOCKER_GROUP_ID} docker \
+    && useradd -ms /bin/bash -d ${AIRFLOW_HOME} -G docker airflow \
     && pip install -U pip setuptools wheel \
     && export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
     && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list \
@@ -70,13 +76,6 @@ RUN set -ex \
     /usr/share/man \
     /usr/share/doc \
     /usr/share/doc-base
-
-# Installing google cloud sdk
-# RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" && \
-#     echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
-#     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
-#     apt-get update -y && apt-get install google-cloud-sdk -y
-
 
 # Installing Airflow and other pythons requirements
 COPY requirements.txt /tmp/requirements.txt
