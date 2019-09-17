@@ -60,5 +60,6 @@ def dag_notify_success_slack_alert(dag):
         webhook_token=slack_webhook_token,
         message=slack_msg,
         username='airflow',
+        trigger_rule="all_success",
         dag=dag)
     return success_alert
