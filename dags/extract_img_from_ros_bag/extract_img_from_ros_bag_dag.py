@@ -26,7 +26,7 @@ TOPICS = ["/provider_vision/Front_GigE/compressed",
           "/provider_vision/Bottom_GigE/compressed"]
 
 slack_webhook_token = BaseHook.get_connection('slack').password
-formated_topics = " ".join(TOPICS)
+
 
 default_args = {
     "owner": "airflow",
@@ -40,37 +40,45 @@ default_args = {
     "retries": 0,
 }
 
-dag = DAG("extract_image_from_ros_bag",
-          catchup=False, default_args=default_args)
+with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args) as dag:
 
-task_notify_start = slack.dag_notify_start_slack_alert(dag=dag)
+    formated_topics = " ".join(TOPICS)
 
-task_detect_bag = PythonOperator(
-    task_id="task_detect_bag",
-    python_callable=extract_img_from_ros_bag.bag_file_exists,
-    op_kwargs={"bag_path": BAG_FOLDER},
-    trigger_rule="all_success",
-    dag=dag,
-)
+    detect_bag = PythonOperator(
+        task_id="detect_bag",
+        python_callable=extract_img_from_ros_bag.bag_file_exists,
+        op_kwargs={"bag_path": BAG_FOLDER},
+        trigger_rule="all_success",
+        dag=dag,
+    )
 
-extract_image_command = f"python cli.py --media image --topics {formated_topics}"
+    bag_filename_syntax_matches_format = PythonOperator(
+        task_id="bag_filename_syntax_matches_format",
+        python_callable=extract_img_from_ros_bag.bag_filename_syntax_valid,
+        op_kwargs={"bag_path": BAG_FOLDER},
+        trigger_rule="all_success",
+        dag=dag,
+    )
 
-task_extract_images_from_bag = DockerOperator(
-    task_id="task_extract_images_from_bag",
-    image="soniaauvets/ros-bag-extractor:1.0.4",
-    force_pull=False,
-    command=extract_image_command,
-    api_version="1.37",
-    docker_url='unix://var/run/docker.sock',
-    volumes=['/home/parallels/Projects/docker-ros-airflow/data/bags:/home/sonia/bags',
-             '/home/parallels/Projects/docker-ros-airflow/data/images/:/home/sonia/images',
-             ],
-    network_mode='bridge',
-    provide_context=True,
-    trigger_rule="all_success",
-    dag=dag,
-)
+    extract_image_command = f"python cli.py --media image --topics {formated_topics}"
 
-task_notify_extraction_success = slack.dag_notify_success_slack_alert(dag=dag)
+    extract_images_from_bag = DockerOperator(
+        task_id="extract_images_from_bag",
+        image="soniaauvets/ros-bag-extractor:1.1.6",
+        force_pull=True,
+        auto_remove=True,
+        command=extract_image_command,
+        api_version="1.37",
+        docker_url='unix://var/run/docker.sock',
+        volumes=['/home/parallels/Projects/docker-ros-airflow/data/bags:/home/sonia/bags',
+                 '/home/parallels/Projects/docker-ros-airflow/data/images/:/home/sonia/images',
+                 ],
+        network_mode='bridge',
+        provide_context=True,
+        trigger_rule="all_success",
+        dag=dag,
+    )
 
-task_notify_start >> task_detect_bag >> task_extract_images_from_bag >> task_notify_extraction_success
+    notify_extraction_success = slack.dag_notify_success_slack_alert(dag=dag)
+
+    detect_bag >> bag_filename_syntax_matches_format >> extract_images_from_bag >> notify_extraction_success
