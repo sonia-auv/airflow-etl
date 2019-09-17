@@ -1,7 +1,0 @@
-{ 
-    "Dataset": "2018-07-31-11-41-35", 
-    "Bucket": "gs://example/", 
-    "Topics": "/provider_vision/Front_GigE/compressed,/provider_vision/Bottom_GigE/compressed",
-    "Dataset_to_Trainset": "dataset_1,dataset_2",
-    "Trainset": "example"
-}
