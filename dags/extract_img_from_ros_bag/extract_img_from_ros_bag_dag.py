@@ -71,7 +71,7 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
         api_version="1.37",
         docker_url='unix://var/run/docker.sock',
         volumes=['/home/parallels/Projects/docker-ros-airflow/data/bags:/home/sonia/bags',
-                 '/home/parallels/Projects/docker-ros-airflow/data/images/:/home/sonia/images',
+                 '/home/parallels/Projects/docker-ros-airflow/data/images/:/home/sonia/output/images',
                  ],
         network_mode='bridge',
         provide_context=True,
