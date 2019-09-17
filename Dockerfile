@@ -1,10 +1,8 @@
-# VERSION 0.0.1
 # AUTHOR: Martin Gauthier
 # DESCRIPTION: Airflow and ROS container
 # HIGHLY INSPIRED BY: https://github.com/puckel/docker-airflow
 
-FROM osrf/ros:melodic-desktop-bionic
-LABEL version="1.1.3"
+FROM python:3.7-slim-stretch
 LABEL maintainer="gauthiermartin86@gmail.com"
 LABEL description="This image is an integration of Airflow and ROS"
 
@@ -15,55 +13,61 @@ LABEL description="This image is an integration of Airflow and ROS"
 ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
-# Define Airflow specific environements var
+# Airflow
+ARG DOCKER_GROUP_ID=999
 ENV AIRFLOW_HOME=/usr/local/airflow
-ENV SLUGIFY_USES_TEXT_UNIDECODE=yes
+
+
+# Define en_US.
+ENV LANGUAGE en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
+ENV LC_CTYPE en_US.UTF-8
+ENV LC_MESSAGES en_US.UTF-8
 
 # *********************************************
-# Creating airflow logs folder
-WORKDIR /tmp
-COPY requirements.txt requirements.txt
-COPY requirements3.txt requirements3.txt
 
-## Installing Airflow
+# Installing google cloud sdk
+
 RUN set -ex \
     && buildDeps=' \
-    python-dev \
+    freetds-dev \
     libkrb5-dev \
     libsasl2-dev \
     libssl-dev \
     libffi-dev \
-    build-essential \
-    libblas-dev \
-    liblapack-dev \
     libpq-dev \
     git \
+    lsb-release \
+    gnupg2 \
+    apt-transport-https \
+    ca-certificates \
+    software-properties-common \
     ' \
     && apt-get update -yqq \
     && apt-get upgrade -yqq \
     && apt-get install -yqq --no-install-recommends \
     $buildDeps \
-    python-pip \
-    python3-pip\
-    python-requests \
+    freetds-bin \
+    build-essential \
+    default-libmysqlclient-dev \
     apt-utils \
-    openssh-client \
+    curl \
     rsync \
     netcat \
     locales \
-    protobuf-compiler \
-    python-pil \
-    python-lxml \
-    python-tk \
-    wget \
     && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
-    && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow \
-    && pip install setuptools wheel \
-    && pip install -r requirements.txt \
-    && pip3 install setuptools wheel opencv-python \
-    && pip3 install -r requirements3.txt \
+    && addgroup --gid ${DOCKER_GROUP_ID} docker \
+    && useradd -ms /bin/bash -d ${AIRFLOW_HOME} -G docker airflow \
+    && pip install -U pip setuptools wheel \
+    && export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
+    && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list \
+    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
+    && apt-get update -y && apt-get install google-cloud-sdk -y \
+    && apt-get purge --auto-remove -yqq $buildDeps \
+    && apt-get autoremove -yqq --purge \
     && apt-get clean \
     && rm -rf \
     /var/lib/apt/lists/* \
@@ -73,36 +77,25 @@ RUN set -ex \
     /usr/share/doc \
     /usr/share/doc-base
 
-# Installing google cloud sdk
-RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" && \
-    echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
-    apt-get update -y && apt-get install google-cloud-sdk -y
+# Installing Airflow and other pythons requirements
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
 
 # *********************************************
 # Creating airflow logs folder
-RUN mkdir ${AIRFLOW_HOME}/logs
+RUN mkdir -p ${AIRFLOW_HOME}/logs
 RUN mkdir -p ${AIRFLOW_HOME}/.config/gcloud/
 
 # *********************************************
 #Copying our airflow config and setting ownership
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
-# COPY config/webserver_config.py ${AIRFLOW_HOME}/webserver_config.py
 RUN chown -R airflow: ${AIRFLOW_HOME}
-
-# *********************************************
-# Installing requirements for tensorflow object detection API
-RUN wget -c https://github.com/tensorflow/models/archive/v1.13.0.tar.gz -O - | tar -xz -C ${AIRFLOW_HOME}
-WORKDIR ${AIRFLOW_HOME}/models-1.13.0/research/
-RUN protoc object_detection/protos/*.proto --python_out=.
-ENV PYTHONPATH=$PYTHONPATH:${AIRFLOW_HOME}/models-1.13.0/research/:${AIRFLOW_HOME}/models-1.13.0/research/slim
-# Testing installation of the API
-RUN python object_detection/builders/model_builder_test.py
 
 # Copying our docker entrypoint
 COPY script/entrypoint.sh /entrypoint.sh
 
-EXPOSE 8080 5555 8793
+EXPOSE 8080
+# 5555 8793
 
 USER airflow
 WORKDIR ${AIRFLOW_HOME}
