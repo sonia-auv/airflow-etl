@@ -77,7 +77,8 @@ docker pull ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} ||error "Er
 echo "#########################################################################"
 echo
 echo "Launching sonia-auv airflow docker containers"
-AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
+echo ${CURRENT_DIR}
+AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} HOST_ROOT_FOLDER=${CURRENT_DIR}  docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
 
 
 echo "#########################################################################"
