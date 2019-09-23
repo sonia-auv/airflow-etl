@@ -22,16 +22,12 @@ function error() {
 
 function collectArgs() {
     DAGS_DIR=$1
-    HOST_DIR=$2
 
     if [[ ! -z $DAGS_DIR ]]; then
         AIRFLOW_DAG_DIR=${DAGS_DIR}
     else
         AIRFLOW_DAG_DIR=$PWD/dags
     fi
-
-    if [[ ! $HOST_DIR ]]; then
-        error("Host directory path must be defined")
 }
 
 function checkRequiredFolderExist() {
@@ -75,13 +71,14 @@ echo
 echo "#########################################################################"
 echo
 echo "Generating '${AIRFLOW_DOCKER_IMAGE_NAME}' image using tag '${AIRFLOW_DOCKER_IMAGE_TAG}'"
-#docker pull ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} ||error "Error pulling '${AIRLFLOW_DOCKER_IMAGE_NAME}'"
+docker pull ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} ||error "Error pulling '${AIRLFLOW_DOCKER_IMAGE_NAME}'"
 
 
 echo "#########################################################################"
 echo
 echo "Launching sonia-auv airflow docker containers"
-AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} HOST_DIR=${CURRENT_DIR}  docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
+echo ${CURRENT_DIR}
+AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} HOST_ROOT_FOLDER=${CURRENT_DIR}  docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
 
 
 echo "#########################################################################"

@@ -19,13 +19,15 @@ from extract_img_from_ros_bag import extract_img_from_ros_bag
 from utils import file_ops
 from utils import slack
 
-HOST_ROOT_FOLDER = os.environ['HOST_DIR']
+
+HOST_ROOT_FOLDER = os.environ['HOST_ROOT_FOLDER']
 DATA_FOLDER = "/data/"
 DOCKER_ROOT_FOLDER = "/usr/local/airflow"
 DOCKER_BAG_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, DATA_FOLDER, "bags")
 DOCKER_IMAGE_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, DATA_FOLDER, "images")
-HOST_DIR_BAG_FOLDER = os.path.join(HOST_ROOT_FOLDER, DATA_FOLDER, "bags")
-HOST_DIR_IMAGE_FOLDER = os.path.join(HOST_ROOT_FOLDER, DATA_FOLDER, "images")
+HOST_DIR_BAG_FOLDER = HOST_ROOT_FOLDER + DATA_FOLDER + "bags"
+HOST_DIR_IMAGE_FOLDER = HOST_ROOT_FOLDER + DATA_FOLDER + "images"
+
 BAG_EXTENSION = ".bag"
 TOPICS = ["/provider_vision/Front_GigE/compressed",
           "/provider_vision/Bottom_GigE/compressed"]
@@ -45,24 +47,38 @@ default_args = {
     "retries": 0,
 }
 
+with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args) as dag:
 
-def create_subdag(bag_path, index, default_args):
-    dag = DAG(f"extract_image_from_ros_bag_{index}",
-              catchup=False, default_args=default_args)
+    formated_topics = " ".join(TOPICS)
+
+    detect_bag = PythonOperator(
+        task_id="detect_bag",
+        python_callable=extract_img_from_ros_bag.bag_file_exists,
+        op_kwargs={"bag_path": DOCKER_BAG_FOLDER},
+        trigger_rule="all_success",
+        dag=dag,
+    )
+
+    bag_filename_syntax_matches_format = PythonOperator(
+        task_id="bag_filename_syntax_matches_format",
+        python_callable=extract_img_from_ros_bag.bag_filename_syntax_valid,
+        op_kwargs={"bag_path": DOCKER_BAG_FOLDER},
+        trigger_rule="all_success",
+        dag=dag,
+    )
 
     extract_image_command = f"python cli.py --media image --topics {formated_topics}"
-    bag_filename = file_ops.get_filename(bag_path)
 
     extract_images_from_bag = DockerOperator(
         task_id="extract_images_from_bag",
-        image="soniaauvets/ros-bag-extractor:1.1.6",
+        image="soniaauvets/ros-bag-extractor:1.1.7",
         force_pull=True,
         auto_remove=True,
         command=extract_image_command,
         api_version="1.37",
         docker_url='unix://var/run/docker.sock',
         volumes=[
-            f"{HOST_DIR_BAG_FOLDER}/{bag_filename}:/home/sonia/bags/{bag_filename}",
+            f"{HOST_DIR_BAG_FOLDER}:/home/sonia/bags",
             f"{HOST_DIR_IMAGE_FOLDER}:/home/sonia/images",
         ],
         network_mode='bridge',
@@ -71,37 +87,6 @@ def create_subdag(bag_path, index, default_args):
         dag=dag,
     )
 
-
-with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args) as dag:
-
-    formated_topics = " ".join(TOPICS)
-
-    dynamic_task_list = []
-
-    detect_bag = PythonOperator(
-        task_id="detect_bag",
-        python_callable=extract_img_from_ros_bag.bag_file_exists,
-        op_kwargs={"bag_path": BAG_FOLDER},
-        trigger_rule="all_success",
-        dag=dag,
-    )
-
-    bag_filename_syntax_matches_format = PythonOperator(
-        task_id="bag_filename_syntax_matches_format",
-        python_callable=extract_img_from_ros_bag.bag_filename_syntax_valid,
-        op_kwargs={"bag_path": BAG_FOLDER},
-        trigger_rule="all_success",
-        dag=dag,
-    )
-
-    bags_path = file_ops.get_files_in_directory(
-        BAG_FOLDER, BAG_EXTENSION)
-
-    for index, image_path in enumerate(bags_path):
-        sub_dag = create_subdag(image_path, index)
-
-        task_list.append(sub_dag)
-
     notify_extraction_success = slack.dag_notify_success_slack_alert(dag=dag)
 
-    detect_bag >> bag_filename_syntax_matches_format >> dynamic_task_list >> notify_extraction_success
+    detect_bag >> bag_filename_syntax_matches_format >> extract_images_from_bag >> notify_extraction_success
