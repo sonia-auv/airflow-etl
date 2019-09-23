@@ -7,7 +7,7 @@ env:
 before_script:
   - version="$(cat VERSION)"
 script:
-  - docker build --pull --cache-from "$IMAGE_NAME" --tag "$IMAGE_NAME"  --build-arg LABELBOX_KEY=${LABELBOX_API_KEY}.
+  - docker build --pull --cache-from "$IMAGE_NAME" --tag "$IMAGE_NAME" --build-arg LABELBOX_KEY=${LABELBOX_API_KEY} .
 after_script:
   - docker images
 before_deploy:
