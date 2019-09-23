@@ -95,7 +95,6 @@ RUN chown -R airflow: ${AIRFLOW_HOME}
 COPY script/entrypoint.sh /entrypoint.sh
 
 EXPOSE 8080
-# 5555 8793
 
 USER airflow
 WORKDIR ${AIRFLOW_HOME}
