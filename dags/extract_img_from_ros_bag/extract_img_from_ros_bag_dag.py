@@ -19,9 +19,16 @@ from extract_img_from_ros_bag import extract_img_from_ros_bag
 from utils import file_ops
 from utils import slack
 
-ROOT_FOLDER = "/usr/local/airflow/data/"
-BAG_FOLDER = os.path.join(ROOT_FOLDER, "bags")
-IMAGE_FOLDER = os.path.join(ROOT_FOLDER, "images")
+
+HOST_ROOT_FOLDER = os.environ['HOST_ROOT_FOLDER']
+DATA_FOLDER = "/data/"
+DOCKER_ROOT_FOLDER = "/usr/local/airflow"
+DOCKER_BAG_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, DATA_FOLDER, "bags")
+DOCKER_IMAGE_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, DATA_FOLDER, "images")
+HOST_DIR_BAG_FOLDER = HOST_ROOT_FOLDER + DATA_FOLDER + "bags"
+HOST_DIR_IMAGE_FOLDER = HOST_ROOT_FOLDER + DATA_FOLDER + "images"
+
+BAG_EXTENSION = ".bag"
 TOPICS = ["/provider_vision/Front_GigE/compressed",
           "/provider_vision/Bottom_GigE/compressed"]
 
@@ -47,7 +54,7 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
     detect_bag = PythonOperator(
         task_id="detect_bag",
         python_callable=extract_img_from_ros_bag.bag_file_exists,
-        op_kwargs={"bag_path": BAG_FOLDER},
+        op_kwargs={"bag_path": DOCKER_BAG_FOLDER},
         trigger_rule="all_success",
         dag=dag,
     )
@@ -55,7 +62,7 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
     bag_filename_syntax_matches_format = PythonOperator(
         task_id="bag_filename_syntax_matches_format",
         python_callable=extract_img_from_ros_bag.bag_filename_syntax_valid,
-        op_kwargs={"bag_path": BAG_FOLDER},
+        op_kwargs={"bag_path": DOCKER_BAG_FOLDER},
         trigger_rule="all_success",
         dag=dag,
     )
@@ -64,15 +71,16 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
 
     extract_images_from_bag = DockerOperator(
         task_id="extract_images_from_bag",
-        image="soniaauvets/ros-bag-extractor:1.1.6",
+        image="soniaauvets/ros-bag-extractor:1.1.7",
         force_pull=True,
         auto_remove=True,
         command=extract_image_command,
         api_version="1.37",
         docker_url='unix://var/run/docker.sock',
-        volumes=['/home/parallels/Projects/docker-ros-airflow/data/bags:/home/sonia/bags',
-                 '/home/parallels/Projects/docker-ros-airflow/data/images/:/home/sonia/images',
-                 ],
+        volumes=[
+            f"{HOST_DIR_BAG_FOLDER}:/home/sonia/bags",
+            f"{HOST_DIR_IMAGE_FOLDER}:/home/sonia/images",
+        ],
         network_mode='bridge',
         provide_context=True,
         trigger_rule="all_success",

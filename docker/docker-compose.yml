@@ -26,8 +26,9 @@ services:
       - POSTGRES_HOST
       - POSTGRES_PORT
       - AIRFLOW_FERNET_KEY
+      - HOST_ROOT_FOLDER=${HOST_ROOT_FOLDER}
     volumes:
-      - $AIRFLOW_DAG_DIR:/usr/local/airflow/dags
+      - ${AIRFLOW_DAG_DIR}:/usr/local/airflow/dags
       - $PWD/data:/usr/local/airflow/data
       - $PWD/logs:/usr/local/airflow/logs
       - /var/run/docker.sock:/var/run/docker.sock
