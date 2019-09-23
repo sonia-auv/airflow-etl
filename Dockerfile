@@ -15,7 +15,9 @@ ENV TERM linux
 
 # Airflow
 ARG DOCKER_GROUP_ID=999
+ARG LABELBOX_KEY
 ENV AIRFLOW_HOME=/usr/local/airflow
+ENV LABELBOX_API_KEY=${LABELBOX_KEY}
 
 
 # Define en_US.
