@@ -20,7 +20,8 @@ def get_files_in_directory(dir_path, file_ext):
     :param file_ext: file extension
     :return: a list of filepath
     """
-    return glob(os.path.join(dir_path, '*', file_ext))
+    print(os.path.join(dir_path, file_ext))
+    return glob(os.path.join(dir_path, file_ext))
 
 
 def get_filename(file_path, with_extension=True):
@@ -30,10 +31,25 @@ def get_filename(file_path, with_extension=True):
     :param with_extension: Include extension into filename
     :return: Filename with or without extension
     """
+
+    print(file_path)
     if with_extension:
         return os.path.basename(file_path)
 
     return os.path.splitext(file_path)[0]
+
+
+def get_filenames_in_directory(dir_path, file_ext):
+    """
+    A Utility function to get the filenames of files in a given folder
+    with/without extension given a path
+    :param dir_path: A directory path
+    :param with_extension: Include extension into filename
+    :return: Filename with or without extension
+    """
+    filepaths = get_files_in_directory(dir_path, file_ext)
+
+    return [get_filename(f) for f in filepaths]
 
 
 def get_sub_folders_list(dir_path):
@@ -42,7 +58,7 @@ def get_sub_folders_list(dir_path):
     : param dir_path: folder path
     : return: list of sub folder path
     """
-    return glob(os.path.join(dir_path), '*', '')
+    return glob(os.path.join(dir_path, "*", ""))
 
 
 def gcs_path_to_local_path(images_path, gcs_path):
@@ -71,7 +87,7 @@ def concat_json(json_files, output_path):
     json_dict = []
     with open(output_path, "w") as out:
         for f in json_files:
-            with open(f, 'rb') as infile:
+            with open(f, "rb") as infile:
                 data = json.load(infile)
                 json_dict += data
         json.dump(json_dict, out)

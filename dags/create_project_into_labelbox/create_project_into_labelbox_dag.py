@@ -2,7 +2,7 @@
 """
  This DAG will handle project creation into labelbox
 """
-
+import os
 import logging
 
 from airflow import DAG
@@ -10,13 +10,15 @@ from airflow.operators.python_operator import PythonOperator, BranchPythonOperat
 
 from create_project_into_labelbox import create_dataset, create_project, complete_project_setup, configure_interface_for_project, get_image_labeling_interface_id
 
-ROOT_FOLDER = "/usr/local/airflow/data/"
-IMAGE_FOLDER = os.path.join(ROOT_FOLDER, "images")
+DATA_FOLDER = "/data/"
+DOCKER_ROOT_FOLDER = "/usr/local/airflow"
+DOCKER_IMAGE_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, DATA_FOLDER, "images")
+
+
 LABELBOX_API_URL = "https://api.labelbox.com/graphql"
-LABELBOX_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjamRrZzJiNXo5eWl3MDE1MDhwczRqOWU2Iiwib3JnYW5pemF0aW9uSWQiOiJjamRmODljNGxxdnNmMDEwMHBvdnFqeWppIiwiYXBpS2V5SWQiOiJjazBncWN4NXM1cWszMDk0NHNmdXV5NjE2IiwiaWF0IjoxNTY4Mjk1MDEzLCJleHAiOjIxOTk0NDcwMTN9.WJzExnJM4lTO3tvWQ867etmDKZWxbJTSW3nix0SKp5o"
+LABELBOX_API_KEY = os.environ["LABELBOX_API_KEY"]
 
 slack_webhook_token = BaseHook.get_connection('slack').password
-project_name = 'test'
 
 default_args = {
     "owner": "airflow",

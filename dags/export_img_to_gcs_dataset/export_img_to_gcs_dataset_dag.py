@@ -16,11 +16,15 @@ from airflow.hooks.base_hook import BaseHook
 from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
 from export_img_to_gcs_dataset import export_img_to_gcs_dataset
+from utils import slack
 
-ROOT_FOLDER = "/usr/local/airflow/data/"
-IMAGE_FOLDER = os.path.join(ROOT_FOLDER, "images")
-CSV_FOLDER = os.path.join(ROOT_FOLDER, "csv")
+DOCKER_ROOT_FOLDER = "/usr/local/airflow/data/"
+IMAGE_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, "images")
+CSV_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, "csv")
+JSON_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, "json")
 BASE_URL = "https://storage.cloud.google.com/"
+BUCKET_NAME = "robosub-2020"
+
 slack_webhook_token = BaseHook.get_connection('slack').password
 
 default_args = {
@@ -30,72 +34,71 @@ default_args = {
     "email": ["club.sonia@etsmtl.net"],
     "email_on_failure": False,
     "email_on_retry": False,
+    "on_failure_callback": slack.task_fail_slack_alert,
     "retries": 0,
 }
+
+
+
 
 
 with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_args) as dag:
 
     logging.info("Starting images export to google cloud storage")
 
-    storage_name = Variable.get("Bucket")
-    dataset = Variable.get("Dataset")
+    input_location = os.path.join(IMAGE_FOLDER)
+    output_location = "gs://" + BUCKET_NAME + "/"
 
-    # Build GCS path
-    gcs_images_path = BASE_URL + os.path.join(storage_name, dataset)
 
-    input_location = os.path.join(IMAGE_FOLDER, dataset)
-    output_location = "gs://" + os.path.join(storage_name, dataset)
 
-    task_notify_start = SlackWebhookOperator(
-        task_id="task_notify_start",
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        username='airflow',
-        message=" :dolphin:[PROCESSING] DAG (export_img_to_gcs_dataset): Exporting image to GCP dataset folder",
-        dag=dag,
-    )
+    # create_data_bucket = BashOperator(
+    #     task_id="create_data_bucket",
+    #     bash_command="gsutil mb " + output_location,
+    #     provide_context=True,
+    #     dag=dag
+    # )
 
-    command = "gsutil -m cp -r {src_folder} {dest_bucket}".format(
-        src_folder=input_location, dest_bucket=output_location
-    )
-    task_export_images_to_gcs_dataset = BashOperator(
-        task_id="task_export_images_to_gcs_dataset", bash_command=command, dag=dag
-    )
+    # set_data_bucket_acl = BashOperator(
+    #     task_id="set_data_bucket_acl",
+    #     bash_command="gsutil -m acl set -a public-read " + output_location,
+    #     provide_context=True,
+    #     trigger_rule="all_success",
+    #     dag=dag
+    # )
 
-    task_create_csv = PythonOperator(
-        task_id="task_create_csv",
-        python_callable=export_img_to_gcs_dataset.create_csv,
+    # export_images_to_gcs_dataset = BashOperator(
+    #     task_id="export_images_to_gcs",
+    #     bash_command="gsutil -m cp -r " + input_location + " " + output_location,
+    #     provide_context=True,
+    #     trigger_rule="all_success",
+    #     dag=dag
+    # )
+
+    # task_create_csv = PythonOperator(
+    #     task_id="create_csv_export_file",
+    #     python_callable=export_img_to_gcs_dataset.create_csv,
+    #     op_kwargs={
+    #         "images_path": IMAGE_FOLDER,
+    #         "gcs_images_path": output_location,
+    #         "csv_path": CSV_FOLDER
+    #     },
+    #     trigger_rule="all_success",
+    #     dag=dag,
+    # )
+
+    task_create_json = PythonOperator(
+        task_id="create_json_export_file",
+        python_callable=export_img_to_gcs_dataset.create_json,
         op_kwargs={
-            "images_path": IMAGE_FOLDER, 
-            "dataset": dataset,
-            "gcs_images_path": gcs_images_path,
-            "csv_path": CSV_FOLDER
+            "images_path": IMAGE_FOLDER,
+            "gcs_images_path": output_location,
+            "json_path": JSON_FOLDER
         },
-        dag=dag,
-    )
-
-    task_notify_export_success = SlackWebhookOperator(
-        task_id="task_notify_export_to_gcs_success",
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        username='airflow',
-        message=":heavy_check_mark: [SUCCESS] DAG (export_img_to_gcs_dataset): Images were exported to google cloud storage",
         trigger_rule="all_success",
         dag=dag,
     )
 
-    task_notify_export_failure = SlackWebhookOperator(
-        task_id="task_notify_export_to_gcs_failure",
-        http_conn_id='slack',
-        webhook_token=slack_webhook_token,
-        username='airflow',
-        message=":heavy_multiplication_x: [FAILURE] DAG (export_img_to_gcs_dataset): There was an error while exporting image to google cloud storage",
-        trigger_rule="one_failed",
-        dag=dag,
-    )
+    notify_upload_success = slack.dag_notify_success_slack_alert(dag=dag)
 
-    task_notify_start.set_downstream(task_export_images_to_gcs_dataset)
-    task_export_images_to_gcs_dataset.set_downstream(task_create_csv)
-    task_create_csv.set_downstream(task_notify_export_success)
-    task_create_csv.set_downstream(task_notify_export_failure)
+    # create_data_bucket >> set_data_bucket_acl >> export_images_to_gcs_dataset >> task_create_csv >>
+    task_create_json >> notify_upload_success

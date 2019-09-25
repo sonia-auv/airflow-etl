@@ -53,7 +53,6 @@ def _get_client(url, key):
 #     res = json.loads(res_str)
 #     return res['data']['user']
 
-
 def create_dataset(url, key, name):
     client = _get_client(url, key)
     res_str = client.execute("""
