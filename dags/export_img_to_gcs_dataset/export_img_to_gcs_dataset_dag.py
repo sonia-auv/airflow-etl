@@ -1,8 +1,6 @@
 """
  This DAG will upload image to google cloud storage dataset
 """
-
-import logging
 import os
 from datetime import datetime, timedelta
 
@@ -22,10 +20,9 @@ DOCKER_ROOT_FOLDER = "/usr/local/airflow/data/"
 IMAGE_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, "images")
 CSV_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, "csv")
 JSON_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, "json")
-BASE_URL = "https://storage.cloud.google.com/"
-BUCKET_NAME = "robosub-2020"
 
-slack_webhook_token = BaseHook.get_connection('slack').password
+slack_webhook_token = BaseHook.get_connection("slack").password
+bucket_name = Variable.get("bucket_name")
 
 default_args = {
     "owner": "airflow",
@@ -39,52 +36,36 @@ default_args = {
 }
 
 
-
-
-
 with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_args) as dag:
 
-    logging.info("Starting images export to google cloud storage")
-
     input_location = os.path.join(IMAGE_FOLDER)
-    output_location = "gs://" + BUCKET_NAME + "/"
+    output_location = f"gs://{bucket_name}/"
 
+    create_data_bucket_cmd = f"gsutil ls -b {output_location} || gsutil mb {output_location}"
+    create_data_bucket = BashOperator(
+        task_id="create_data_bucket",
+        bash_command=create_data_bucket_cmd,
+        provide_context=True,
+        dag=dag,
+    )
 
+    set_data_bucket_acl_cmd = f"gsutil -m acl set -a public-read {output_location}"
+    set_data_bucket_acl = BashOperator(
+        task_id="set_data_bucket_acl",
+        bash_command=set_data_bucket_acl_cmd,
+        provide_context=True,
+        trigger_rule="all_success",
+        dag=dag,
+    )
 
-    # create_data_bucket = BashOperator(
-    #     task_id="create_data_bucket",
-    #     bash_command="gsutil mb " + output_location,
-    #     provide_context=True,
-    #     dag=dag
-    # )
-
-    # set_data_bucket_acl = BashOperator(
-    #     task_id="set_data_bucket_acl",
-    #     bash_command="gsutil -m acl set -a public-read " + output_location,
-    #     provide_context=True,
-    #     trigger_rule="all_success",
-    #     dag=dag
-    # )
-
-    # export_images_to_gcs_dataset = BashOperator(
-    #     task_id="export_images_to_gcs",
-    #     bash_command="gsutil -m cp -r " + input_location + " " + output_location,
-    #     provide_context=True,
-    #     trigger_rule="all_success",
-    #     dag=dag
-    # )
-
-    # task_create_csv = PythonOperator(
-    #     task_id="create_csv_export_file",
-    #     python_callable=export_img_to_gcs_dataset.create_csv,
-    #     op_kwargs={
-    #         "images_path": IMAGE_FOLDER,
-    #         "gcs_images_path": output_location,
-    #         "csv_path": CSV_FOLDER
-    #     },
-    #     trigger_rule="all_success",
-    #     dag=dag,
-    # )
+    export_images_to_gcs_dataset_cmd = f"gsutil -m cp -r {input_location} {output_location}"
+    export_images_to_gcs_dataset = BashOperator(
+        task_id="export_images_to_gcs",
+        bash_command=export_images_to_gcs_dataset_cmd,
+        provide_context=True,
+        trigger_rule="all_success",
+        dag=dag,
+    )
 
     task_create_json = PythonOperator(
         task_id="create_json_export_file",
@@ -92,7 +73,7 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
         op_kwargs={
             "images_path": IMAGE_FOLDER,
             "gcs_images_path": output_location,
-            "json_path": JSON_FOLDER
+            "json_path": JSON_FOLDER,
         },
         trigger_rule="all_success",
         dag=dag,
@@ -100,5 +81,7 @@ with DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_arg
 
     notify_upload_success = slack.dag_notify_success_slack_alert(dag=dag)
 
-    # create_data_bucket >> set_data_bucket_acl >> export_images_to_gcs_dataset >> task_create_csv >>
-    task_create_json >> notify_upload_success
+    create_data_bucket >> set_data_bucket_acl >> [
+        export_images_to_gcs_dataset,
+        task_create_json,
+    ] >> notify_upload_success
