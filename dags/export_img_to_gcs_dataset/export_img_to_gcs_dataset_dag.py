@@ -5,13 +5,12 @@ import os
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.operators.bash_operator import BashOperator
-from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
 from airflow.contrib.sensors.file_sensor import FileSensor
-from airflow.operators.slack_operator import SlackAPIPostOperator
-from airflow.models import Variable
 from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
+from airflow.models import Variable
+from airflow.operators.bash_operator import BashOperator
+from airflow.operators.python_operator import BranchPythonOperator, PythonOperator
+from airflow.operators.slack_operator import SlackAPIPostOperator
 
 from export_img_to_gcs_dataset import export_img_to_gcs_dataset
 from utils import slack
