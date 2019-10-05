@@ -32,11 +32,10 @@ def get_filename(file_path, with_extension=True):
     :return: Filename with or without extension
     """
 
-    print(file_path)
     if with_extension:
         return os.path.basename(file_path)
 
-    return os.path.splitext(file_path)[0]
+    return os.path.splitext(os.path.basename(file_path))[0]
 
 
 def get_filenames_in_directory(dir_path, file_ext):

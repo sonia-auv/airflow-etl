@@ -31,6 +31,8 @@ ENV LC_MESSAGES en_US.UTF-8
 
 # Installing google cloud sdk
 
+
+
 RUN set -ex \
     && buildDeps=' \
     freetds-dev \
@@ -42,8 +44,6 @@ RUN set -ex \
     git \
     lsb-release \
     gnupg2 \
-    apt-transport-https \
-    ca-certificates \
     software-properties-common \
     ' \
     && apt-get update -yqq \
@@ -58,6 +58,8 @@ RUN set -ex \
     rsync \
     netcat \
     locales \
+    ca-certificates \
+    apt-transport-https \
     && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
@@ -97,6 +99,10 @@ RUN chown -R airflow: ${AIRFLOW_HOME}
 COPY script/entrypoint.sh /entrypoint.sh
 
 EXPOSE 8080
+
+# RUN update-ca-certificates --fresh
+# ENV SSL_CERT_DIR=/etc/ssl/certs
+
 
 USER airflow
 WORKDIR ${AIRFLOW_HOME}
