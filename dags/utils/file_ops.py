@@ -38,6 +38,19 @@ def get_filename(file_path, with_extension=True):
     return os.path.splitext(os.path.basename(file_path))[0]
 
 
+def get_object_name_from_file(file_path):
+    """
+    get_object_name_from_file
+
+    :param file_path: File path
+    :return: Object name
+    """
+    filename = os.path.splitext(os.path.basename(file_path))[0]
+    object_name = filename.split("_")[0]
+
+    return object_name
+
+
 def get_filenames_in_directory(dir_path, file_ext):
     """
     A Utility function to get the filenames of files in a given folder

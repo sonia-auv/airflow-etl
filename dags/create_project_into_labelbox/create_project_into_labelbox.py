@@ -51,9 +51,9 @@ def create_project(api_url, api_key, project_name, **kwargs):
 
     res = json.loads(res_str)
 
-    return res["data"]["createProject"]["id"]
-    # ti = kwargs["ti"]
-    # ti.xcom_push(key="labebox_project_id", value=res["data"]["createProject"]["id"])
+    # return res["data"]["createProject"]["id"]
+    ti = kwargs["ti"]
+    ti.xcom_push(key="labebox_project_id", value=res["data"]["createProject"]["id"])
 
 
 def create_dataset(api_url, api_key, project_name, dataset_name, **kwargs):
@@ -73,13 +73,13 @@ def create_dataset(api_url, api_key, project_name, dataset_name, **kwargs):
 
     res = json.loads(res_str)
 
-    return res["data"]["createDataset"]["id"]
+    # return res["data"]["createDataset"]["id"]
 
-    # ti = kwargs["ti"]
-    # ti.xcom_push(key="labebox_project_dataset_id", value=res["data"]["createProject"]["id"])
+    ti = kwargs["ti"]
+    ti.xcom_push(key="labebox_project_dataset_id", value=res["data"]["createProject"]["id"])
 
 
-def get_image_labeling_interface_id(api_url, api_key, project_name, dataset_name, **kwargs):
+def get_image_labeling_interface_id(api_url, api_key, **kwargs):
     client = __get_client(api_url, api_key)
     res_str = client.execute(
         """
@@ -97,14 +97,26 @@ def get_image_labeling_interface_id(api_url, api_key, project_name, dataset_name
 
     return res["data"]["labelingFrontends"][0]["id"]
 
-    # ti = kwargs["ti"]
-    # ti.xcom_push(
-    #     key="labebox_project_labeling_interface_id", value=res["data"]["labelingFrontends"][0]["id"]
-    # )
+    ti = kwargs["ti"]
+    ti.xcom_push(
+        key="labebox_project_labeling_interface_id", value=res["data"]["labelingFrontends"][0]["id"]
+    )
 
 
-def configure_interface_for_project(api_url, api_key, ontology, project_id, interface_id, **kwargs):
+def configure_interface_for_project(api_url, api_key, ontology, index, **kwargs):
     client = __get_client(api_url, api_key)
+    organization_id = __get_organization_id(client)
+
+    ti = kwargs["ti"]
+
+    project_id = ti.xcom_pull(
+        key="labebox_project_id", task_id=f"task_create_project_into_labelbox_{index}"
+    )
+    interface_id = ti.xcom_pull(
+        key="labebox_project_labeling_interface_id",
+        task_id=f"task_get_labeling_image_interface_from_labelbox_{index}",
+    )
+
     organization_id = __get_organization_id(client)
 
     res_str = client.execute(
@@ -141,11 +153,29 @@ def configure_interface_for_project(api_url, api_key, ontology, project_id, inte
     )
 
     res = json.loads(res_str)
-    return res["data"]["createLabelingFrontendOptions"]["id"]
+
+    ti.xcom_push(
+        key="labebox_labeling_frontend_id", value=res["data"]["createLabelingFrontendOptions"]["id"]
+    )
 
 
-def completeSetupOfProject(api_url, api_key, project_id, dataset_id, labeling_frontend_id):
+def complete_project_setup(api_url, api_key, index, **kwargs):
     client = __get_client(api_url, api_key)
+
+    ti = kwargs["ti"]
+
+    project_id = ti.xcom_pull(
+        key="labebox_project_id", task_id=f"task_create_project_into_labelbox_{index}"
+    )
+
+    dataset_id = ti.xcom_pull(
+        key="labebox_project_dataset_id", task_id=f"task_create_dataset_into_labelbox_{index}"
+    )
+
+    labeling_frontend_id = ti.xcom_pull(
+        key="labeling_frontend_id",
+        task_id=f"task_configure_labeling_interface_for_project_into_labelbox_{index}",
+    )
 
     res_str = client.execute(
         """
@@ -180,6 +210,8 @@ def completeSetupOfProject(api_url, api_key, project_id, dataset_id, labeling_fr
     )
 
     res = json.loads(res_str)
+
+    # TODO: Do we need the updated id here ????
     return res["data"]["updateProject"]["id"]
 
 
