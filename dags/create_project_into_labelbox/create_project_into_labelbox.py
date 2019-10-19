@@ -76,7 +76,7 @@ def create_dataset(api_url, api_key, project_name, dataset_name, **kwargs):
     # return res["data"]["createDataset"]["id"]
 
     ti = kwargs["ti"]
-    ti.xcom_push(key="labebox_project_dataset_id", value=res["data"]["createProject"]["id"])
+    ti.xcom_push(key="labebox_project_dataset_id", value=res["data"]["createDataset"]["id"])
 
 
 def get_image_labeling_interface_id(api_url, api_key, **kwargs):
@@ -95,8 +95,6 @@ def get_image_labeling_interface_id(api_url, api_key, **kwargs):
 
     res = json.loads(res_str)
 
-    return res["data"]["labelingFrontends"][0]["id"]
-
     ti = kwargs["ti"]
     ti.xcom_push(
         key="labebox_project_labeling_interface_id", value=res["data"]["labelingFrontends"][0]["id"]
@@ -110,15 +108,16 @@ def configure_interface_for_project(api_url, api_key, ontology, index, **kwargs)
     ti = kwargs["ti"]
 
     project_id = ti.xcom_pull(
-        key="labebox_project_id", task_id=f"task_create_project_into_labelbox_{index}"
+        key="labebox_project_id", task_ids=f"task_create_project_into_labelbox_{index}"
     )
     interface_id = ti.xcom_pull(
         key="labebox_project_labeling_interface_id",
-        task_id=f"task_get_labeling_image_interface_from_labelbox_{index}",
+        task_ids=f"task_get_labeling_image_interface_from_labelbox_{index}",
     )
 
     organization_id = __get_organization_id(client)
 
+    print(json.dumps(ontology))
     res_str = client.execute(
         """
       mutation ConfigureInterfaceFromAPI($projectId: ID!, $customizationOptions: String!, $labelingFrontendId: ID!, $organizationId: ID!) {
@@ -146,7 +145,7 @@ def configure_interface_for_project(api_url, api_key, ontology, index, **kwargs)
     """,
         {
             "projectId": project_id,
-            "customizationOptions": json.dumps(ontology),
+            "customizationOptions": ontology,
             "labelingFrontendId": interface_id,
             "organizationId": organization_id,
         },
@@ -154,9 +153,10 @@ def configure_interface_for_project(api_url, api_key, ontology, index, **kwargs)
 
     res = json.loads(res_str)
 
-    ti.xcom_push(
-        key="labebox_labeling_frontend_id", value=res["data"]["createLabelingFrontendOptions"]["id"]
-    )
+    # ti.xcom_push(
+    #     key="labelbox_labeling_frontend_id",
+    #     value=res["data"]["createLabelingFrontendOptions"]["id"],
+    # )
 
 
 def complete_project_setup(api_url, api_key, index, **kwargs):
@@ -165,17 +165,21 @@ def complete_project_setup(api_url, api_key, index, **kwargs):
     ti = kwargs["ti"]
 
     project_id = ti.xcom_pull(
-        key="labebox_project_id", task_id=f"task_create_project_into_labelbox_{index}"
+        key="labebox_project_id", task_ids=f"task_create_project_into_labelbox_{index}"
     )
 
     dataset_id = ti.xcom_pull(
-        key="labebox_project_dataset_id", task_id=f"task_create_dataset_into_labelbox_{index}"
+        key="labebox_project_dataset_id", task_ids=f"task_create_dataset_into_labelbox_{index}"
     )
 
     labeling_frontend_id = ti.xcom_pull(
-        key="labeling_frontend_id",
-        task_id=f"task_configure_labeling_interface_for_project_into_labelbox_{index}",
+        key="labebox_project_labeling_interface_id",
+        task_ids=f"task_get_labeling_image_interface_from_labelbox_{index}",
     )
+
+    print(project_id)
+    print(dataset_id)
+    print(labeling_frontend_id)
 
     res_str = client.execute(
         """
@@ -210,9 +214,9 @@ def complete_project_setup(api_url, api_key, index, **kwargs):
     )
 
     res = json.loads(res_str)
-
-    # TODO: Do we need the updated id here ????
-    return res["data"]["updateProject"]["id"]
+    print(res)
+    # # TODO: Do we need the updated id here ????
+    # return res["data"]["updateProject"]["id"]
 
 
 # def create_datarow(api_url, api_key, row_data, external_id, dataset_id):
@@ -245,25 +249,25 @@ def complete_project_setup(api_url, api_key, index, **kwargs):
 #     # return res["data"]["createDataRow"]["id"]
 
 
-# def bulk_import_datastet(dataSetId, jsonFileURL):
-#     """ returns true if upload was successful.
-#       See the documentation for more informaton:
-#       https://labelbox.com/docs/api/data-import
-#   """
-#     res_str = client.execute(
-#         """
-#   mutation AppendRowsToDataset($dataSetId : ID!, $jsonURL: String!){
-#     appendRowsToDataset(
-#       data:{
-#         datasetId: $dataSetId,
-#         jsonFileUrl: $jsonURL
-#       }
-#     ){
-#       accepted
-#     }
-#   } """,
-#         {"dataSetId": dataSetId, "jsonURL": jsonFileURL},
-#     )
+def bulk_import_datastet(dataSetId, jsonFileURL):
+    """ returns true if upload was successful.
+      See the documentation for more informaton:
+      https://labelbox.com/docs/api/data-import
+  """
+    res_str = client.execute(
+        """
+  mutation AppendRowsToDataset($dataSetId : ID!, $jsonURL: String!){
+    appendRowsToDataset(
+      data:{
+        datasetId: $dataSetId,
+        jsonFileUrl: $jsonURL
+      }
+    ){
+      accepted
+    }
+  } """,
+        {"dataSetId": dataSetId, "jsonURL": jsonFileURL},
+    )
 
-#     res = json.loads(res_str)
-#     return res["data"]["appendRowsToDataset"]["accepted"]
+    res = json.loads(res_str)
+    return res["data"]["appendRowsToDataset"]["accepted"]
