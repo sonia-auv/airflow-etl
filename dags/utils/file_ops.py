@@ -42,13 +42,31 @@ def get_object_name_from_file(file_path):
     """
     get_object_name_from_file
 
+    Get the object name from a file
+
     :param file_path: File path
     :return: Object name
     """
     filename = os.path.splitext(os.path.basename(file_path))[0]
-    object_name = filename.split("_")[0]
+    object_name = filename.split("_")[1]
 
     return object_name
+
+
+def get_ontology_name_from_file(file_path):
+    """
+    get_ontology_name_from_file
+
+    Get the ontology associated with this object
+
+    :param file_path: File location
+    :return: Ontology name
+    """
+
+    filename = os.path.splitext(os.path.basename(file_path))[0]
+    anthology_name = filename.split("_")[0]
+
+    return anthology_name
 
 
 def get_filenames_in_directory(dir_path, file_ext):
