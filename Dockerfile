@@ -100,10 +100,6 @@ COPY script/entrypoint.sh /entrypoint.sh
 
 EXPOSE 8080
 
-# RUN update-ca-certificates --fresh
-# ENV SSL_CERT_DIR=/etc/ssl/certs
-
-
 USER airflow
 WORKDIR ${AIRFLOW_HOME}
 ENTRYPOINT ["/entrypoint.sh"]
