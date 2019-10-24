@@ -19,9 +19,11 @@ DOCKER_ROOT_FOLDER = "/usr/local/airflow/data/"
 IMAGE_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, "images")
 CSV_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, "csv")
 JSON_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, "json")
+GCP_STORAGE_BASE = "https://storage.googleapis.com/"
 
 slack_webhook_token = BaseHook.get_connection("slack").password
 bucket_name = Variable.get("bucket_name")
+bucket_image_storage_url = GCP_STORAGE_BASE + bucket_name + "/images/"
 
 default_args = {
     "owner": "airflow",
@@ -41,12 +43,13 @@ input_image_location = IMAGE_FOLDER
 input_json_location = JSON_FOLDER
 output_location = f"gs://{bucket_name}/"
 
+
 create_data_bucket_cmd = f"gsutil ls -b {output_location} || gsutil mb {output_location}"
 create_data_bucket = BashOperator(
     task_id="create_data_bucket", bash_command=create_data_bucket_cmd, provide_context=True, dag=dag
 )
 
-set_data_bucket_acl_cmd = f"gsutil -m acl set -a public-read {output_location}"
+set_data_bucket_acl_cmd = f"gsutil defacl ch -u AllUsers:R {output_location}"
 set_data_bucket_acl = BashOperator(
     task_id="set_data_bucket_acl",
     bash_command=set_data_bucket_acl_cmd,
@@ -69,18 +72,9 @@ create_json = PythonOperator(
     python_callable=export_img_to_gcs_dataset.create_json,
     op_kwargs={
         "images_path": IMAGE_FOLDER,
-        "gcs_images_path": output_location,
+        "gcs_images_path": bucket_image_storage_url,
         "json_path": JSON_FOLDER,
     },
-    trigger_rule="all_success",
-    dag=dag,
-)
-
-export_json_to_gcs_dataset_cmd = f"gsutil -m cp -r {input_json_location} {output_location}"
-export_json_to_gcs_dataset = BashOperator(
-    task_id="export_json_to_gcs",
-    bash_command=export_json_to_gcs_dataset_cmd,
-    provide_context=True,
     trigger_rule="all_success",
     dag=dag,
 )
@@ -89,4 +83,4 @@ notify_upload_success = slack.dag_notify_success_slack_alert(dag=dag)
 
 create_data_bucket >> set_data_bucket_acl
 set_data_bucket_acl >> export_images_to_gcs_dataset >> notify_upload_success
-set_data_bucket_acl >> create_json >> export_json_to_gcs_dataset >> notify_upload_success
+set_data_bucket_acl >> create_json >> notify_upload_success
