@@ -1,5 +1,9 @@
 import json
+import uuid
+import logging
 from graphqlclient import GraphQLClient
+
+logging.getLogger().setLevel(logging.INFO)
 
 
 def __get_client(api_url, api_key):
@@ -28,10 +32,53 @@ def __get_user_info(client):
     return res["data"]["user"]
 
 
+def __get_users(client):
+    res_str = client.execute(
+        """
+    query GetUsersInformations {
+        users {
+          email
+        }
+      }
+    """
+    )
+
+    res = json.loads(res_str)
+    return res["data"]["user"]
+
+
 def __get_organization_id(client):
     user_info = __get_user_info(client)
     org_id = user_info["organization"]["id"]
     return org_id
+
+
+def __get_available_roles(client):
+
+    res_str = client.execute(
+        """
+     query GetAvailableRoles {
+        roles {
+          name
+          id
+        }
+      }
+    """
+    )
+
+    res = json.loads(res_str)
+
+    return res["data"]["roles"]
+
+
+def __get_specific_role_id(client, role_name):
+    roles = __get_available_roles(client)
+
+    for role in roles:
+        if role_name == role["name"]:
+            return role["id"]
+
+    raise ValueError(f"Role:{role_name} is invalid")
 
 
 def create_project(api_url, api_key, project_name, **kwargs):
@@ -72,8 +119,6 @@ def create_dataset(api_url, api_key, project_name, dataset_name, **kwargs):
     )
 
     res = json.loads(res_str)
-
-    # return res["data"]["createDataset"]["id"]
 
     ti = kwargs["ti"]
     ti.xcom_push(key="labebox_project_dataset_id", value=res["data"]["createDataset"]["id"])
@@ -153,11 +198,6 @@ def configure_interface_for_project(api_url, api_key, ontology, index, **kwargs)
 
     res = json.loads(res_str)
 
-    # ti.xcom_push(
-    #     key="labelbox_labeling_frontend_id",
-    #     value=res["data"]["createLabelingFrontendOptions"]["id"],
-    # )
-
 
 def complete_project_setup(api_url, api_key, index, **kwargs):
     client = __get_client(api_url, api_key)
@@ -176,10 +216,6 @@ def complete_project_setup(api_url, api_key, index, **kwargs):
         key="labebox_project_labeling_interface_id",
         task_ids=f"task_get_labeling_image_interface_from_labelbox_{index}",
     )
-
-    print(project_id)
-    print(dataset_id)
-    print(labeling_frontend_id)
 
     res_str = client.execute(
         """
@@ -214,60 +250,91 @@ def complete_project_setup(api_url, api_key, index, **kwargs):
     )
 
     res = json.loads(res_str)
-    print(res)
-    # # TODO: Do we need the updated id here ????
-    # return res["data"]["updateProject"]["id"]
+    # TODO: Handle error
+    print("Labelbox project setup complete")
 
 
-# def create_datarow(api_url, api_key, row_data, external_id, dataset_id):
-#     client = __get_client(api_url, api_key)
+def create_data_rows(api_url, api_key, index, json_file, **kwargs):
 
-#     res_str = client.execute(
-#         """
-#       mutation CreateDataRowFromAPI(
-#         $rowData: String!,
-#         $externalId: String,
-#         $datasetId: ID!
-#       ) {
-#         createDataRow(data:{
-#           externalId: $externalId,
-#           rowData: $rowData,
-#           dataset:{
-#             connect:{
-#               id: $datasetId
-#             }
-#           }
-#         }){
-#           id
-#         }
-#       }
-#     """,
-#         {"rowData": row_data, "externalId": external_id, "datasetId": dataset_id},
-#     )
+    with open(json_file) as f:
+        data = json.load(f)
 
-#     res = json.loads(res_str)
-#     # return res["data"]["createDataRow"]["id"]
+        client = __get_client(api_url, api_key)
+        ti = kwargs["ti"]
+
+        dataset_id = ti.xcom_pull(
+            key="labebox_project_dataset_id", task_ids=f"task_create_dataset_into_labelbox_{index}"
+        )
+
+        for item in data:
+
+            external_id = uuid.uuid1()
+
+            res_str = client.execute(
+                """
+              mutation createDataRowFromAPI(
+              $image_url: String!, $external_id: String!, $dataset_id: ID!) {
+                createDataRow(
+                  data: {
+                    rowData: $image_url
+                    externalId: $external_id
+                    dataset: { connect: { id: $dataset_id } }
+                  }
+                ){
+                id
+                }
+              }
+              """,
+                {
+                    "dataset_id": dataset_id,
+                    "image_url": item["imageUrl"],
+                    "external_id": str(external_id),
+                },
+            )
+
+            res = json.loads(res_str)
+            print(f"Data row added: {item['imageUrl']} - ID : {res['data']['createDataRow']['id']}")
+            # TODO: Handle error
+        print("Added all row to dataset")
 
 
-def bulk_import_datastet(dataSetId, jsonFileURL):
-    """ returns true if upload was successful.
-      See the documentation for more informaton:
-      https://labelbox.com/docs/api/data-import
-  """
-    res_str = client.execute(
-        """
-  mutation AppendRowsToDataset($dataSetId : ID!, $jsonURL: String!){
-    appendRowsToDataset(
-      data:{
-        datasetId: $dataSetId,
-        jsonFileUrl: $jsonURL
-      }
-    ){
-      accepted
-    }
-  } """,
-        {"dataSetId": dataSetId, "jsonURL": jsonFileURL},
+def add_users_to_project(api_url, api_key, index, users, **kwargs):
+    client = __get_client(api_url, api_key)
+    ti = kwargs["ti"]
+
+    project_id = ti.xcom_pull(
+        key="labebox_project_id", task_ids=f"task_create_project_into_labelbox_{index}"
     )
 
-    res = json.loads(res_str)
-    return res["data"]["appendRowsToDataset"]["accepted"]
+    for user in users:
+        email = user["email"]
+        name = user["name"]
+        role = user["role"]
+
+        print(f"Adding user to project: User:{name}, Email:{email}, Role:{role}")
+
+        role_id = __get_specific_role_id(client, role)
+
+        print(f"Adding user to project: User:{name}, Email:{email}, Role:{role}, RoleID: {role_id}")
+
+        res_str = client.execute(
+            """
+            mutation AddUserToProject {
+              addUserToProject(
+                data: {
+                  email: "$email",
+                  projectId: "$projectId",
+                  roleId: "$roleId"
+                }
+              ) {
+                user { email }
+                project { name }
+                role { name }
+              }
+              }
+            """,
+            {"email": email, "projectId": project_id, "roleId": role_id},
+        )
+
+        res = json.loads(res_str)
+        print(res)

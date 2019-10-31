@@ -21,9 +21,11 @@ DOCKER_JSON_FOLDER = os.path.join(DOCKER_DATA_FOLDER, "json")
 
 
 LABELBOX_API_URL = "https://api.labelbox.com/graphql"
-LABELBOX_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjamRrZzJiNXo5eWl3MDE1MDhwczRqOWU2Iiwib3JnYW5pemF0aW9uSWQiOiJjamRmODljNGxxdnNmMDEwMHBvdnFqeWppIiwiYXBpS2V5SWQiOiJjazEyMXdzbmswaGI5MDcyMWU3eHVxdnllIiwiaWF0IjoxNTY5NTg0MjA2LCJleHAiOjIyMDA3MzYyMDZ9.YESNVGf5d5U43uJCuOMPrAkt2jz_qV-hLtTiST5-Z8s"
+# LABELBOX_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjamRrZzJiNXo5eWl3MDE1MDhwczRqOWU2Iiwib3JnYW5pemF0aW9uSWQiOiJjamRmODljNGxxdnNmMDEwMHBvdnFqeWppIiwiYXBpS2V5SWQiOiJjazEyMXdzbmswaGI5MDcyMWU3eHVxdnllIiwiaWF0IjoxNTY5NTg0MjA2LCJleHAiOjIyMDA3MzYyMDZ9.YESNVGf5d5U43uJCuOMPrAkt2jz_qV-hLtTiST5-Z8s"
+LABELBOX_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjamRmODljc2JxbW9hMDEzMDg2cGM0eTFnIiwib3JnYW5pemF0aW9uSWQiOiJjamRmODljNGxxdnNmMDEwMHBvdnFqeWppIiwiYXBpS2V5SWQiOiJjazJkamVueW5sNjB6MDk0NGZnNWxjdjRpIiwiaWF0IjoxNTcyNDU1NTAzLCJleHAiOjIyMDM2MDc1MDN9.ENXBSGEAa7fTkMn0aMKBnTDdM4LxIqCnsmmquPY0Co8"
 
 slack_webhook_token = BaseHook.get_connection("slack").password
+bucket_name = Variable.get("bucket_name")
 
 ontology_front = {
     "tools": [
@@ -86,6 +88,21 @@ ontology_bottom = {
     "classifications": [],
 }
 
+org_user = {
+    "users": [
+        {"email": "club.sonia@etsmtl.net", "name": "Club Etudiant SONIA", "role": "Admin"},
+        {"email": " camille.sauvain.1@etsmtl.net", "name": "Camille Sauvain", "role": "Admin"},
+        {"email": "gauthiermartin86@gmail.com", "name": "Martin Gauthier", "role": "Admin"},
+        {
+            "email": "marc-antoine.couture.1@ens.etsmtl.ca",
+            "name": "Marc-Antoine Couture",
+            "role": "Team Manager",
+        },
+    ]
+}
+
+
+output_location = f"https://{bucket_name}/"
 
 default_args = {
     "owner": "airflow",
@@ -116,7 +133,6 @@ def get_proper_ontology(json_file):
 
 
 for index, json_file in enumerate(json_files):
-    print(json_file)
     create_project_task = PythonOperator(
         task_id="task_create_project_into_labelbox_" + str(index),
         python_callable=create_project_into_labelbox.create_project,
@@ -171,20 +187,30 @@ for index, json_file in enumerate(json_files):
         dag=dag,
     )
 
-    # create_dataset_task = PythonOperator(
-    #     task_id="task_create_data_into_project" + str(index),
-    #     python_callable=create_project_into_labelbox.create_dataset,
-    #     op_kwargs={
-    #         "api_key": LABELBOX_API_KEY,
-    #         "project_name": file_ops.get_filename(json_file, with_extension=False),
-    #         "dataset_name": file_ops.get_filename(json_file, with_extension=False),
-    #     },
-    #     dag=dag,
-    # )
+    bulk_import_dataset_task = PythonOperator(
+        task_id="bulk_import_data_into_dataset_" + str(index),
+        python_callable=create_project_into_labelbox.create_data_rows,
+        provide_context=True,
+        op_kwargs={
+            "api_url": LABELBOX_API_URL,
+            "api_key": LABELBOX_API_KEY,
+            "index": index,
+            "json_file": json_file,
+        },
+        dag=dag,
+    )
 
-    start_task >> create_project_task >> create_project_dataset_task >> get_labeling_image_interface_task >> configure_interface_for_project_task >> complete_labelbox_project_setup_task >> end_task
-    # create_project_task.set_upstream(start_task)
+    add_user_to_project_task = PythonOperator(
+        task_id="add_usr_to_project_" + str(index),
+        python_callable=create_project_into_labelbox.add_users_to_project,
+        provide_context=True,
+        op_kwargs={
+            "api_url": LABELBOX_API_URL,
+            "api_key": LABELBOX_API_KEY,
+            "index": index,
+            "users": org_user["users"],
+        },
+        dag=dag,
+    )
 
-    # # create_project_dataset_task.set_downstream(create_project_dataset_task)
-    # create_project_task.set_downstream(end_task)
-    # create_dataset_task.set_downstream(end_task)
+    start_task >> create_project_task >> create_project_dataset_task >> get_labeling_image_interface_task >> configure_interface_for_project_task >> complete_labelbox_project_setup_task >> bulk_import_dataset_task >> add_user_to_project_task >> end_task
