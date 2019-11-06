@@ -21,7 +21,6 @@ DOCKER_JSON_FOLDER = os.path.join(DOCKER_DATA_FOLDER, "json")
 
 
 LABELBOX_API_URL = "https://api.labelbox.com/graphql"
-# LABELBOX_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjamRrZzJiNXo5eWl3MDE1MDhwczRqOWU2Iiwib3JnYW5pemF0aW9uSWQiOiJjamRmODljNGxxdnNmMDEwMHBvdnFqeWppIiwiYXBpS2V5SWQiOiJjazEyMXdzbmswaGI5MDcyMWU3eHVxdnllIiwiaWF0IjoxNTY5NTg0MjA2LCJleHAiOjIyMDA3MzYyMDZ9.YESNVGf5d5U43uJCuOMPrAkt2jz_qV-hLtTiST5-Z8s"
 LABELBOX_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjamRmODljc2JxbW9hMDEzMDg2cGM0eTFnIiwib3JnYW5pemF0aW9uSWQiOiJjamRmODljNGxxdnNmMDEwMHBvdnFqeWppIiwiYXBpS2V5SWQiOiJjazJuZzR3aGNnMWM1MDk0NHIyNXljM2R6IiwiaWF0IjoxNTczMDU0NjcxLCJleHAiOjIyMDQyMDY2NzF9.l9flIjZaSmXHomMrR7BHmIYeFoN8Q3t9Q0Lfka6_tq8"
 
 slack_webhook_token = BaseHook.get_connection("slack").password
@@ -45,19 +44,6 @@ ontology_bottom = {
     ],
     "classifications": [],
 }
-
-# org_user = {
-#     "users": [
-#         {"email": "club.sonia@etsmtl.net", "name": "Club Etudiant SONIA", "role": "Admin"},
-#         {"email": " camille.sauvain.1@etsmtl.net", "name": "Camille Sauvain", "role": "Admin"},
-#         {"email": "gauthiermartin86@gmail.com", "name": "Martin Gauthier", "role": "Admin"},
-#         {
-#             "email": "marc-antoine.couture.1@ens.etsmtl.ca",
-#             "name": "Marc-Antoine Couture",
-#             "role": "Team Manager",
-#         },
-#     ]
-# }
 
 
 output_location = f"https://{bucket_name}/"
