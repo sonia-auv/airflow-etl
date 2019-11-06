@@ -46,18 +46,18 @@ ontology_bottom = {
     "classifications": [],
 }
 
-org_user = {
-    "users": [
-        {"email": "club.sonia@etsmtl.net", "name": "Club Etudiant SONIA", "role": "Admin"},
-        {"email": " camille.sauvain.1@etsmtl.net", "name": "Camille Sauvain", "role": "Admin"},
-        {"email": "gauthiermartin86@gmail.com", "name": "Martin Gauthier", "role": "Admin"},
-        {
-            "email": "marc-antoine.couture.1@ens.etsmtl.ca",
-            "name": "Marc-Antoine Couture",
-            "role": "Team Manager",
-        },
-    ]
-}
+# org_user = {
+#     "users": [
+#         {"email": "club.sonia@etsmtl.net", "name": "Club Etudiant SONIA", "role": "Admin"},
+#         {"email": " camille.sauvain.1@etsmtl.net", "name": "Camille Sauvain", "role": "Admin"},
+#         {"email": "gauthiermartin86@gmail.com", "name": "Martin Gauthier", "role": "Admin"},
+#         {
+#             "email": "marc-antoine.couture.1@ens.etsmtl.ca",
+#             "name": "Marc-Antoine Couture",
+#             "role": "Team Manager",
+#         },
+#     ]
+# }
 
 
 output_location = f"https://{bucket_name}/"
@@ -158,17 +158,4 @@ for index, json_file in enumerate(json_files):
         dag=dag,
     )
 
-    add_user_to_project_task = PythonOperator(
-        task_id="add_usr_to_project_" + str(index),
-        python_callable=create_project_into_labelbox.add_users_to_project,
-        provide_context=True,
-        op_kwargs={
-            "api_url": LABELBOX_API_URL,
-            "api_key": LABELBOX_API_KEY,
-            "index": index,
-            "users": org_user["users"],
-        },
-        dag=dag,
-    )
-
-    start_task >> create_project_task >> create_project_dataset_task >> get_labeling_image_interface_task >> configure_interface_for_project_task >> complete_labelbox_project_setup_task >> bulk_import_dataset_task >> add_user_to_project_task >> end_task
+    start_task >> create_project_task >> create_project_dataset_task >> get_labeling_image_interface_task >> configure_interface_for_project_task >> complete_labelbox_project_setup_task >> bulk_import_dataset_task >> end_task
