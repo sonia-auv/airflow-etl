@@ -22,68 +22,26 @@ DOCKER_JSON_FOLDER = os.path.join(DOCKER_DATA_FOLDER, "json")
 
 LABELBOX_API_URL = "https://api.labelbox.com/graphql"
 # LABELBOX_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjamRrZzJiNXo5eWl3MDE1MDhwczRqOWU2Iiwib3JnYW5pemF0aW9uSWQiOiJjamRmODljNGxxdnNmMDEwMHBvdnFqeWppIiwiYXBpS2V5SWQiOiJjazEyMXdzbmswaGI5MDcyMWU3eHVxdnllIiwiaWF0IjoxNTY5NTg0MjA2LCJleHAiOjIyMDA3MzYyMDZ9.YESNVGf5d5U43uJCuOMPrAkt2jz_qV-hLtTiST5-Z8s"
-LABELBOX_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjamRmODljc2JxbW9hMDEzMDg2cGM0eTFnIiwib3JnYW5pemF0aW9uSWQiOiJjamRmODljNGxxdnNmMDEwMHBvdnFqeWppIiwiYXBpS2V5SWQiOiJjazJkamVueW5sNjB6MDk0NGZnNWxjdjRpIiwiaWF0IjoxNTcyNDU1NTAzLCJleHAiOjIyMDM2MDc1MDN9.ENXBSGEAa7fTkMn0aMKBnTDdM4LxIqCnsmmquPY0Co8"
+LABELBOX_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjamRmODljc2JxbW9hMDEzMDg2cGM0eTFnIiwib3JnYW5pemF0aW9uSWQiOiJjamRmODljNGxxdnNmMDEwMHBvdnFqeWppIiwiYXBpS2V5SWQiOiJjazJuZzR3aGNnMWM1MDk0NHIyNXljM2R6IiwiaWF0IjoxNTczMDU0NjcxLCJleHAiOjIyMDQyMDY2NzF9.l9flIjZaSmXHomMrR7BHmIYeFoN8Q3t9Q0Lfka6_tq8"
 
 slack_webhook_token = BaseHook.get_connection("slack").password
 bucket_name = Variable.get("bucket_name")
 
 ontology_front = {
     "tools": [
-        {
-            "color": "Green",
-            "tool": "rectangle",
-            "name": "vetalas",
-            "featureSchemaId": "d8c76233-7572-413f-9ace-fbb367243ebe",
-            "schemaNodeId": "95ea4e48-501f-40ea-b947-0f8b57af93d6",
-        },
-        {
-            "color": "Yellow",
-            "tool": "rectangle",
-            "name": "jiangshi",
-            "featureSchemaId": "496bc308-db6d-491c-8ebb-539441109289",
-            "schemaNodeId": "edb01a9f-e30e-410e-bd76-7724ddcc3973",
-        },
-        {
-            "color": "Magenta",
-            "tool": "rectangle",
-            "name": "vampire",
-            "featureSchemaId": "21de612e-2f45-4519-b37a-f4ae0630f4e2",
-            "schemaNodeId": "7e9d81fe-b0b5-4cf9-9830-78451c17522a",
-        },
-        {
-            "color": "Pink",
-            "tool": "rectangle",
-            "name": "draugr",
-            "featureSchemaId": "7e342bdc-dd99-47ec-b6db-90a46c1f3534",
-            "schemaNodeId": "f3175c8f-90fa-49f1-8981-02119a5ac554",
-        },
-        {
-            "color": "Cornsilk",
-            "tool": "rectangle",
-            "name": "answag",
-            "featureSchemaId": "27f61404-dd19-4928-8c2c-ebfcb58dae2f",
-            "schemaNodeId": "72bdcfa4-8062-4878-a4b9-b7f69414c808",
-        },
+        {"color": "Green", "tool": "rectangle", "name": "vetalas"},
+        {"color": "Yellow", "tool": "rectangle", "name": "jiangshi"},
+        {"color": "Magenta", "tool": "rectangle", "name": "vampire"},
+        {"color": "Pink", "tool": "rectangle", "name": "draugr"},
+        {"color": "Cornsilk", "tool": "rectangle", "name": "answag"},
     ],
     "classifications": [],
 }
 
 ontology_bottom = {
     "tools": [
-        {
-            "color": "Red",
-            "tool": "rectangle",
-            "name": "bat",
-            "featureSchemaId": "8432e791-c890-4a96-90cc-557f89912df6",
-            "schemaNodeId": "d925ae8f-203f-41e5-a5c4-33f688ec0f7e",
-        },
-        {
-            "color": "Blue",
-            "tool": "rectangle",
-            "name": "wolf",
-            "featureSchemaId": "18c48c89-5c79-4273-ab1f-36d7f2e8cc29",
-            "schemaNodeId": "4277c26b-5f12-43cd-a39e-8826dccf0e56",
-        },
+        {"color": "Red", "tool": "rectangle", "name": "bat"},
+        {"color": "Blue", "tool": "rectangle", "name": "wolf"},
     ],
     "classifications": [],
 }

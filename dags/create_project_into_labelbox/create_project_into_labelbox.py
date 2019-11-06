@@ -190,13 +190,14 @@ def configure_interface_for_project(api_url, api_key, ontology, index, **kwargs)
     """,
         {
             "projectId": project_id,
-            "customizationOptions": ontology,
+            "customizationOptions": json.dumps(ontology),
             "labelingFrontendId": interface_id,
             "organizationId": organization_id,
         },
     )
 
     res = json.loads(res_str)
+    print(res)
 
 
 def complete_project_setup(api_url, api_key, index, **kwargs):
