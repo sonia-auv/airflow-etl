@@ -105,18 +105,31 @@ def generate_trainval_file(annotation_dir, output_dir, output_file):
     os.makedirs(output_dir)
 
     files = []
-    with open(output_file, "w") as fd:
+    file_path = os.path.join(output_dir, f"{output_file}.txt")
+    with open(file_path, "w") as fd:
         for r, d, f in os.walk(annotation_dir):
             for file in f:
                 line = file.split(".")[0]
                 fd.write(line + "\n")
 
 
-def generate_labelmap_file(annotation_dir, output_dir):
-    files = file_ops.get_files_in_directory(annotation_dir)
-    for xml_file in files:
-        print(xml_file)
-        tree = ET.parse(xml_file)
-        root = tree.getroot()
-        for obj in root.findall("object"):
-            listing.find("name")
+def generate_labelmap_file(labels, output_dir, output_file):
+    data = []
+    # first_line = "item {\n"
+    # second_line = "  id: {}\n"
+    # third_line = "  name: '{}'\n"
+    # fourth_line = "}"
+
+    for index, label_name in enumerate(labels):
+        first_line = "item {\n"
+        second_line = "  id: {}\n".format(index + 1)
+        third_line = "  name: '{}'\n".format(label_name)
+        fourth_line = "}\n"
+
+        temp = first_line + second_line + third_line + fourth_line
+        data.append(temp)
+
+    file_path = os.path.join(output_dir, f"{output_file}.pbtxt")
+
+    with open(file_path, "w") as label_file:
+        label_file.writelines(data)
