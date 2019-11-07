@@ -157,7 +157,7 @@ def create_tf_record(output_filename, label_map_dict, annotations_dir, image_dir
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--label_map_file", type=str, required=True, help="Path to label_map.pbtxt file."
+        "--label_map_file", type=str, required=True, help="Path     to label_map.pbtxt file."
     )
     parser.add_argument("--image_dir", type=str, required=True, help="Path to images directory.")
     parser.add_argument(

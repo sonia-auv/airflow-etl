@@ -1,9 +1,13 @@
-import os
 import json
+import os
 import shutil
 import time
 import urllib.request
+from xml.etree import ElementTree as ET
+
 from graphqlclient import GraphQLClient
+
+from utils import file_ops
 
 
 def __get_client(api_url, api_key):
@@ -76,11 +80,16 @@ def fetch_project_labels(api_url, api_key, project_name, output_folder):
     with urllib.request.urlopen(export_job["downloadUrl"]) as url:
         labels = json.loads(url.read().decode())
         print(labels)
-        folder = os.path.join(output_folder, project_name)
+        folder = os.path.join(output_folder, "input", project_name)
+        output_folder = os.path.join(output_folder, "output", project_name)
 
         if os.path.exists(folder):
             shutil.rmtree(folder)
-        os.mkdir(folder)
+        os.makedirs(folder)
+
+        if os.path.exists(output_folder):
+            shutil.rmtree(output_folder)
+        os.makedirs(output_folder)
 
         json_file = f"{folder}/{project_name}.json"
         if os.path.exists(json_file):
@@ -88,3 +97,26 @@ def fetch_project_labels(api_url, api_key, project_name, output_folder):
 
         with open(json_file, "w", encoding="utf-8") as f:
             json.dump(labels, f, ensure_ascii=False, indent=4)
+
+
+def generate_trainval_file(annotation_dir, output_dir, output_file):
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+    os.makedirs(output_dir)
+
+    files = []
+    with open(output_file, "w") as fd:
+        for r, d, f in os.walk(annotation_dir):
+            for file in f:
+                line = file.split(".")[0]
+                fd.write(line + "\n")
+
+
+def generate_labelmap_file(annotation_dir, output_dir):
+    files = file_ops.get_files_in_directory(annotation_dir)
+    for xml_file in files:
+        print(xml_file)
+        tree = ET.parse(xml_file)
+        root = tree.getroot()
+        for obj in root.findall("object"):
+            listing.find("name")
