@@ -151,7 +151,7 @@ def create_tf_record(output_filename, label_map_dict, annotations_dir, image_dir
         if tf_example != None:
             writer.write(tf_example.SerializeToString())
     writer.close()
-    logging.info(f"TF Record generated in{os.path.exists(output_filename)}")
+    logging.info(f"TF Record generated : {output_filename}")
 
 
 def parse_args():
