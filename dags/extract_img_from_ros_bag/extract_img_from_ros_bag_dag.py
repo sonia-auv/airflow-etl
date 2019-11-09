@@ -13,14 +13,13 @@ from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.operators.slack_operator import SlackAPIPostOperator
 from airflow.models import Variable
 from airflow.hooks.base_hook import BaseHook
-from airflow.contrib.operators.slack_webhook_operator import SlackWebhookOperator
 
 from extract_img_from_ros_bag import extract_img_from_ros_bag
 from utils import file_ops
 from utils import slack
 
 
-HOST_ROOT_FOLDER = os.environ['HOST_ROOT_FOLDER']
+HOST_ROOT_FOLDER = os.environ["HOST_ROOT_FOLDER"]
 DATA_FOLDER = "/data/"
 DOCKER_ROOT_FOLDER = "/usr/local/airflow"
 DOCKER_BAG_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, DATA_FOLDER, "bags")
@@ -29,10 +28,9 @@ HOST_DIR_BAG_FOLDER = HOST_ROOT_FOLDER + DATA_FOLDER + "bags"
 HOST_DIR_IMAGE_FOLDER = HOST_ROOT_FOLDER + DATA_FOLDER + "images"
 
 BAG_EXTENSION = ".bag"
-TOPICS = ["/provider_vision/Front_GigE/compressed",
-          "/provider_vision/Bottom_GigE/compressed"]
+TOPICS = ["/provider_vision/Front_GigE/compressed", "/provider_vision/Bottom_GigE/compressed"]
 
-slack_webhook_token = BaseHook.get_connection('slack').password
+slack_webhook_token = BaseHook.get_connection("slack").password
 
 
 default_args = {
@@ -76,12 +74,12 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
         auto_remove=True,
         command=extract_image_command,
         api_version="1.37",
-        docker_url='unix://var/run/docker.sock',
+        docker_url="unix://var/run/docker.sock",
         volumes=[
             f"{HOST_DIR_BAG_FOLDER}:/home/sonia/bags",
             f"{HOST_DIR_IMAGE_FOLDER}:/home/sonia/images",
         ],
-        network_mode='bridge',
+        network_mode="bridge",
         provide_context=True,
         trigger_rule="all_success",
         dag=dag,
