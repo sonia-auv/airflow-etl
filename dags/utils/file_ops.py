@@ -69,6 +69,24 @@ def get_ontology_name_from_file(file_path):
     return anthology_name
 
 
+def get_source_feed_from_folder_name(dir_path):
+    """
+    get_source_feed_from_folder_name
+
+    Get source feed from tf record name
+
+    :param dir_path: TFRecord folder name
+    :return: Source feed name
+    """
+
+    if os.path.isdir(dir_path):
+        dir_name = os.path.basename(dir_path)
+        source_feed = dir_name.split("_")[0]
+        return source_feed
+
+    raise ValueError(f"The specified path is not a directory: {dir_path}")
+
+
 def get_filenames_in_directory(dir_path, file_ext):
     """
     A Utility function to get the filenames of files in a given folder
