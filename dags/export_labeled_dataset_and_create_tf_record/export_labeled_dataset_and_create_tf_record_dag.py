@@ -5,9 +5,10 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.models import Variable
 from airflow.hooks.base_hook import BaseHook
+from airflow.operators.bash_operator import BashOperator
+from airflow.operators.docker_operator import DockerOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
-from airflow.operators.docker_operator import DockerOperator
 
 
 from export_labeled_dataset_and_create_tf_record import export_labeled_dataset_and_create_tf_record
@@ -21,6 +22,7 @@ HOST_LABELBOX_OUTPUT_FOLDER = HOST_LABELBOX_FOLDER + "/output/"
 
 
 DOCKER_DATA_FOLDER = "/usr/local/airflow/data"
+DOCKER_CURRENT_DAG_FOLDER = os.path.dirname(os.path.realpath(__file__))
 DOCKER_LABELBOX_FOLDER = os.path.join(DOCKER_DATA_FOLDER, "labelbox")
 DOCKER_LABELBOX_OUTPUT_FOLDER = os.path.join(DOCKER_LABELBOX_FOLDER, "output")
 DOCKER_TF_RECORD_FOLDER = os.path.join(DOCKER_DATA_FOLDER, "tfrecord")
@@ -138,18 +140,18 @@ for index, project_name in enumerate(export_project_name):
         dag=dag,
     )
 
-    # TODO: Create tf record
-    #  create_tf_records = PythonOperator(
-    #     task_id="create_tf_record_" + project_name,
-    #     python_callable=create_tf_record_from_labaled_data.create_tf_records,
-    #     op_kwargs={
-    #         "label_map_file": None,
-    #         "image_dir": None,
-    #         "annotation_dir": None,
-    #         "trainval_file": None,
-    #         "output_dir": None,
-    #     },
-    #     dag=dag,
+    # create_tf_record_command = "python /usr/local/airflow/dags/create_tf_record_from_labaled_data/create_tf_record.py --annotation_dir={voc_dir} --image_dir={img_dir} --label_map_file={label_map_path} --trainval_file={trainval_path} --output_dir={tf_dir}".format(
+    #     voc_dir=voc_path, img_dir=train_img_path, tf_dir=tf_record_path, label_map_path=label_map_path, trainval_path=trainval_path
     # )
 
-    generate_project_label_extract_from_task >> fetch_labels_from_project_task >> extract_labeled_data_from_labelbox >> create_trainval_file >> create_labelmap_file
+    trainval_file = os.path.join(trainval_dir, f"trainval_{project_name}")
+    labelmap_file = os.path.join(trainval_dir, f"label_map_{project_name}")
+    tfrecord_output_dir = os.path.join(DOCKER_TF_RECORD_FOLDER, project_name)
+
+    create_tf_record_command = f"python {DOCKER_CURRENT_DAG_FOLDER}/create_tf_record.py --annotation_dir={voc_annotation_extract_dir} --image_dir={voc_image_extract_dir} --label_map_file={labelmap_file}.pbtxt --trainval_file={trainval_file}.txt --output_dir={tfrecord_output_dir}"
+
+    create_tf_record = BashOperator(
+        task_id="create_tf_record_" + project_name, bash_command=create_tf_record_command, dag=dag
+    )
+
+    generate_project_label_extract_from_task >> fetch_labels_from_project_task >> extract_labeled_data_from_labelbox >> create_trainval_file >> create_labelmap_file >> create_tf_record
