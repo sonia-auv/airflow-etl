@@ -1,6 +1,6 @@
 apache-airflow[crypto,postgres,gcp_api,docker,slack]~=1.10.5
 google-api-python-client~=1.7.11
-tensorflow~=1.13
+tensorflow~=1.12
 labelbox~=2.0.1
 graphqlclient~=0.2.4
 tqdm==4.23.4
