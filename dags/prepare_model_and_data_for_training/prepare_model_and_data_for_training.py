@@ -98,17 +98,25 @@ def download_and_extract_base_model(base_model_csv, base_model_folder, base_mode
 
 
 def prepare_training_input_data(
-    training_input_folder, model_folder_name, target_cam, base_model_folder
+    training_input_folder, model_folder, target_cam, base_model_folder, base_tf_record_folder
 ):
-
     today = datetime.today().strftime("%Y_%m_%d")
     training_input_folder_name = f"{model_folder_name}_{target_cam}_{today}"
     training_input_folder = os.path.join(training_input_folder, training_input_folder_name)
     os.mkdir(training_input_folder)
 
-    # TODO: Check if model folder exist
-    # TODO: Copy model from base folder
-    # TODO: Copy all data for target cam
+    if not os.path.isdir(model_folder_name):
+        ValueError(f"Model folder {model_folder} does not exist")
+
+    shutil.copytree(model_folder, training_input_data_folder)
+    training_input_data_folder = os.path.join(training_input_folder, "data")
+
+    subfolders = file_ops.get_sub_folders_list(base_tf_record_folder)
+    subfolders = [folder for folder in subfolders if os.path.dirname(folder).startswith(target_cam)]
+
+    for folder in subfolders:
+        shutil.copytree(folder, training_input_data_folder)
+
     # TODO: Compare all labelmap.pbtxt
     # TODO: Join all trainval content
     # TODO: Copy all train.record and val.record

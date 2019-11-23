@@ -15,6 +15,7 @@ BASE_MODELS_FOLDER = os.path.join(DOCKER_DATA_FOLDER, "model", "base")
 BASE_MODELS_CSV = os.path.join(DOCKER_DATA_FOLDER, "model", "model_list.csv")
 BASE_TRAINING_FOLDER = os.path.join(DOCKER_DATA_FOLDER, "training")
 BASE_TRAINING_INPUT_FOLDER = os.path.join(BASE_TRAINING_FOLDER, "input")
+DOCKER_TF_RECORD_FOLDER = os.path.join(DOCKER_DATA_FOLDER, "tfrecord")
 
 default_args = {
     "owner": "airflow",
