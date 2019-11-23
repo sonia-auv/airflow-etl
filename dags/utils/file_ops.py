@@ -1,7 +1,9 @@
 import os
-import logging
-from glob import glob
+import filecmp
 import json
+import logging
+import requests
+from glob import glob
 
 
 def get_parent_folder_name(dir_path):
@@ -35,7 +37,7 @@ def get_filename(file_path, with_extension=True):
     if with_extension:
         return os.path.basename(file_path)
 
-    return os.path.splitext(os.path.basename(file_path))[0]
+    return os.path.splitext(os.path.basename(file_path), ".tar.gz")[0]
 
 
 def get_object_name_from_file(file_path):
@@ -139,3 +141,12 @@ def concat_json(json_files, output_path):
                 data = json.load(infile)
                 json_dict += data
         json.dump(json_dict, out)
+
+
+def folder_exist_or_create(folder_path):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+
+def file_exist(file_path):
+    return os.path.isfile(file_path)

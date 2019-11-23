@@ -14,3 +14,6 @@ Pillow~=6.2.1
 Shapely~=1.6.4.post2
 lxml~=4.4.1
 matplotlib~=3.1.1
+mistune~=0.8.4
+beautifulsoup4~=4.8.1
+pandas~=0.25.3
