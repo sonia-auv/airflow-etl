@@ -20,12 +20,11 @@ from utils import slack
 
 
 HOST_ROOT_FOLDER = os.environ["HOST_ROOT_FOLDER"]
-DATA_FOLDER = "/data/"
-DOCKER_ROOT_FOLDER = "/usr/local/airflow"
-DOCKER_BAG_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, DATA_FOLDER, "bags")
-DOCKER_IMAGE_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, DATA_FOLDER, "images")
-HOST_DIR_BAG_FOLDER = HOST_ROOT_FOLDER + DATA_FOLDER + "bags"
-HOST_DIR_IMAGE_FOLDER = HOST_ROOT_FOLDER + DATA_FOLDER + "images"
+BASE_DATA_FOLDER = "/data/"
+BASE_AIRFLOW_FOLDER = "/usr/local/airflow"
+BAG_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, BASE_DATA_FOLDER, "bags")
+HOST_DIR_BAG_FOLDER = HOST_ROOT_FOLDER + BASE_DATA_FOLDER + "bags"
+HOST_DIR_IMAGE_FOLDER = HOST_ROOT_FOLDER + BASE_DATA_FOLDER + "images"
 
 BAG_EXTENSION = ".bag"
 TOPICS = ["/provider_vision/Front_GigE/compressed", "/provider_vision/Bottom_GigE/compressed"]
@@ -52,7 +51,7 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
     detect_bag = PythonOperator(
         task_id="detect_bag",
         python_callable=extract_img_from_ros_bag.bag_file_exists,
-        op_kwargs={"bag_path": DOCKER_BAG_FOLDER},
+        op_kwargs={"bag_path": BAG_FOLDER},
         trigger_rule="all_success",
         dag=dag,
     )
@@ -60,7 +59,7 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
     bag_filename_syntax_matches_format = PythonOperator(
         task_id="bag_filename_syntax_matches_format",
         python_callable=extract_img_from_ros_bag.bag_filename_syntax_valid,
-        op_kwargs={"bag_path": DOCKER_BAG_FOLDER},
+        op_kwargs={"bag_path": BAG_FOLDER},
         trigger_rule="all_success",
         dag=dag,
     )
