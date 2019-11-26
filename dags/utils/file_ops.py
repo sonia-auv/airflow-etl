@@ -37,7 +37,7 @@ def get_filename(file_path, with_extension=True):
     if with_extension:
         return os.path.basename(file_path)
 
-    return os.path.splitext(os.path.basename(file_path), ".tar.gz")[0]
+    return os.path.splitext(os.path.basename(file_path))[0]
 
 
 def get_object_name_from_file(file_path):
