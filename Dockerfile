@@ -4,7 +4,7 @@
 
 FROM python:3.7-slim-stretch
 LABEL maintainer="gauthiermartin86@gmail.com"
-LABEL description="This image is an integration of Airflow and ROS"
+LABEL description="A docker image of Airflow an ETL orchestration plateform"
 
 # *********************************************
 # Declaring environements variables
