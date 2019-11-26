@@ -1,15 +1,15 @@
+import json
 import logging
 import os
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.models import Variable
 from airflow.hooks.base_hook import BaseHook
+from airflow.models import Variable
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.docker_operator import DockerOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
-
 
 from export_labeled_dataset_and_create_tf_record import export_labeled_dataset_and_create_tf_record
 from utils import file_ops, slack
@@ -21,23 +21,27 @@ HOST_LABELBOX_INPUT_FOLDER = HOST_LABELBOX_FOLDER + "input/"
 HOST_LABELBOX_OUTPUT_FOLDER = HOST_LABELBOX_FOLDER + "/output/"
 
 
-DOCKER_DATA_FOLDER = "/usr/local/airflow/data"
-DOCKER_CURRENT_DAG_FOLDER = os.path.dirname(os.path.realpath(__file__))
-DOCKER_LABELBOX_FOLDER = os.path.join(DOCKER_DATA_FOLDER, "labelbox")
-DOCKER_LABELBOX_OUTPUT_FOLDER = os.path.join(DOCKER_LABELBOX_FOLDER, "output")
-DOCKER_TF_RECORD_FOLDER = os.path.join(DOCKER_DATA_FOLDER, "tfrecord")
+BASE_AIRFLOW_FOLDER = "/usr/local/airflow/"
+AIRFLOW_DATA_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, "data")
+
+AIRFLOW_CURRENT_DAG_FOLDER = os.path.dirname(os.path.realpath(__file__))
+AIRFLOW_LABELBOX_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "labelbox")
+AIRFLOW_LABELBOX_OUTPUT_FOLDER = os.path.join(AIRFLOW_LABELBOX_FOLDER, "output")
+AIRFLOW_TF_RECORD_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "tfrecord")
 
 
-LABELBOX_API_URL = "https://api.labelbox.com/graphql"
-LABELBOX_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjamRmODljc2JxbW9hMDEzMDg2cGM0eTFnIiwib3JnYW5pemF0aW9uSWQiOiJjamRmODljNGxxdnNmMDEwMHBvdnFqeWppIiwiYXBpS2V5SWQiOiJjazJuZzR3aGNnMWM1MDk0NHIyNXljM2R6IiwiaWF0IjoxNTczMDU0NjcxLCJleHAiOjIyMDQyMDY2NzF9.l9flIjZaSmXHomMrR7BHmIYeFoN8Q3t9Q0Lfka6_tq8"
-
+labelbox_api_url = BaseHook.get_connection("labelbox").host
+labelbox_api_key = BaseHook.get_connection("labelbox").password
 slack_webhook_token = BaseHook.get_connection("slack").password
 
-export_project_name = ["front_dice_morrisson_20180707"]
+ontology_front = json.loads(Variable.get("ontology_front"))
+ontology_bottom = json.loads(Variable.get("ontology_bottom"))
 
-front_cam_object_list = ["vetalas", "jiangshi", "vampire", "draugr", "answag"]
+export_project_name = Variable.get("labelbox_export_project_list").split(",")
 
-bottom_cam_object_list = ["bat", "wolf"]
+front_cam_object_list = [tool["name"] for tool in ontology_front["tools"]]
+
+bottom_cam_object_list = [tool["name"] for tool in ontology_bottom["tools"]]
 
 default_args = {
     "owner": "airflow",
@@ -70,8 +74,8 @@ for index, project_name in enumerate(export_project_name):
         task_id="generate_project_label_extract_from_" + project_name,
         python_callable=export_labeled_dataset_and_create_tf_record.generate_project_labels,
         op_kwargs={
-            "api_url": LABELBOX_API_URL,
-            "api_key": LABELBOX_API_KEY,
+            "api_url": labelbox_api_url,
+            "api_key": labelbox_api_key,
             "project_name": project_name,
         },
         trigger_rule="all_success",
@@ -82,10 +86,10 @@ for index, project_name in enumerate(export_project_name):
         task_id="fetch_labels_from_project_" + project_name,
         python_callable=export_labeled_dataset_and_create_tf_record.fetch_project_labels,
         op_kwargs={
-            "api_url": LABELBOX_API_URL,
-            "api_key": LABELBOX_API_KEY,
+            "api_url": labelbox_api_url,
+            "api_key": labelbox_api_key,
             "project_name": project_name,
-            "output_folder": DOCKER_LABELBOX_FOLDER,
+            "output_folder": AIRFLOW_LABELBOX_FOLDER,
         },
         trigger_rule="all_success",
         dag=dag,
@@ -109,12 +113,12 @@ for index, project_name in enumerate(export_project_name):
         dag=dag,
     )
 
-    voc_annotation_extract_dir = os.path.join(DOCKER_LABELBOX_OUTPUT_FOLDER, project_name)
-    voc_image_extract_dir = os.path.join(DOCKER_LABELBOX_OUTPUT_FOLDER, project_name, "images")
+    voc_annotation_extract_dir = os.path.join(AIRFLOW_LABELBOX_OUTPUT_FOLDER, project_name)
+    voc_image_extract_dir = os.path.join(AIRFLOW_LABELBOX_OUTPUT_FOLDER, project_name, "images")
 
     # TODO:Validate voc data (Image + draw bbox)
-    trainval_dir = os.path.join(DOCKER_TF_RECORD_FOLDER, project_name)
-    labelmap_dir = os.path.join(DOCKER_TF_RECORD_FOLDER, project_name)
+    trainval_dir = os.path.join(AIRFLOW_TF_RECORD_FOLDER, project_name)
+    labelmap_dir = os.path.join(AIRFLOW_TF_RECORD_FOLDER, project_name)
 
     create_trainval_file = PythonOperator(
         task_id="create_trainval_" + project_name,
@@ -140,15 +144,11 @@ for index, project_name in enumerate(export_project_name):
         dag=dag,
     )
 
-    # create_tf_record_command = "python /usr/local/airflow/dags/create_tf_record_from_labaled_data/create_tf_record.py --annotation_dir={voc_dir} --image_dir={img_dir} --label_map_file={label_map_path} --trainval_file={trainval_path} --output_dir={tf_dir}".format(
-    #     voc_dir=voc_path, img_dir=train_img_path, tf_dir=tf_record_path, label_map_path=label_map_path, trainval_path=trainval_path
-    # )
-
     trainval_file = os.path.join(trainval_dir, f"trainval_{project_name}")
     labelmap_file = os.path.join(trainval_dir, f"label_map_{project_name}")
-    tfrecord_output_dir = os.path.join(DOCKER_TF_RECORD_FOLDER, project_name)
+    tfrecord_output_dir = os.path.join(AIRFLOW_TF_RECORD_FOLDER, project_name)
 
-    create_tf_record_command = f"python {DOCKER_CURRENT_DAG_FOLDER}/create_tf_record.py --annotation_dir={voc_annotation_extract_dir} --image_dir={voc_image_extract_dir} --label_map_file={labelmap_file}.pbtxt --trainval_file={trainval_file}.txt --output_dir={tfrecord_output_dir}"
+    create_tf_record_command = f"python {AIRFLOW_CURRENT_DAG_FOLDER}/create_tf_record.py --annotation_dir={voc_annotation_extract_dir} --image_dir={voc_image_extract_dir} --label_map_file={labelmap_file}.pbtxt --trainval_file={trainval_file}.txt --output_dir={tfrecord_output_dir}"
 
     create_tf_record = BashOperator(
         task_id="create_tf_record_" + project_name, bash_command=create_tf_record_command, dag=dag
