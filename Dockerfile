@@ -14,10 +14,11 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 ARG DOCKER_GROUP_ID=999
+ARG GCLOUD_SERVICE_ACCOUNT_EMAIL
 
 # Airflow
 ENV AIRFLOW_HOME=/usr/local/airflow
-ENV LABELBOX_API_KEY=${LABELBOX_KEY}
+ENV GCLOUD_SERVICE_ACCOUNT_EMAIL=${GCLOUD_SERVICE_ACCOUNT_EMAIL}
 
 # Tensorflow
 ARG PROTOC_VERSION=3.10.1
@@ -153,7 +154,10 @@ RUN mkdir -p ${AIRFLOW_HOME}/.config/gcloud/
 # *********************************************
 #Copying our airflow config and setting ownership
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
+COPY gcloud_service_account.json ${AIRFLOW_HOME}/gcloud_service_account.json
 RUN chown -R airflow: ${AIRFLOW_HOME}
+
+RUN gcloud auth activate-service-account ${GCLOUD_SERVICE_ACCOUNT_EMAIL} --keyfile=gcloud_service_account.json
 
 # Copying our docker entrypoint
 COPY script/entrypoint.sh /entrypoint.sh
