@@ -157,7 +157,7 @@ COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
 COPY gcloud_service_account.json ${AIRFLOW_HOME}/gcloud_service_account.json
 RUN chown -R airflow: ${AIRFLOW_HOME}
 
-RUN gcloud auth activate-service-account ${GCLOUD_SERVICE_ACCOUNT_EMAIL} --key-file=gcloud_service_account.json
+RUN gcloud auth activate-service-account ${GCLOUD_SERVICE_ACCOUNT_EMAIL} --key-file=${AIRFLOW_HOME}/gcloud_service_account.json
 
 # Copying our docker entrypoint
 COPY script/entrypoint.sh /entrypoint.sh
