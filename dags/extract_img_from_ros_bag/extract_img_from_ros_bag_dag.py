@@ -84,6 +84,4 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
         dag=dag,
     )
 
-    notify_extraction_success = slack.dag_notify_success_slack_alert(dag=dag)
-
-    detect_bag >> bag_filename_syntax_matches_format >> extract_images_from_bag >> notify_extraction_success
+    detect_bag >> bag_filename_syntax_matches_format >> extract_images_from_bag
