@@ -29,8 +29,8 @@ slack_webhook_token = BaseHook.get_connection("slack").password
 
 
 bucket_name = Variable.get("bucket_name")
-ontology_front = Variable.get("ontology_front", deserialize_json=True)
-ontology_bottom = Variable.get("ontology_bottom", deserialize_json=True)
+ontology_front = Variable.get("ontology_front")
+ontology_bottom = Variable.get("ontology_bottom")
 
 json_files = file_ops.get_files_in_directory(AIRFLOW_JSON_FOLDER, "*.json")
 
