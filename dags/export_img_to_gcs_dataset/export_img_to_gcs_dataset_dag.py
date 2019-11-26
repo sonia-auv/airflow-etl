@@ -81,8 +81,5 @@ create_json = PythonOperator(
     dag=dag,
 )
 
-notify_upload_success = slack.dag_notify_success_slack_alert(dag=dag)
-
 create_data_bucket >> set_data_bucket_acl
-set_data_bucket_acl >> export_images_to_gcs_dataset >> notify_upload_success
-set_data_bucket_acl >> create_json >> notify_upload_success
+set_data_bucket_acl >> [export_images_to_gcs_dataset, create_json]
