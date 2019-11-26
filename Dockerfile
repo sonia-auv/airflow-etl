@@ -15,6 +15,7 @@ ENV TERM linux
 
 ARG DOCKER_GROUP_ID=999
 ARG GCLOUD_SERVICE_ACCOUNT_EMAIL
+ARG BUILD="local"
 
 # Airflow
 ENV AIRFLOW_HOME=/usr/local/airflow
@@ -157,7 +158,8 @@ COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
 COPY gcloud_service_account.json ${AIRFLOW_HOME}/gcloud_service_account.json
 RUN chown -R airflow: ${AIRFLOW_HOME}
 
-RUN gcloud auth activate-service-account ${GCLOUD_SERVICE_ACCOUNT_EMAIL} --key-file=${AIRFLOW_HOME}/gcloud_service_account.json
+COPY script/gcloud_init.sh /gcloud_init.sh
+RUN ./gcloud_init
 
 # Copying our docker entrypoint
 COPY script/entrypoint.sh /entrypoint.sh
