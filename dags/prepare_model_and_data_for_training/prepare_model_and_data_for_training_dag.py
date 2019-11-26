@@ -86,7 +86,6 @@ base_model_exist_or_download = PythonOperator(
     dag=dag,
 )
 
-
 start_task >> check_reference_file_exist >> [
     download_current_model_zoo_list,
     check_model_list_difference,
