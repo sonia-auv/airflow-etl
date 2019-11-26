@@ -37,7 +37,7 @@ slack_webhook_token = BaseHook.get_connection("slack").password
 ontology_front = json.loads(Variable.get("ontology_front"))
 ontology_bottom = json.loads(Variable.get("ontology_bottom"))
 
-export_project_name = ["front_dice_morrisson_20180707"]
+export_project_name = ["bottom_roulette_cvm_20190909"]
 
 front_cam_object_list = [tool["name"] for tool in ontology_front["tools"]]
 
