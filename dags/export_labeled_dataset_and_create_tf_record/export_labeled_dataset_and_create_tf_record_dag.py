@@ -1,15 +1,15 @@
+import json
 import logging
 import os
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.models import Variable
 from airflow.hooks.base_hook import BaseHook
+from airflow.models import Variable
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.docker_operator import DockerOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
-
 
 from export_labeled_dataset_and_create_tf_record import export_labeled_dataset_and_create_tf_record
 from utils import file_ops, slack
