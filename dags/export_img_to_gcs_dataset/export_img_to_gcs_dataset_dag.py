@@ -15,15 +15,18 @@ from airflow.operators.slack_operator import SlackAPIPostOperator
 from export_img_to_gcs_dataset import export_img_to_gcs_dataset
 from utils import slack
 
-DOCKER_ROOT_FOLDER = "/usr/local/airflow/data/"
-IMAGE_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, "images")
-CSV_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, "csv")
-JSON_FOLDER = os.path.join(DOCKER_ROOT_FOLDER, "json")
+
+BASE_AIRFLOW_FOLDER = "/usr/local/airflow/"
+AIRFLOW_DATA_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, "data")
+AIRFLOW_IMAGE_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "images")
+AIRFLOW_CSV_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "csv")
+AIRFLOW_JSON_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "json")
+
 GCP_STORAGE_BASE = "https://storage.googleapis.com/"
 
 slack_webhook_token = BaseHook.get_connection("slack").password
 bucket_name = Variable.get("bucket_name")
-bucket_image_storage_url = GCP_STORAGE_BASE + bucket_name + "/images/"
+
 
 default_args = {
     "owner": "airflow",
@@ -36,20 +39,19 @@ default_args = {
     "retries": 0,
 }
 
+bucket_base_uri = f"gs://{bucket_name}/"
+bucket_image_storage_url = f"{GCP_STORAGE_BASE}{bucket_name}/images/"
+
 
 dag = DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_args)
 
-input_image_location = IMAGE_FOLDER
-input_json_location = JSON_FOLDER
-output_location = f"gs://{bucket_name}/"
 
-
-create_data_bucket_cmd = f"gsutil ls -b {output_location} || gsutil mb {output_location}"
+create_data_bucket_cmd = f"gsutil ls -b {bucket_base_uri} || gsutil mb {bucket_base_uri}"
 create_data_bucket = BashOperator(
     task_id="create_data_bucket", bash_command=create_data_bucket_cmd, provide_context=True, dag=dag
 )
 
-set_data_bucket_acl_cmd = f"gsutil defacl ch -u AllUsers:R {output_location}"
+set_data_bucket_acl_cmd = f"gsutil defacl ch -u AllUsers:R {bucket_base_uri}"
 set_data_bucket_acl = BashOperator(
     task_id="set_data_bucket_acl",
     bash_command=set_data_bucket_acl_cmd,
@@ -58,7 +60,7 @@ set_data_bucket_acl = BashOperator(
     dag=dag,
 )
 
-export_images_to_gcs_dataset_cmd = f"gsutil -m cp -r {input_image_location} {output_location}"
+export_images_to_gcs_dataset_cmd = f"gsutil -m cp -r {AIRFLOW_IMAGE_FOLDER} {bucket_base_uri}"
 export_images_to_gcs_dataset = BashOperator(
     task_id="export_images_to_gcs",
     bash_command=export_images_to_gcs_dataset_cmd,
@@ -71,16 +73,13 @@ create_json = PythonOperator(
     task_id="create_json_export_file",
     python_callable=export_img_to_gcs_dataset.create_json,
     op_kwargs={
-        "images_path": IMAGE_FOLDER,
+        "images_path": AIRFLOW_IMAGE_FOLDER,
         "gcs_images_path": bucket_image_storage_url,
-        "json_path": JSON_FOLDER,
+        "json_path": AIRFLOW_JSON_FOLDER,
     },
     trigger_rule="all_success",
     dag=dag,
 )
 
-notify_upload_success = slack.dag_notify_success_slack_alert(dag=dag)
-
 create_data_bucket >> set_data_bucket_acl
-set_data_bucket_acl >> export_images_to_gcs_dataset >> notify_upload_success
-set_data_bucket_acl >> create_json >> notify_upload_success
+set_data_bucket_acl >> [export_images_to_gcs_dataset, create_json]
