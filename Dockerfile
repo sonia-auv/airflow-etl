@@ -2,10 +2,15 @@
 # DESCRIPTION: Airflow and ROS container
 # HIGHLY INSPIRED BY: https://github.com/puckel/docker-airflow
 
-FROM python:3.7-slim-stretch
+FROM python:3.7-slim-stretch as base_build
 LABEL maintainer="gauthiermartin86@gmail.com"
 LABEL description="A docker image of Airflow an ETL orchestration plateform"
 
+# *********************************************
+# Declaring arguments variables
+ARG DOCKER_GROUP_ID=999
+ARG GCLOUD_SERVICE_ACCOUNT_EMAIL
+ARG BUILD_ENV="local"
 # *********************************************
 # Declaring environements variables
 
@@ -13,12 +18,10 @@ LABEL description="A docker image of Airflow an ETL orchestration plateform"
 ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
-ARG DOCKER_GROUP_ID=999
-ARG GCLOUD_SERVICE_ACCOUNT_EMAIL
-ARG BUILD="local"
-
 # Airflow
 ENV AIRFLOW_HOME=/usr/local/airflow
+
+# Google cloud
 ENV GCLOUD_SERVICE_ACCOUNT_EMAIL=${GCLOUD_SERVICE_ACCOUNT_EMAIL}
 
 # Tensorflow
@@ -155,16 +158,24 @@ RUN mkdir -p ${AIRFLOW_HOME}/.config/gcloud/
 # *********************************************
 #Copying our airflow config and setting ownership
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
-COPY gcloud_service_account.json ${AIRFLOW_HOME}/gcloud_service_account.json
 RUN chown -R airflow: ${AIRFLOW_HOME}
-
-COPY script/gcloud_init.sh /gcloud_init.sh
-RUN ./gcloud_init
 
 # Copying our docker entrypoint
 COPY script/entrypoint.sh /entrypoint.sh
 
+
 EXPOSE 8080
+
+
+FROM base_build as build_local
+
+
+FROM base_build as build_deploy
+COPY gcloud_service_account.json ${AIRFLOW_HOME}/gcloud_service_account.json
+RUN gcloud auth activate-service-account ${GCLOUD_SERVICE_ACCOUNT_EMAIL} --key-file=${AIRFLOW_HOME}/gcloud_service_account.json
+
+
+FROM build_${BUILD_ENV}
 
 USER airflow
 WORKDIR ${AIRFLOW_HOME}

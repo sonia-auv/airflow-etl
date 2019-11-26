@@ -10,7 +10,7 @@ before_install:
 before_script:
   - version="$(cat VERSION)"
 script:
-  - docker build --pull --cache-from "$IMAGE_NAME" --tag "$IMAGE_NAME" --build-arg BUILD='deploy' --build-arg GCLOUD_SERVICE_ACCOUNT_EMAIL="${GCLOUD_SERVICE_ACCOUNT_EMAIL}"
+  - docker build --pull --cache-from "$IMAGE_NAME" --tag "$IMAGE_NAME" --build-arg BUILD_ENV='deploy' --build-arg GCLOUD_SERVICE_ACCOUNT_EMAIL="${GCLOUD_SERVICE_ACCOUNT_EMAIL}"
     .
 after_script:
   - docker images
