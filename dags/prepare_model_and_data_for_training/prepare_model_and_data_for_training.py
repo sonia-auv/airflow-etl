@@ -117,9 +117,46 @@ def prepare_training_input_data(
     for folder in subfolders:
         shutil.copytree(folder, training_input_data_folder)
 
-    # TODO: Compare all labelmap.pbtxt
-    # TODO: Join all trainval content
-    # TODO: Copy all train.record and val.record
-    # TODO: Edit model config file
-    # TODO: compress content
-    # TODO: Export to GCP
+
+def compare_label_map_file(base_tf_record_folder, folder_prefix):
+
+    subfolders = files.get_sub_folders_list(base_tf_record_folder)
+
+    subfolders = [subfolder in subfolders if subfolder.startwith(folder_prefix)]
+
+
+
+
+
+
+
+
+
+# def compare_label_map_file(tf_records_folders):
+
+#     label_maps = []
+#     for path, subdirs, files in os.walk(tf_records_folders):
+#         for file_name in files:
+#             if file_name.endswith(".pbtxt"):
+#                 label_maps.append(os.path.join(path, file_name))
+
+#     reference_label_map = label_maps[0]
+#     labelmap_match = True
+#     print("--------- Labelmap Compare ----------")
+#     print(f"Reference Map :{reference_label_map}")
+#     for label_map in label_maps:
+#         if filecmp(label_map, reference_label_map):
+#             print(f"[ MATCH ] | LabelMap:{label_map} ")
+#         else:
+#             print(f"[ FAILED ] | LabelMap:{label_map} ")
+#             labelmap_match = False
+
+#     if labelmap_match == False:
+#         raise ValueError("Comparing labelmap file failed")
+
+# TODO: Compare all labelmap.pbtxt
+# TODO: Join all trainval content
+# TODO: Copy all train.record and val.record
+# TODO: Edit model config file
+# TODO: compress content
+# TODO: Export to GCP
