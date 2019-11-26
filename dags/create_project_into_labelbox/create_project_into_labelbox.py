@@ -162,7 +162,7 @@ def configure_interface_for_project(api_url, api_key, ontology, index, **kwargs)
 
     organization_id = __get_organization_id(client)
 
-    print(json.dumps(ontology))
+    # print(json.dumps(ontology))
     res_str = client.execute(
         """
       mutation ConfigureInterfaceFromAPI($projectId: ID!, $customizationOptions: String!, $labelingFrontendId: ID!, $organizationId: ID!) {
@@ -190,7 +190,7 @@ def configure_interface_for_project(api_url, api_key, ontology, index, **kwargs)
     """,
         {
             "projectId": project_id,
-            "customizationOptions": json.dumps(ontology),
+            "customizationOptions": ontology,  # json.dumps(ontology),
             "labelingFrontendId": interface_id,
             "organizationId": organization_id,
         },
