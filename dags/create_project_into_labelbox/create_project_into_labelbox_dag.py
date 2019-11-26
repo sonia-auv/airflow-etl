@@ -20,9 +20,6 @@ AIRFLOW_DATA_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, "data")
 AIRFLOW_IMAGE_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "images")
 AIRFLOW_JSON_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "json")
 
-# labelbox_api_url = "https://api.labelbox.com/graphql"
-# labelbox_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjamRmODljc2JxbW9hMDEzMDg2cGM0eTFnIiwib3JnYW5pemF0aW9uSWQiOiJjamRmODljNGxxdnNmMDEwMHBvdnFqeWppIiwiYXBpS2V5SWQiOiJjazJuZzR3aGNnMWM1MDk0NHIyNXljM2R6IiwiaWF0IjoxNTczMDU0NjcxLCJleHAiOjIyMDQyMDY2NzF9.l9flIjZaSmXHomMrR7BHmIYeFoN8Q3t9Q0Lfka6_tq8"
-
 labelbox_api_url = BaseHook.get_connection("labelbox").host
 labelbox_api_key = BaseHook.get_connection("labelbox").password
 slack_webhook_token = BaseHook.get_connection("slack").password
@@ -33,26 +30,6 @@ ontology_front = Variable.get("ontology_front")
 ontology_bottom = Variable.get("ontology_bottom")
 
 json_files = file_ops.get_files_in_directory(AIRFLOW_JSON_FOLDER, "*.json")
-
-# ontology_front = {
-#     "tools": [
-#         {"color": "Green", "tool": "rectangle", "name": "vetalas"},
-#         {"color": "Yellow", "tool": "rectangle", "name": "jiangshi"},
-#         {"color": "Magenta", "tool": "rectangle", "name": "vampire"},
-#         {"color": "Pink", "tool": "rectangle", "name": "draugr"},
-#         {"color": "Cornsilk", "tool": "rectangle", "name": "answag"},
-#     ],
-#     "classifications": [],
-# }
-
-# ontology_bottom = {
-#     "tools": [
-#         {"color": "Red", "tool": "rectangle", "name": "bat"},
-#         {"color": "Blue", "tool": "rectangle", "name": "wolf"},
-#     ],
-#     "classifications": [],
-# }
-
 
 default_args = {
     "owner": "airflow",
