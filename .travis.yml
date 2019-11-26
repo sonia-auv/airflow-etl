@@ -4,10 +4,15 @@ services:
 env:
   global:
     - IMAGE_NAME=soniaauvets/airflow-ros-tensorflow
+before_install:
+  - openssl aes-256-cbc -K $encrypted_171740cf799b_key -iv $encrypted_171740cf799b_iv
+    -in gcloud_service_account.json.enc -out gcloud_service_account.json -d
+  - ls -lat
 before_script:
   - version="$(cat VERSION)"
 script:
-  - docker build --pull --cache-from "$IMAGE_NAME" --tag "$IMAGE_NAME" --build-arg LABELBOX_KEY="${LABELBOX_API_KEY}" .
+  - docker build --pull --cache-from "$IMAGE_NAME" --tag "$IMAGE_NAME" --build-arg LABELBOX_KEY="${LABELBOX_API_KEY}"
+    .
 after_script:
   - docker images
 before_deploy:
@@ -15,10 +20,14 @@ before_deploy:
   - docker tag "$IMAGE_NAME" "${IMAGE_NAME}:latest"
 deploy:
   - provider: script
-    script: docker tag "$IMAGE_NAME" "${IMAGE_NAME}:dev" && docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:dev"
+    script:
+      docker tag "$IMAGE_NAME" "${IMAGE_NAME}:dev" && docker push "${IMAGE_NAME}:latest"
+      && docker push "${IMAGE_NAME}:dev"
     on:
       branch: dev
   - provider: script
-    script: docker tag "$IMAGE_NAME" "${IMAGE_NAME}:${version}" && docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:${version}"
+    script:
+      docker tag "$IMAGE_NAME" "${IMAGE_NAME}:${version}" && docker push "${IMAGE_NAME}:latest"
+      && docker push "${IMAGE_NAME}:${version}"
     on:
       branch: master
