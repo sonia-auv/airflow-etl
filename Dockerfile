@@ -2,7 +2,7 @@
 # DESCRIPTION: Airflow and ROS container
 # HIGHLY INSPIRED BY: https://github.com/puckel/docker-airflow
 
-FROM python:3.7-slim-stretch as base_build
+FROM python:3.7-slim-stretch as release
 LABEL maintainer="gauthiermartin86@gmail.com"
 LABEL description="A docker image of Airflow an ETL orchestration plateform"
 
@@ -167,16 +167,18 @@ COPY script/entrypoint.sh /entrypoint.sh
 EXPOSE 8080
 
 
-FROM base_build as build_local
-
-
-FROM base_build as build_deploy
-COPY gcloud_service_account.json ${AIRFLOW_HOME}/gcloud_service_account.json
-RUN gcloud auth activate-service-account ${GCLOUD_SERVICE_ACCOUNT_EMAIL} --key-file=${AIRFLOW_HOME}/gcloud_service_account.json
-
-
-FROM build_${BUILD_ENV}
+FROM release as dev-env
 
 USER airflow
 WORKDIR ${AIRFLOW_HOME}
 ENTRYPOINT ["/entrypoint.sh"]
+
+FROM release as prod-env
+COPY gcloud_service_account.json ${AIRFLOW_HOME}/gcloud_service_account.json
+RUN gcloud auth activate-service-account ${GCLOUD_SERVICE_ACCOUNT_EMAIL} --key-file=${AIRFLOW_HOME}/gcloud_service_account.json
+
+USER airflow
+WORKDIR ${AIRFLOW_HOME}
+ENTRYPOINT ["/entrypoint.sh"]
+
+FROM release
