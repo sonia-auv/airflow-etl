@@ -29,7 +29,10 @@ docker login
 
 ### Installation
 
-#### .env file
+#### Development environment
+
+
+##### Environment file
 
 After you have installed docker and docker-compose you must create an environment file. Simply copy .env.template with destination file name .env
 
@@ -37,13 +40,30 @@ After you have installed docker and docker-compose you must create an environmen
 cp .env.template .env
 ```
 
-#### start.sh script
+#### Google Cloud SDK
+When you have successfully launched the containers you must set your credential too google cloud.
+To complete this step you must ask for access either to the captain or software rep to the required access.
+
+You must execute the following commands to init you gcloud config:
+
+```bash
+docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud init
+```
+
+#### Airflow UI User
+
+To create a user to access the Airflow UI through a web browser you must run the following command
+```bash
+docker exec -it sonia-auv-airflow_airflow-webserver_1 airflow create_user --role Admin --username USERNAME --email EMAIL --firstname FIRSTNAME --lastname LASTNAME --password PASSWORD
+```
+
+#### Start Airflow
 
 Once you have your configuration file, run this command in you shell:
 
 
 ```bash
-./start.sh
+./start.sh dev
 ```
 
 This will pull the docker-ros-airflow image from the docker repository, and start the containers locally.
@@ -68,15 +88,85 @@ sonia-auv-airflow_airflow-webserver_1 is ... done
 Airflow containers have STARTED
 ```
 
-When you have successfully launched the containers you must set your credential too google cloud.
-To complete this step you must ask for access either to Marc-Antoine or Martin
 
-You must execute the following commands to init you gcloud config:
 
-```bash
-docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud init
+#### Production environment
+
+
+##### Environment file
+
+After you have installed docker and docker-compose you must create an environment file. Simply copy .env.template with destination file name .env
+
+```
+cp .env.template .env
 ```
 
+#### Google Cloud SDK
+
+Google cloud SDK credential are are automatically deployed into the production images through CI/CD
+
+
+#### Start Airflow
+
+```bash
+./start.sh prod
+```
+
+This will pull the docker-ros-airflow image from the docker repository, and start the containers locally.
+It will start both the airflow container as the postgres container use to store airflow metadata.
+
+The output of the script should look like this
+
+```bash
+#########################################################################
+
+ Generating 'soniaauvets/airflow-ros-tensorflow' image using tag '1.1.3'
+1.1.3: Pulling from soniaauvets/airflow-ros-tensorflow
+Digest: sha256:778224fdeb5b89a790376084913d272b87a8f24d6352af527e1b472839e7b0dd
+Status: Image is up to date for soniaauvets/airflow-ros-tensorflow:1.1.3
+#########################################################################
+
+Launching sonia-auv airflow docker containers
+Starting sonia-auv-airflow_airflow-postgres_1 ... done
+sonia-auv-airflow_airflow-webserver_1 is ... done
+#########################################################################
+
+Airflow containers have STARTED
+```
+
+
+#### Airflow UI User
+
+To create a user to access the Airflow UI through a web browser you must run the following command
+```bash
+docker exec -it sonia-auv-airflow_airflow-webserver_1 airflow create_user --role Admin --username USERNAME --email EMAIL --firstname FIRSTNAME --lastname LASTNAME --password PASSWORD
+```
+
+```bash
+./start.sh prod
+```
+
+This will pull the docker-ros-airflow image from the docker repository, and start the containers locally.
+It will start both the airflow container as the postgres container use to store airflow metadata.
+
+The output of the script should look like this
+
+```bash
+#########################################################################
+
+ Generating 'soniaauvets/airflow-ros-tensorflow' image using tag '1.1.3'
+1.1.3: Pulling from soniaauvets/airflow-ros-tensorflow
+Digest: sha256:778224fdeb5b89a790376084913d272b87a8f24d6352af527e1b472839e7b0dd
+Status: Image is up to date for soniaauvets/airflow-ros-tensorflow:1.1.3
+#########################################################################
+
+Launching sonia-auv airflow docker containers
+Starting sonia-auv-airflow_airflow-postgres_1 ... done
+sonia-auv-airflow_airflow-webserver_1 is ... done
+#########################################################################
+
+Airflow containers have STARTED
+```
 You will the be asked to select your google account using a link that will displayed in the terminal.
 
 Afterward you will need to input the verification code into the terminal.
