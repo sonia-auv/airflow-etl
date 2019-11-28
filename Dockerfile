@@ -174,7 +174,7 @@ WORKDIR ${AIRFLOW_HOME}
 ENTRYPOINT ["/entrypoint.sh"]
 
 FROM release as prod-env
-COPY gcloud_service_account.json ${AIRFLOW_HOME}/gcloud_service_account.json
+COPY config/gcloud_service_account.json ${AIRFLOW_HOME}/gcloud_service_account.json
 RUN gcloud auth activate-service-account ${GCLOUD_SERVICE_ACCOUNT_EMAIL} --key-file=${AIRFLOW_HOME}/gcloud_service_account.json
 
 USER airflow
