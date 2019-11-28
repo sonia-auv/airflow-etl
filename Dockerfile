@@ -2,10 +2,15 @@
 # DESCRIPTION: Airflow and ROS container
 # HIGHLY INSPIRED BY: https://github.com/puckel/docker-airflow
 
-FROM python:3.7-slim-stretch
+FROM python:3.7-slim-stretch as release
 LABEL maintainer="gauthiermartin86@gmail.com"
-LABEL description="This image is an integration of Airflow and ROS"
+LABEL description="A docker image of Airflow an ETL orchestration plateform"
 
+# *********************************************
+# Declaring arguments variables
+ARG DOCKER_GROUP_ID=999
+ARG GCLOUD_SERVICE_ACCOUNT_EMAIL
+ARG BUILD_ENV="local"
 # *********************************************
 # Declaring environements variables
 
@@ -13,11 +18,11 @@ LABEL description="This image is an integration of Airflow and ROS"
 ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
-ARG DOCKER_GROUP_ID=999
-
 # Airflow
 ENV AIRFLOW_HOME=/usr/local/airflow
-ENV LABELBOX_API_KEY=${LABELBOX_KEY}
+
+# Google cloud
+ENV GCLOUD_SERVICE_ACCOUNT_EMAIL=${GCLOUD_SERVICE_ACCOUNT_EMAIL}
 
 # Tensorflow
 ARG PROTOC_VERSION=3.10.1
@@ -153,13 +158,28 @@ RUN mkdir -p ${AIRFLOW_HOME}/.config/gcloud/
 # *********************************************
 #Copying our airflow config and setting ownership
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
+COPY config/variables.json ${AIRFLOW_HOME}/variables.json
 RUN chown -R airflow: ${AIRFLOW_HOME}
 
 # Copying our docker entrypoint
 COPY script/entrypoint.sh /entrypoint.sh
 
+
 EXPOSE 8080
+
+
+FROM release as dev-env
 
 USER airflow
 WORKDIR ${AIRFLOW_HOME}
 ENTRYPOINT ["/entrypoint.sh"]
+
+FROM release as prod-env
+COPY config/gcloud_service_account.json ${AIRFLOW_HOME}/gcloud_service_account.json
+RUN gcloud auth activate-service-account ${GCLOUD_SERVICE_ACCOUNT_EMAIL} --key-file=${AIRFLOW_HOME}/gcloud_service_account.json
+
+USER airflow
+WORKDIR ${AIRFLOW_HOME}
+ENTRYPOINT ["/entrypoint.sh"]
+
+FROM release
