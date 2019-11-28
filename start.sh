@@ -24,8 +24,6 @@ function collectArgs() {
     BUILD_ENV=$1
     DAGS_DIR=$2
 
-    [[ "${BUILD_ENV}" == "dev" ]] && echo "Equal" || echo "Not equal"
-
     if [[ -z ${BUILD_ENV} ]]; then
         error "BUILD_ENV argument must be defined on calling ! i.e : ./start.sh [BUILD_ENV]"
     elif [[ "${BUILD_ENV}" -ne "dev" || "${BUILD_ENV}" -ne "prod" ]]; then
