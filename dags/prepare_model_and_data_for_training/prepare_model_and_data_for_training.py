@@ -122,14 +122,7 @@ def compare_label_map_file(base_tf_record_folder, folder_prefix):
 
     subfolders = files.get_sub_folders_list(base_tf_record_folder)
 
-    subfolders = [subfolder in subfolders if subfolder.startwith(folder_prefix)]
-
-
-
-
-
-
-
+    subfolders = [subfolder for subfolder in subfolders if subfolder.startwith(folder_prefix)]
 
 
 # def compare_label_map_file(tf_records_folders):
