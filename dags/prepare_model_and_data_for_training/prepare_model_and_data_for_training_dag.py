@@ -31,7 +31,7 @@ default_args = {
 
 tensorflow_model_zoo_markdown_url = Variable.get("tensorflow_model_zoo_markdown_url")
 base_model = Variable.get("tensorflow_model_zoo_models").split(",")
-video_feed_sources = Variable.get("video_feed_sources ").split(",")
+video_feed_sources = Variable.get("video_feed_sources").split(",")
 
 
 dag = DAG("prepare_model_and_data_for_training", default_args=default_args, catchup=False)
