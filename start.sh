@@ -94,7 +94,7 @@ if [[ ${BUILD_ENV} == 'prod' ]]; then
     echo
     echo "Launching sonia-auv airflow docker containers"
     echo ${CURRENT_DIR}
-    AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} HOST_ROOT_FOLDER=${CURRENT_DIR}  docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
+    AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} HOST_ROOT_FOLDER=${CURRENT_DIR}  docker-compose -f ${DOCKER_DIR}/docker-compose.yml up  -f ${DOCKER_DIR}/docker-compose-prod.yml -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
 else
     echo "#########################################################################"
     echo
