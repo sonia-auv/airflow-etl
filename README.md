@@ -50,6 +50,14 @@ You must execute the following commands to init you gcloud config:
 docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud init
 ```
 
+You will the be asked to select your google account using a link that will displayed in the terminal.
+
+Afterward you will need to input the verification code into the terminal.
+
+Once it's done you should be prompted to input the project name which should be *deep-learning-detection*
+
+And you must set you default region to *us-east-1-c*
+
 #### Airflow UI User
 
 To create a user to access the Airflow UI through a web browser you must run the following command
@@ -88,10 +96,7 @@ sonia-auv-airflow_airflow-webserver_1 is ... done
 Airflow containers have STARTED
 ```
 
-
-
 #### Production environment
-
 
 ##### Environment file
 
@@ -100,11 +105,28 @@ After you have installed docker and docker-compose you must create an environmen
 ```
 cp .env.template .env
 ```
+#### Airflow Fernet Key (Database data encryption)
+
+//TODO: Feed the key through CI/CD Pipeline
+
+First of all you must generate an Fernet Key to encrypt (connexions data) into Airflow database
+
+Here are the step to generate a fernet key
+
+```bash
+pip install cryptography
+```
+Then execute the following command to generate the fernet key
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Replace the **AIRFLOW_FERNET_KEY** field value by the newly created key into the **.env** file
 
 #### Google Cloud SDK
 
 Google cloud SDK credential are are automatically deployed into the production images through CI/CD
-
 
 #### Start Airflow
 
@@ -134,6 +156,17 @@ sonia-auv-airflow_airflow-webserver_1 is ... done
 Airflow containers have STARTED
 ```
 
+#### Importing Airflow Variables
+
+To import airflow variables from saved json file you must run the following command :
+
+```bash
+docker exec -it sonia-auv-airflow_airflow-webserver_1 airflow variables --import variables.json
+```
+
+The variables file is added to the docker image during build and it's located into the config directory
+It can be modified if new variables are added to the airflow instance.
+Their is an airflow command to extract it see [airflow variables](https://airflow.apache.org/docs/stable/concepts.html?highlight=variable)
 
 #### Airflow UI User
 
@@ -167,54 +200,11 @@ sonia-auv-airflow_airflow-webserver_1 is ... done
 
 Airflow containers have STARTED
 ```
-You will the be asked to select your google account using a link that will displayed in the terminal.
-
-Afterward you will need to input the verification code into the terminal.
-
-Once it's done you should be prompted to input the project name which should be *deep-learning-detection*
-
-And you must set you default region to *us-east-1-c*
-
-#### add slack connection
-
-You need to add a slack connection to be able to use slack in airflow.
 
 ### Usage
 
-#### Extract bags img from bags(extract_img_from_ros_bag_dag)
-1. Create a directory that will contain your bags in the `data/input/ros_bag` directory
-2. Add your bag in the folder
-3. Launch the extract_img_from_ros_bag DAG
-
-
-### Admin Variables
+### Airflow Variables
 Our project defines admin variables to change the behavior and configuration of DAGS. In the Admin->Variables section of Airflow, you can import from json file. For an example of a variables set, see the variables.json file at the root of the repository.
-
-#### Dataset
-Represents the name of the bag you want to extract into a series of images. The dataset variable is also used for naming the output images folder
-
-### Bucket
-link to the targeted bucket. See variables.json for an example.
-
-### Dataset_to_Trainset
-Comma-separated list of Dataset to convert into Trainset. See variables.json for an example.
-
-### Trainset
-Represent the name of your final tf_record directory. See variables.json for an example.
-
-#### Topics
-Comma-separated list of ROS Topics that the images will be extracted from. See variables.json for an example.
-
-### Before generating tf_record file
-before generating the tf_record file be sure to have the label_map file, it must have the name `<name of your Trainset>.pbtxt` for an example
-of label_map file refer to this [file](https://github.com/EdjeElectronics/TensorFlow-Object-Detection-API-Tutorial-Train-Multiple-Objects-Windows-10/blob/master/training/labelmap.pbtxt)
-
-
-#### Developpement
-
-## Deployment
-
-Add additional notes about how to deploy this on a live system
 
 ## Troubleshooting
 
@@ -227,8 +217,6 @@ chown -R [user]:[user] logs
 
 ## Built With
 - [Apache-Airflow](https://airflow.apache.org/) - Apache-Airflow
-- [ROS](http://www.ros.org/) - ROS Robotic Operating System
-- [TENSORFLOW](http://tensorflow.com) - Tensorflow Deep learning library
 
 ## Contributing
 

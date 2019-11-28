@@ -158,6 +158,7 @@ RUN mkdir -p ${AIRFLOW_HOME}/.config/gcloud/
 # *********************************************
 #Copying our airflow config and setting ownership
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
+COPY config/variables.json ${AIRFLOW_HOME}/variables.json
 RUN chown -R airflow: ${AIRFLOW_HOME}
 
 # Copying our docker entrypoint
