@@ -132,7 +132,7 @@ def create_tf_record(output_filename, label_map_dict, annotations_dir, image_dir
       image_dir: Directory where image files are stored.
       examples: Examples to parse and save to tf record.
     """
-    writer = tf.python_io.TFRecordWriter(output_filename)
+    writer = tf.io.TFRecordWriter(output_filename)
     for idx, example in enumerate(examples):
         if idx % 100 == 0:
             logging.info("On image %d of %d", idx, len(examples))
@@ -150,8 +150,8 @@ def create_tf_record(output_filename, label_map_dict, annotations_dir, image_dir
 
         if tf_example != None:
             writer.write(tf_example.SerializeToString())
-
     writer.close()
+    logging.info(f"TF Record generated : {output_filename}")
 
 
 def parse_args():
@@ -207,4 +207,4 @@ def main(_):
 if __name__ == "__main__":
     parser = parse_args()
     FLAGS, unparsed = parser.parse_known_args()
-    tf.app.run(main=main)
+    tf.compat.v1.app.run(main=main)

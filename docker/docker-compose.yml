@@ -1,7 +1,7 @@
-version: "3.1"
+version: "3.7"
 services:
   airflow-postgres:
-    image: postgres:9.6
+    image: postgres:12
     hostname: airflow-postgres
     environment:
       - POSTGRES_USER
@@ -26,10 +26,12 @@ services:
       - POSTGRES_HOST
       - POSTGRES_PORT
       - AIRFLOW_FERNET_KEY
+      - HOST_ROOT_FOLDER=${HOST_ROOT_FOLDER}
     volumes:
-      - $AIRFLOW_DAG_DIR:/usr/local/airflow/dags
+      - ${AIRFLOW_DAG_DIR}:/usr/local/airflow/dags
       - $PWD/data:/usr/local/airflow/data
       - $PWD/logs:/usr/local/airflow/logs
+      - /var/run/docker.sock:/var/run/docker.sock
       - gcloud-config:/usr/local/airflow/.config/gcloud
       - ssh-keys:/home/airflow/.ssh
 

@@ -21,7 +21,14 @@ function error() {
 }
 
 function collectArgs() {
-    DAGS_DIR=$1
+    BUILD_ENV=$1
+    DAGS_DIR=$2
+
+    if [[ -z ${BUILD_ENV} ]]; then
+        error "BUILD_ENV argument must be defined on calling ! i.e : ./start.sh [BUILD_ENV]"
+    elif [[ "${BUILD_ENV}" -ne "dev" || "${BUILD_ENV}" -ne "prod" ]]; then
+        error "BUILD_ENV argument value must be dev or prod"
+    fi
 
     if [[ ! -z $DAGS_DIR ]]; then
         AIRFLOW_DAG_DIR=${DAGS_DIR}
@@ -60,6 +67,14 @@ if [[ ! "$(docker -v)" ]]; then
      error "You must install docker to be able to use this script"
 fi
 
+
+echo "#########################################################################"
+echo
+echo
+echo "Build context:${BUILD_ENV}"
+echo
+echo
+
 echo "#########################################################################"
 echo
 echo "Validating presence of airflow required folder and creating missing folders"
@@ -68,18 +83,25 @@ checkRequiredFolderExist ||error "Error while creating folder required by airflo
 echo
 echo
 
-echo "#########################################################################"
-echo
-echo "Generating '${AIRFLOW_DOCKER_IMAGE_NAME}' image using tag '${AIRFLOW_DOCKER_IMAGE_TAG}'"
-docker pull ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} ||error "Error pulling '${AIRLFLOW_DOCKER_IMAGE_NAME}'"
+echo ${BUILD_ENV}
+if [[ ${BUILD_ENV} == 'prod' ]]; then
+    echo "#########################################################################"
+    echo
+    echo "Generating '${AIRFLOW_DOCKER_IMAGE_NAME}' image using tag '${AIRFLOW_DOCKER_IMAGE_TAG}'"
+    docker pull ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} ||error "Error pulling '${AIRLFLOW_DOCKER_IMAGE_NAME}'"
 
-
-echo "#########################################################################"
-echo
-echo "Launching sonia-auv airflow docker containers"
-AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
-
-
+    echo "#########################################################################"
+    echo
+    echo "Launching sonia-auv airflow docker containers"
+    echo ${CURRENT_DIR}
+    AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} HOST_ROOT_FOLDER=${CURRENT_DIR}  docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
+else
+    echo "#########################################################################"
+    echo
+    echo "Launching sonia-auv airflow docker containers"
+    echo ${CURRENT_DIR}
+    AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} HOST_ROOT_FOLDER=${CURRENT_DIR}  docker-compose -f ${DOCKER_DIR}/docker-compose.yml -f ${DOCKER_DIR}/docker-compose-local.yml up -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
+fi
 echo "#########################################################################"
 echo
 echo "Airflow containers have ${GREEN}${BOLD}STARTED${GREEN}${BOLD}"
