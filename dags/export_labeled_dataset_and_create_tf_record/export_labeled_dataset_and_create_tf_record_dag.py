@@ -148,7 +148,7 @@ for index, project_name in enumerate(export_project_name):
     labelmap_file = os.path.join(trainval_dir, f"label_map_{project_name}")
     tfrecord_output_dir = os.path.join(AIRFLOW_TF_RECORD_FOLDER, project_name)
 
-    create_tf_record_command = f"python {AIRFLOW_CURRENT_DAG_FOLDER}/create_tf_record.py --annotation_dir={voc_annotation_extract_dir} --image_dir={voc_image_extract_dir} --label_map_file={labelmap_file}.pbtxt --trainval_file={trainval_file}.txt --output_dir={tfrecord_output_dir}"
+    create_tf_record_command = f"python {AIRFLOW_CURRENT_DAG_FOLDER}/create_tf_record.py --annotation_dir={voc_annotation_extract_dir} --image_dir={voc_image_extract_dir} --label_map_file={labelmap_file}.pbtxt --trainval_file={trainval_file}.txt --output_dir={tfrecord_output_dir} --dataset_name={project_name}"
 
     create_tf_record = BashOperator(
         task_id="create_tf_record_" + project_name, bash_command=create_tf_record_command, dag=dag
