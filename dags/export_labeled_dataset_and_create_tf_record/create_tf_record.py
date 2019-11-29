@@ -167,6 +167,7 @@ def parse_args():
         "--trainval_file", type=str, required=True, help="Path to trainval.txt file."
     )
     parser.add_argument("--output_dir", type=str, required=True, help="Path to output directory.")
+    parser.add_argument("--dataset_name", type=str, required=True, help="Dataset name")
 
     return parser
 
@@ -180,6 +181,7 @@ def main(_):
     image_dir = FLAGS.image_dir
     annotations_dir = FLAGS.annotation_dir
     output_dir = FLAGS.output_dir
+    dataset_name = FLAGS.dataset_name
     examples_path = FLAGS.trainval_file
     examples_list = dataset_util.read_examples_list(examples_path)
 
@@ -195,13 +197,13 @@ def main(_):
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    train_output_path = os.path.join(output_dir, "train.record")
-    val_output_path = os.path.join(output_dir, "val.record")
-    label_map_output_path = os.path.join(output_dir, "label_map.pbtxt")
+    train_output_path = os.path.join(output_dir, f"{dataset_name}_train.record")
+    val_output_path = os.path.join(output_dir, f"{dataset_name}_val.record")
+    # label_map_output_path = os.path.join(output_dir, "label_map.pbtxt")
     create_tf_record(train_output_path, label_map_dict, annotations_dir, image_dir, train_examples)
     create_tf_record(val_output_path, label_map_dict, annotations_dir, image_dir, val_examples)
 
-    shutil.copy(FLAGS.label_map_file, label_map_output_path)
+    # shutil.copy(FLAGS.label_map_file, label_map_output_path)
 
 
 if __name__ == "__main__":

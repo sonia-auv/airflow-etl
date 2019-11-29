@@ -31,6 +31,7 @@ default_args = {
 
 tensorflow_model_zoo_markdown_url = Variable.get("tensorflow_model_zoo_markdown_url")
 base_model = Variable.get("tensorflow_model_zoo_models").split(",")
+video_feed_sources = Variable.get("video_feed_sources").split(",")
 
 
 dag = DAG("prepare_model_and_data_for_training", default_args=default_args, catchup=False)
@@ -86,7 +87,18 @@ base_model_exist_or_download = PythonOperator(
     dag=dag,
 )
 
-start_task >> check_reference_file_exist >> [
-    download_current_model_zoo_list,
-    check_model_list_difference,
-] >> base_model_exist_or_download >> end_task
+for feed_source in video_feed_sources:
+
+    check_labelmap_file_content_are_the_same = PythonOperator(
+        task_id="check_labelmap_file_content_are_the_same_" + feed_source,
+        python_callable=None,
+        op_kwargs={
+            "base_tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
+            "folder_prefixes": feed_source,
+        },
+    )
+
+    start_task >> check_reference_file_exist >> [
+        download_current_model_zoo_list,
+        check_model_list_difference,
+    ] >> base_model_exist_or_download >> check_labelmap_file_content_are_the_same >> end_task
