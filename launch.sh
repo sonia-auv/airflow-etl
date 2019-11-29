@@ -20,7 +20,7 @@ function error() {
     exit 1
 }
 
-function collectArgs() {
+function parseArgs() {
     BUILD_ENV=$1
     DAGS_DIR=$2
 
@@ -57,7 +57,7 @@ function checkRequiredFolderExist() {
     done
 }
 
-collectArgs $* || error "Error while defining airflow dags directory"
+parseArgs $* || error "Error while defining airflow dags directory"
 
 [ -f .env ] || error "'.env' file does not exist in current directory! ($(pwd))"
 
