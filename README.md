@@ -107,8 +107,6 @@ cp .env.template .env
 ```
 #### Airflow Fernet Key (Database data encryption)
 
-//TODO: Feed the key through CI/CD Pipeline
-
 First of all you must generate an Fernet Key to encrypt (connexions data) into Airflow database
 
 Here are the step to generate a fernet key
@@ -126,7 +124,15 @@ Replace the **AIRFLOW_FERNET_KEY** field value by the newly created key into the
 
 #### Google Cloud SDK
 
-Google cloud SDK credential are are automatically deployed into the production images through CI/CD
+**NOTE:** Make sure to that the file glcoud_service_account.json exist in docker-ros-airflow/config on the VM
+**NOTE:** Make sure the webserver docker container is running
+
+Then from the vm run the following command
+
+```bash
+gcloud auth activate-service-account --key-file=config/gcloud_service_account.json
+```
+
 
 #### Start Airflow
 

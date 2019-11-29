@@ -83,7 +83,6 @@ checkRequiredFolderExist ||error "Error while creating folder required by airflo
 echo
 echo
 
-echo ${BUILD_ENV}
 if [[ ${BUILD_ENV} == 'prod' ]]; then
     echo "#########################################################################"
     echo

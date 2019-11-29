@@ -32,8 +32,6 @@ services:
       - $PWD/data:/usr/local/airflow/data
       - $PWD/logs:/usr/local/airflow/logs
       - /var/run/docker.sock:/var/run/docker.sock
-      - gcloud-config:/usr/local/airflow/.config/gcloud
-      - ssh-keys:/home/airflow/.ssh
 
     ports:
       - "4080:8080"

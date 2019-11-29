@@ -145,7 +145,6 @@ RUN set -ex \
     /usr/share/doc \
     /usr/share/doc-base
 
-
 ENV PYTHONPATH=${PYTHONPATH}:${TENSORFLOW_OBJECT_DETECTION_LIB_PATH}:${TENSORFLOW_OBJECT_DETECTION_SLIM_PATH}
 # Testing installation of the API
 RUN cd ${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}/research/ \
