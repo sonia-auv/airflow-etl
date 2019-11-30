@@ -12,8 +12,8 @@ from utils import file_ops, slack
 
 BASE_AIRFLOW_FOLDER = "/usr/local/airflow/"
 AIRFLOW_DATA_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, "data")
-AIRFLOW_MODELS_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "model", "base")
-AIRFLOW_MODELS_CSV = os.path.join(AIRFLOW_DATA_FOLDER, "model", "model_list.csv")
+AIRFLOW_MODELS_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "models", "base")
+AIRFLOW_MODELS_CSV = os.path.join(AIRFLOW_DATA_FOLDER, "models", "model_list.csv")
 AIRFLOW_TRAINING_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "training")
 AIRFLOW_TRAINING_INPUT_FOLDER = os.path.join(AIRFLOW_TRAINING_FOLDER, "input")
 AIRFLOW_TF_RECORD_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "tfrecord")
