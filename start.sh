@@ -24,6 +24,7 @@
 RED="$(tput setaf 1)"
 GREEN="$(tput setaf 2)"
 YELLOW="$(tput setaf 3)"
+ORANGE='\033[0;33m'
 BOLD="$(tput bold)"
 RESET="$(tput sgr0)"
 
@@ -42,42 +43,42 @@ DOCKER_DIR="${CURRENT_DIR}/docker"
 # ------------------------------------------------------------------------------
 
 # Header logging
-e_header() {
-    printf "$(tput setaf 38)→ %s$(tput sgr0)\n" "$@"
+e_info() {
+    echo "${YELLOW}[INFO]:${RESET}" "$@"
 }
 
 # Success logging
 e_success() {
-    printf "$(tput setaf 76)✔ %s$(tput sgr0)\n" "$@"
+    echo "${GREEN}✔${RESET}" "$@"
 }
 
 # Error logging
 e_error() {
-    printf "$(tput setaf 1)✖ %s$(tput sgr0)\n" "$@"
+    echo "${RED}[ERROR]:${RESET}" "$@"
     exit 1
 }
 
 # Warning logging
 e_warning() {
-    printf "$(tput setaf 3)! %s$(tput sgr0)\n" "$@"
+    printf "${ORANGE}![WARNING]:${RESET}" "$@"
 }
 
 e_airflow_container_starting() {
     echo "#########################################################################"
     echo
-    echo "Launching sonia-auv airflow docker containers"
+    e_success "Launching sonia-auv airflow docker containers"
 }
 
 e_airflow_container_started() {
     echo "#########################################################################"
     echo
-    echo "Airflow containers have ${GREEN}${BOLD}STARTED${GREEN}${BOLD}"
+    e_success "Airflow containers have ${GREEN}${BOLD}STARTED${GREEN}${BOLD}"
 }
 
 e_airflow_image_pulling() {
     echo "#########################################################################"
     echo
-    echo "Pulling image '${AIRFLOW_DOCKER_IMAGE_NAME}' using tag '${AIRFLOW_DOCKER_IMAGE_TAG}'"
+    e_success "Pulling image '${AIRFLOW_DOCKER_IMAGE_NAME}' using tag '${AIRFLOW_DOCKER_IMAGE_TAG}'"
 }
 
 # ------------------------------------------------------------------------------
@@ -85,7 +86,7 @@ e_airflow_image_pulling() {
 # ------------------------------------------------------------------------------
 
 context(){
-    e_header "Build context:${BUILD_ENV}"
+    e_info "Build context:${BUILD_ENV}"
 }
 
 help() {
