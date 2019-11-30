@@ -87,7 +87,7 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
 
     remove_bag_after_extract = BashOperator(
         task_id="remove_bag_after_extract",
-        command=f"rm -rf {BAG_FOLDER}/*",
+        bash_command=f"rm -rf {BAG_FOLDER}/*",
         trigger_rule="all_success",
         dag=dag,
     )
