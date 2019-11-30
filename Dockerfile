@@ -2,7 +2,7 @@
 # DESCRIPTION: Airflow and ROS container
 # HIGHLY INSPIRED BY: https://github.com/puckel/docker-airflow
 
-FROM python:3.7-slim-stretch as release
+FROM python:3.7-slim-stretch
 LABEL maintainer="gauthiermartin86@gmail.com"
 LABEL description="A docker image of Airflow an ETL orchestration plateform"
 

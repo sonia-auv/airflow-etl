@@ -3,4 +3,3 @@ services:
   airflow-webserver:
     build:
       context: $PWD/
-      target: dev-env
