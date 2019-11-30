@@ -96,6 +96,7 @@ for feed_source in video_feed_sources:
             "base_tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
             "folder_prefixes": feed_source,
         },
+        dag=dag,
     )
 
     start_task >> check_reference_file_exist >> [
