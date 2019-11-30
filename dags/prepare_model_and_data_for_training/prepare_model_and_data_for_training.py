@@ -123,13 +123,16 @@ def compare_label_map_file(base_tf_record_folder, video_source):
     subfolders = files.get_sub_folders_list(base_tf_record_folder)
     subfolders = [subfolder for subfolder in subfolders if subfolder.startwith(video_source)]
 
-    label_maps = []
-    for path, subdirs, files in os.walk(subfolders):
-        for file_name in files:
-            if file_name.endswith(".pbtxt"):
-                label_maps.append(os.path.join(path, file_name))
+    print(subfolders)
 
-    print(label_maps)
+    if len(subfolders) > 1:
+        label_maps = []
+        for path, subdirs, files in os.walk(subfolders):
+            for file_name in files:
+                if file_name.endswith(".pbtxt"):
+                    label_maps.append(os.path.join(path, file_name))
+
+        print(label_maps)
 
 
 # def compare_label_map_file(tf_records_folders):
