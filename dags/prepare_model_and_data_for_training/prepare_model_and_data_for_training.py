@@ -121,7 +121,7 @@ def prepare_training_input_data(
 def compare_label_map_file(base_tf_record_folder, video_source):
 
     subfolders = file_ops.get_sub_folders_list(base_tf_record_folder)
-    subfolders = [subfolder for subfolder in subfolders if subfolder.startwith(video_source)]
+    subfolders = [subfolder for subfolder in subfolders if subfolder.startswith(video_source)]
 
     print(subfolders)
 
