@@ -7,6 +7,7 @@ import os
 from datetime import datetime, timedelta
 
 from airflow import DAG
+from airflow.operators.bash_operator import BashOperator
 from airflow.operators.docker_operator import DockerOperator
 from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
 from airflow.contrib.sensors.file_sensor import FileSensor
@@ -84,4 +85,11 @@ with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args)
         dag=dag,
     )
 
-    detect_bag >> bag_filename_syntax_matches_format >> extract_images_from_bag
+    remove_bag_after_extract = BashOperator(
+        task_id="remove_bag_after_extract",
+        command=f"rm -rf {BAG_FOLDER}/*",
+        trigger_rule="all_success",
+        dag=dag,
+    )
+
+    detect_bag >> bag_filename_syntax_matches_format >> extract_images_from_bag >> remove_bag_after_extract
