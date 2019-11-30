@@ -2,8 +2,3 @@
 *
 # Except this file
 !.gitignore
-!bags
-!images
-!tfrecords
-!json
-!csv
