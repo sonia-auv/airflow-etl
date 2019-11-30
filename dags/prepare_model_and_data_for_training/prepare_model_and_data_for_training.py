@@ -118,11 +118,18 @@ def prepare_training_input_data(
         shutil.copytree(folder, training_input_data_folder)
 
 
-def compare_label_map_file(base_tf_record_folder, folder_prefix):
+def compare_label_map_file(base_tf_record_folder, video_source):
 
     subfolders = files.get_sub_folders_list(base_tf_record_folder)
+    subfolders = [subfolder for subfolder in subfolders if subfolder.startwith(video_source)]
 
-    subfolders = [subfolder for subfolder in subfolders if subfolder.startwith(folder_prefix)]
+    label_maps = []
+    for path, subdirs, files in os.walk(subfolders):
+        for file_name in files:
+            if file_name.endswith(".pbtxt"):
+                label_maps.append(os.path.join(path, file_name))
+
+    print(label_maps)
 
 
 # def compare_label_map_file(tf_records_folders):

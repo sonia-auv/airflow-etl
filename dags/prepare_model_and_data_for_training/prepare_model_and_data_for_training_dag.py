@@ -91,7 +91,7 @@ for feed_source in video_feed_sources:
 
     check_labelmap_file_content_are_the_same = PythonOperator(
         task_id="check_labelmap_file_content_are_the_same_" + feed_source,
-        python_callable=None,
+        python_callable=prepare_model_and_data_for_training.compare_label_map_file,
         op_kwargs={
             "base_tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
             "folder_prefixes": feed_source,
