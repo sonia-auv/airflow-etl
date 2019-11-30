@@ -121,11 +121,15 @@ def prepare_training_input_data(
 def compare_label_map_file(base_tf_record_folder, video_source):
 
     subfolders = file_ops.get_sub_folders_list(base_tf_record_folder)
-    subfolders = [subfolder for subfolder in subfolders if subfolder.startswith(video_source)]
 
-    print(subfolders)
+    parsed_subfolder = []
+    for subfolder in subfolders:
+        folder_name = os.path.basename(os.path.normpath(subfolder))
 
-    if len(subfolders) > 1:
+        if folder_name.startswith(video_source):
+            parsed_subfolder.append(subfolder)
+
+    if len(subfolders) > 2:
         label_maps = []
         for path, subdirs, files in os.walk(subfolders):
             for file_name in files:
@@ -133,6 +137,8 @@ def compare_label_map_file(base_tf_record_folder, video_source):
                     label_maps.append(os.path.join(path, file_name))
 
         print(label_maps)
+    else:
+        logging.warn(f"There were not enough dataset to compare i.g : Less than two")
 
 
 # def compare_label_map_file(tf_records_folders):
