@@ -55,7 +55,7 @@ def check_reference_model_list_different(url, base_model_csv):
 
         if not new_models_reference_df.equals(saved_models_reference_df):
             new_models_reference_df.to_csv(base_model_csv)
-        return True
+        # return True
     except requests.exceptions.RequestException as e:
         logging.error(f"An error occurred while downloading the file from {url}")
 

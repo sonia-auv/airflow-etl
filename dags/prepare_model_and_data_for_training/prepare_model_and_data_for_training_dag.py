@@ -60,7 +60,7 @@ check_reference_model_list_exist_task = PythonOperator(
 )
 
 
-check_model_list_difference = BranchPythonOperator(
+check_model_list_difference = PythonOperator(
     task_id="check_model_version_differences",
     python_callable=prepare_model_and_data_for_training.check_reference_model_list_different,
     op_kwargs={"url": tensorflow_model_zoo_markdown_url, "base_model_csv": AIRFLOW_MODELS_CSV},
