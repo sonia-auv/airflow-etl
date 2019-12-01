@@ -51,11 +51,11 @@ check_reference_file_exist = BranchPythonOperator(
     dag=dag,
 )
 
-
-download_current_model_zoo_list = PythonOperator(
-    task_id="download_current_model_zoo_list",
-    python_callable=prepare_model_and_data_for_training.download_reference_model_list_as_csv,
+check_reference_model_list_exist_task = PythonOperator(
+    task_id="check_reference_model_list_exist",
+    python_callable=prepare_model_and_data_for_training.reference_model_list_exist_or_create,
     op_kwargs={"url": tensorflow_model_zoo_markdown_url, "base_model_csv": AIRFLOW_MODELS_CSV},
+    provide_context=True,
     dag=dag,
 )
 
@@ -67,13 +67,14 @@ check_model_list_difference = BranchPythonOperator(
     dag=dag,
 )
 
-check_reference_model_list_exist_task = PythonOperator(
-    task_id="check_reference_model_list_exist",
-    python_callable=prepare_model_and_data_for_training.reference_model_list_exist_or_create,
+
+download_current_model_zoo_list = PythonOperator(
+    task_id="download_current_model_zoo_list",
+    python_callable=prepare_model_and_data_for_training.download_reference_model_list_as_csv,
     op_kwargs={"url": tensorflow_model_zoo_markdown_url, "base_model_csv": AIRFLOW_MODELS_CSV},
-    provide_context=True,
     dag=dag,
 )
+
 
 base_model_exist_or_download = PythonOperator(
     task_id="base_model_exist_or_download",
