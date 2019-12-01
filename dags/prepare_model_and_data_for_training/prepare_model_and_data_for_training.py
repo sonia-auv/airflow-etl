@@ -51,11 +51,10 @@ def check_reference_model_list_different(url, base_model_csv):
     try:
         response = requests.get(url, allow_redirects=True)
         new_models_reference_df = __parse_downloaded_model_file_list_response(response)
-        saved_models_reference_df = pd.read_csv(model_list_csv)
+        saved_models_reference_df = pd.read_csv(base_model_csv)
 
         if not new_models_reference_df.equals(saved_models_reference_df):
-            new_models_reference_df.to_csv(model_list_csv)
-
+            new_models_reference_df.to_csv(base_model_csv)
         return True
     except requests.exceptions.RequestException as e:
         logging.error(f"An error occurred while downloading the file from {url}")
