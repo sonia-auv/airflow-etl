@@ -62,7 +62,7 @@ download_current_model_zoo_list = PythonOperator(
 
 check_model_list_difference = BranchPythonOperator(
     task_id="check_model_version_differences",
-    python_callable=prepare_model_and_data_for_training.download_reference_model_list_as_csv,
+    python_callable=prepare_model_and_data_for_training.check_reference_model_list_different,
     op_kwargs={"url": tensorflow_model_zoo_markdown_url, "base_model_csv": AIRFLOW_MODELS_CSV},
     dag=dag,
 )
