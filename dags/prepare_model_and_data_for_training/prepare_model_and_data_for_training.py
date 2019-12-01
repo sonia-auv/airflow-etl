@@ -128,7 +128,7 @@ def compare_label_map_file(base_tf_record_folder, video_source):
 
         if folder_name.startswith(video_source):
             parsed_subfolder.append(subfolder)
-
+    print(parsed_subfolder)
     if len(parsed_subfolder) > 2:
         label_maps = []
         print(parsed_subfolder)
