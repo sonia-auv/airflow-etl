@@ -135,32 +135,20 @@ def compare_label_map_file(base_tf_record_folder, video_source):
         label_maps = []
         for subfolder in parsed_subfolder:
             label_maps.append(glob.glob(subfolder + "*.pbtxt"))
-        print(label_maps)
+
+        reference_label_map = label_maps[0]
+        labelmap_match = True
+        for label_map in label_maps:
+            if filecmp(label_map, reference_label_map):
+                print(f"[ MATCH ] | LabelMap:{label_map} ")
+            else:
+                print(f"[ FAILED ] | LabelMap:{label_map} ")
+                labelmap_match = False
+
+        return labelmap_match
     else:
         logging.warn(f"There were not enough dataset to compare i.g : Less than two")
 
-
-# def compare_label_map_file(tf_records_folders):
-
-#     label_maps = []
-#     for path, subdirs, files in os.walk(tf_records_folders):
-#         for file_name in files:
-#             if file_name.endswith(".pbtxt"):
-#                 label_maps.append(os.path.join(path, file_name))
-
-#     reference_label_map = label_maps[0]
-#     labelmap_match = True
-#     print("--------- Labelmap Compare ----------")
-#     print(f"Reference Map :{reference_label_map}")
-#     for label_map in label_maps:
-#         if filecmp(label_map, reference_label_map):
-#             print(f"[ MATCH ] | LabelMap:{label_map} ")
-#         else:
-#             print(f"[ FAILED ] | LabelMap:{label_map} ")
-#             labelmap_match = False
-
-#     if labelmap_match == False:
-#         raise ValueError("Comparing labelmap file failed")
 
 # TODO: Compare all labelmap.pbtxt
 # TODO: Join all trainval content
