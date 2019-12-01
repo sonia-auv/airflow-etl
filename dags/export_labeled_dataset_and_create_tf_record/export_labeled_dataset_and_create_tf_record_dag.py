@@ -100,7 +100,7 @@ for index, project_name in enumerate(export_project_name):
 
     extract_labeled_data_from_labelbox = DockerOperator(
         task_id="extract_labeled_data_from_labelbox_" + project_name,
-        image="soniaauvets/labelbox-exporter:1.0.0",
+        image="soniaauvets/labelbox-exporter:1.1.0",
         force_pull=True,
         auto_remove=True,
         command=f"python main.py /input/{project_name}.json /output",

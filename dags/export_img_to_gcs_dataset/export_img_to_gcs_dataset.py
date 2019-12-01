@@ -30,11 +30,9 @@ def create_json(images_path, gcs_images_path, json_path):
     # """
     sub_folders = file_ops.get_sub_folders_list(images_path)
 
-    data = []
-
     for folder in sub_folders:
+        data = []
         filenames = file_ops.get_filenames_in_directory(folder, "*.jpg")
-
         for filename in filenames:
             gcp_url = os.path.join(
                 gcs_images_path, file_ops.get_parent_folder_name(folder), filename

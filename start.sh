@@ -66,7 +66,7 @@ e_warning() {
 e_airflow_container_starting() {
     echo "#########################################################################"
     echo
-    e_success "Launching sonia-auv airflow docker containers"
+    echo "Launching sonia-auv airflow docker containers"
 }
 
 e_airflow_container_started() {
@@ -78,7 +78,7 @@ e_airflow_container_started() {
 e_airflow_image_pulling() {
     echo "#########################################################################"
     echo
-    e_success "Pulling image '${AIRFLOW_DOCKER_IMAGE_NAME}' using tag '${AIRFLOW_DOCKER_IMAGE_TAG}'"
+    echo  "Pulling image '${AIRFLOW_DOCKER_IMAGE_NAME}' using tag '${AIRFLOW_DOCKER_IMAGE_TAG}'"
 }
 
 # ------------------------------------------------------------------------------

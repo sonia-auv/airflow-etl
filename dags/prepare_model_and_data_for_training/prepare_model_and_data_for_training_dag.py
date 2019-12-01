@@ -12,8 +12,8 @@ from utils import file_ops, slack
 
 BASE_AIRFLOW_FOLDER = "/usr/local/airflow/"
 AIRFLOW_DATA_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, "data")
-AIRFLOW_MODELS_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "model", "base")
-AIRFLOW_MODELS_CSV = os.path.join(AIRFLOW_DATA_FOLDER, "model", "model_list.csv")
+AIRFLOW_MODELS_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "models", "base")
+AIRFLOW_MODELS_CSV = os.path.join(AIRFLOW_DATA_FOLDER, "models", "model_list.csv")
 AIRFLOW_TRAINING_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "training")
 AIRFLOW_TRAINING_INPUT_FOLDER = os.path.join(AIRFLOW_TRAINING_FOLDER, "input")
 AIRFLOW_TF_RECORD_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "tfrecord")
@@ -87,15 +87,13 @@ base_model_exist_or_download = PythonOperator(
     dag=dag,
 )
 
-for feed_source in video_feed_sources:
+for video_source in video_feed_sources:
 
     check_labelmap_file_content_are_the_same = PythonOperator(
-        task_id="check_labelmap_file_content_are_the_same_" + feed_source,
-        python_callable=None,
-        op_kwargs={
-            "base_tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
-            "folder_prefixes": feed_source,
-        },
+        task_id="check_labelmap_file_content_are_the_same_" + video_source,
+        python_callable=prepare_model_and_data_for_training.compare_label_map_file,
+        op_kwargs={"base_tf_record_folder": AIRFLOW_TF_RECORD_FOLDER, "video_source": video_source},
+        dag=dag,
     )
 
     start_task >> check_reference_file_exist >> [

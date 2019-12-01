@@ -118,11 +118,27 @@ def prepare_training_input_data(
         shutil.copytree(folder, training_input_data_folder)
 
 
-def compare_label_map_file(base_tf_record_folder, folder_prefix):
+def compare_label_map_file(base_tf_record_folder, video_source):
 
-    subfolders = files.get_sub_folders_list(base_tf_record_folder)
+    subfolders = file_ops.get_sub_folders_list(base_tf_record_folder)
 
-    subfolders = [subfolder for subfolder in subfolders if subfolder.startwith(folder_prefix)]
+    parsed_subfolder = []
+    for subfolder in subfolders:
+        folder_name = os.path.basename(os.path.normpath(subfolder))
+
+        if folder_name.startswith(video_source):
+            parsed_subfolder.append(subfolder)
+
+    if len(subfolders) > 2:
+        label_maps = []
+        for path, subdirs, files in os.walk(subfolders):
+            for file_name in files:
+                if file_name.endswith(".pbtxt"):
+                    label_maps.append(os.path.join(path, file_name))
+
+        print(label_maps)
+    else:
+        logging.warn(f"There were not enough dataset to compare i.g : Less than two")
 
 
 # def compare_label_map_file(tf_records_folders):
