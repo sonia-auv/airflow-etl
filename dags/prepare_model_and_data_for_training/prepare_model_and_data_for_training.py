@@ -139,6 +139,8 @@ def compare_label_map_file(base_tf_record_folder, video_source):
         reference_label_map = label_maps[0]
         labelmap_match = True
         for label_map in label_maps:
+            print(label_map)
+            print(reference_label_map)
             if filecmp(label_map, reference_label_map):
                 print(f"[ MATCH ] | LabelMap:{label_map} ")
             else:
