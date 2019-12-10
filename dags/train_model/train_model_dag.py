@@ -12,7 +12,6 @@ default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date": datetime(2019, 1, 24),
-    "schedule_interval" : "None",
     "email": ["club.sonia@etsmtl.net"],
     "email_on_failure": False,
     "email_on_retry": False,
@@ -20,7 +19,7 @@ default_args = {
     "retries": 0,
 }
 
-dag = DAG("train_model", default_args=default_args, catchup=False)
+dag = DAG("train_model", default_args=default_args, catchup=False, schedule_interval=None)
 
 start_task = DummyOperator(task_id="start_task", dag=dag)
 end_task = DummyOperator(task_id="end_task", dag=dag)

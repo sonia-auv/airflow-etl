@@ -47,7 +47,6 @@ default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date": datetime(2019, 1, 24),
-    "schedule_interval" : "None",
     "email": ["club.sonia@etsmtl.net"],
     "email_on_failure": False,
     "email_on_retry": False,
@@ -55,7 +54,12 @@ default_args = {
     "retries": 0,
 }
 
-dag = DAG("import_labeled_dataset_and_create_tf_record", default_args=default_args, catchup=False)
+dag = DAG(
+    "import_labeled_dataset_and_create_tf_record",
+    default_args=default_args,
+    catchup=False,
+    schedule_interval=None,
+)
 
 
 def get_proper_label_list(project_name):

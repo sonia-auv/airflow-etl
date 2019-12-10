@@ -32,7 +32,6 @@ default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date": datetime(2019, 1, 24),
-    "schedule_interval" : "None",
     "email": ["club.sonia@etsmtl.net"],
     "email_on_failure": False,
     "email_on_retry": False,
@@ -44,7 +43,9 @@ bucket_base_uri = f"gs://{bucket_name}/"
 bucket_image_storage_url = f"{GCP_STORAGE_BASE}{bucket_name}/images/"
 
 
-dag = DAG("export_images_to_gcs_dataset", catchup=False, default_args=default_args)
+dag = DAG(
+    "export_images_to_gcs_dataset", default_args=default_args, catchup=False, schedule_interval=None
+)
 
 
 create_data_bucket_cmd = f"gsutil ls -b {bucket_base_uri} || gsutil mb {bucket_base_uri}"

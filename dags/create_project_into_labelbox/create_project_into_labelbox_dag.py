@@ -35,7 +35,6 @@ default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date": datetime(2019, 1, 24),
-    "schedule_interval" : "None",
     "email": ["club.sonia@etsmtl.net"],
     "email_on_failure": False,
     "email_on_retry": False,
@@ -52,7 +51,9 @@ def get_proper_ontology(json_file):
         return ontology_bottom
 
 
-dag = DAG("create_project_into_labelbox", default_args=default_args, catchup=False)
+dag = DAG(
+    "create_project_into_labelbox", default_args=default_args, catchup=False, schedule_interval=None
+)
 
 
 start_task = DummyOperator(task_id="start_task", dag=dag)
