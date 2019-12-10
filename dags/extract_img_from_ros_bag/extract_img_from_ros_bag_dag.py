@@ -39,7 +39,7 @@ default_args = {
     "start_date": datetime(2019, 1, 24),
     "schedule_interval" : None,
     "email": ["club.sonia@etsmtl.net"],
-    "schedule_interval": None,
+    "schedule_interval" : "None",
     "email_on_failure": False,
     "email_on_retry": False,
     "on_failure_callback": slack.task_fail_slack_alert,

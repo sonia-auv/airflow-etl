@@ -32,7 +32,7 @@ default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date": datetime(2019, 1, 24),
-    "schedule_interval" : None,
+    "schedule_interval" : "None",
     "email": ["club.sonia@etsmtl.net"],
     "email_on_failure": False,
     "email_on_retry": False,
