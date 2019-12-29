@@ -84,6 +84,7 @@ def download_and_extract_base_model(base_model_csv, base_model_folder, base_mode
 
     for model_folder_name, model_file_name, model_url in models:
         if not model_folder_name in subfolders:
+            logging.info(f"Model {model_folder_name} not found ")
             os.mkdir(os.path.join(base_model_folder, model_folder_name))
             try:
                 response = requests.get(model_url, stream=True)
@@ -98,6 +99,8 @@ def download_and_extract_base_model(base_model_csv, base_model_folder, base_mode
                     os.remove(tar_file)
             except requests.exceptions.RequestException as e:
                 logging.error(f"An error occurred while downloading the file from {model_url}")
+        else:
+            logging.info("All base models are already present")
 
 
 def prepare_training_input_data(
