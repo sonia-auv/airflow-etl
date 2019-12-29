@@ -80,6 +80,7 @@ def download_and_extract_base_model(base_model_csv, base_model_folder, base_mode
 
     models = [tuple(x) for x in models_subset.values]
     subfolders = file_ops.get_sub_folders_list(base_model_folder)
+    print(subfolders)
 
     for model_folder_name, model_file_name, model_url in models:
         if not model_folder_name in subfolders:
