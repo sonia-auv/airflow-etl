@@ -8,7 +8,7 @@ from glob import glob
 
 def get_parent_folder_name(dir_path):
     """
-     Utility function to get lastest folder name from path
+    Utility function to get lastest folder name from path
     :param dir_path: path
     :return: parent folder name
     """
@@ -17,13 +17,49 @@ def get_parent_folder_name(dir_path):
 
 def get_files_in_directory(dir_path, file_ext):
     """
-     Utility function to get all files from a given folder
+    Utility function to get all files from a given folder
     :param dir_path: path
     :param file_ext: file extension
     :return: a list of filepath
     """
-    print(os.path.join(dir_path, file_ext))
     return glob(os.path.join(dir_path, file_ext))
+
+
+def get_subfolders_in_directory(dir_path):
+    """
+    Utility function to get all first level subfolder paths from a given directory
+    :param dir_path: A directory path
+    :raises ValueError: Error raised when given path is not a folder
+    :return: A list of subfolder paths
+    """
+
+    if os.path.isdir(dir_path):
+        folder_paths = []
+        for entry_name in os.listdir(dir_path):
+            entry_path = os.path.join(dir_path, entry_name)
+            if os.path.isdir(entry_path):
+                folder_paths.append(entry_path)
+        return folder_paths
+
+    raise ValueError("The value of the dir_path argument must be a valid directory path")
+
+
+def get_subfolders_names_in_directory(dir_path):
+    """
+    Utility function to get all the subfolders names
+
+    :param dir_path: A directory path
+    :raises ValueError: Error raised when given path is not a folder
+    :return: A list of subfolder paths
+    """
+    if os.path.isdir(dir_path):
+        folder_names = []
+        for entry_name in os.listdir(dir_path):
+            entry_path = os.path.join(dir_path, entry_name)
+            if os.path.isdir(entry_path):
+                folder_names.append(entry_name)
+        return folder_names
+    raise ValueError("The value of the dir_path argument must be a valid directory path")
 
 
 def get_filename(file_path, with_extension=True):

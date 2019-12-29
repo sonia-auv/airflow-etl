@@ -79,8 +79,7 @@ def download_and_extract_base_model(base_model_csv, base_model_folder, base_mode
         models_subset = models_subset[models_df.model_folder_name.isin(base_model_list)]
 
     models = [tuple(x) for x in models_subset.values]
-    subfolders = file_ops.get_sub_folders_list(base_model_folder)
-    subfolders = [file_ops.get_parent_folder_name(subfolder) for subfolder in subfolders]
+    subfolders = file_ops.get_subfolders_names_in_directory(base_model_folder)
     print(subfolders)
 
     for model_folder_name, model_file_name, model_url in models:
