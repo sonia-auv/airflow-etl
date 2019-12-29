@@ -103,27 +103,6 @@ def download_and_extract_base_model(base_model_csv, base_model_folder, base_mode
             logging.info("All base models are already present")
 
 
-def prepare_training_input_data(
-    training_input_folder, model_folder, target_cam, base_model_folder, base_tf_record_folder
-):
-    today = datetime.today().strftime("%Y_%m_%d")
-    training_input_folder_name = f"{model_folder_name}_{target_cam}_{today}"
-    training_input_folder = os.path.join(training_input_folder, training_input_folder_name)
-    os.mkdir(training_input_folder)
-
-    if not os.path.isdir(model_folder_name):
-        ValueError(f"Model folder {model_folder} does not exist")
-
-    shutil.copytree(model_folder, training_input_data_folder)
-    training_input_data_folder = os.path.join(training_input_folder, "data")
-
-    subfolders = file_ops.get_sub_folders_list(base_tf_record_folder)
-    subfolders = [folder for folder in subfolders if os.path.dirname(folder).startswith(target_cam)]
-
-    for folder in subfolders:
-        shutil.copytree(folder, training_input_data_folder)
-
-
 def compare_label_map_file(base_tf_record_folder, video_source):
 
     subfolders = file_ops.get_sub_folders_list(base_tf_record_folder)
@@ -144,7 +123,8 @@ def compare_label_map_file(base_tf_record_folder, video_source):
         reference_label_map = label_maps[0]
         labelmap_match = True
         for label_map in label_maps:
-            if filecmp.cmp(label_map[0], reference_label_map[0]):
+            logging.info(f"Reference File: {reference_label_map}")
+            if filecmp.cmp(label_map, reference_label_map):
                 print(f"[ MATCH ] | LabelMap:{label_map} ")
             else:
                 print(f"[ FAILED ] | LabelMap:{label_map} ")
@@ -153,6 +133,27 @@ def compare_label_map_file(base_tf_record_folder, video_source):
         return labelmap_match
     else:
         logging.warn(f"There were not enough dataset to compare i.g : Less than two")
+
+
+def prepare_training_input_data(
+    training_input_folder, model_folder, target_cam, base_model_folder, base_tf_record_folder
+):
+    today = datetime.today().strftime("%Y_%m_%d")
+    training_input_folder_name = f"{model_folder_name}_{target_cam}_{today}"
+    training_input_folder = os.path.join(training_input_folder, training_input_folder_name)
+    os.mkdir(training_input_folder)
+
+    if not os.path.isdir(model_folder_name):
+        ValueError(f"Model folder {model_folder} does not exist")
+
+    shutil.copytree(model_folder, training_input_data_folder)
+    training_input_data_folder = os.path.join(training_input_folder, "data")
+
+    subfolders = file_ops.get_sub_folders_list(base_tf_record_folder)
+    subfolders = [folder for folder in subfolders if os.path.dirname(folder).startswith(target_cam)]
+
+    for folder in subfolders:
+        shutil.copytree(folder, training_input_data_folder)
 
 
 # TODO: Compare all labelmap.pbtxt
