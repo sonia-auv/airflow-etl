@@ -3,3 +3,4 @@ services:
   airflow-webserver:
     build:
       context: $PWD/
+    image: ${AIRFLOW_DOCKER_IMAGE_NAME}:local-build
