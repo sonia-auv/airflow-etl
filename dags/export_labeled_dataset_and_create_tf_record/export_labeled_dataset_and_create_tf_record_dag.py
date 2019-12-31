@@ -37,6 +37,7 @@ slack_webhook_token = BaseHook.get_connection("slack").password
 ontology_front = json.loads(Variable.get("ontology_front"))
 ontology_bottom = json.loads(Variable.get("ontology_bottom"))
 
+# TODO: Document this since it could be an issues
 export_project_name = Variable.get("labelbox_export_project_list").split(",")
 
 front_cam_object_list = [tool["name"] for tool in ontology_front["tools"]]
@@ -103,6 +104,7 @@ for index, project_name in enumerate(export_project_name):
     input_folder = HOST_LABELBOX_INPUT_FOLDER + project_name
     output_folder = HOST_LABELBOX_OUTPUT_FOLDER + project_name
 
+    # TODO : Rename input since it is ambiguous
     extract_labeled_data_from_labelbox = DockerOperator(
         task_id="extract_labeled_data_from_labelbox_" + project_name,
         image="soniaauvets/labelbox-exporter:1.1.0",
