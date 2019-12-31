@@ -154,7 +154,7 @@ start(){
 
 start_dev() {
     e_airflow_container_starting
-    AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} HOST_ROOT_FOLDER=${CURRENT_DIR}  docker-compose -f ${DOCKER_DIR}/docker-compose.yml -f ${DOCKER_DIR}/docker-compose-local.yml up -d || e_error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
+    AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} HOST_ROOT_FOLDER=${CURRENT_DIR}  docker-compose -f ${DOCKER_DIR}/docker-compose.yml -f ${DOCKER_DIR}/docker-compose-local.yml up -d --build || e_error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
 }
 
 start_prod() {
