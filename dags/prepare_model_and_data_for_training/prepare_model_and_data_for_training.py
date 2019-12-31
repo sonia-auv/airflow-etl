@@ -118,11 +118,11 @@ def compare_label_map_file(base_tf_record_folder, video_source):
 
         label_maps = []
         for subfolder in parsed_subfolder:
-            label_maps.append(glob.glob(subfolder + "*.pbtxt"))
-
+            label_maps.append(glob.glob(subfolder + "*.pbtxt")[0])
         reference_label_map = label_maps[0]
         labelmap_match = True
         for label_map in label_maps:
+            print(label_map)
             logging.info(f"Reference File: {reference_label_map}")
             if filecmp.cmp(label_map, reference_label_map):
                 print(f"[ MATCH ] | LabelMap:{label_map} ")
@@ -133,6 +133,42 @@ def compare_label_map_file(base_tf_record_folder, video_source):
         return labelmap_match
     else:
         logging.warn(f"There were not enough dataset to compare i.g : Less than two")
+
+
+def create_training_folder(training_data_folder, video_source, execution_date):
+
+    # Base folder
+    base_folder = os.path.join(training_data_folder, video_source + execution_date)
+    input_data_folder = os.path.join(base_folder, "input_data")
+    output_data_folder = os.path.join(base_folder, "output_data")
+
+    # Input Data
+    input_annotations_folder = os.path.join(input_data_folder, "annotations", "xmls")
+    input_tf_record_folder = os.path.join(input_data_folder, "tf_record")
+
+    # Output Data
+    output_checkpoint_folder = os.path.join(output_data_folder, "checkpoints")
+    output_tensorboard_data_folder = os.path.join(output_data_folder, "tensorboard")
+
+    data_folders = [
+        input_annotations_folder,
+        input_tf_record_folder,
+        output_checkpoint_folder,
+        output_tensorboard_data_folder,
+    ]
+
+    for folder in data_folders:
+        os.makedirs(folder)
+
+
+def __aggregate_trainval_files():
+    pass
+
+
+def populate_training_folder(
+    base_tf_record_folder, video_source, labelbox_output_data_folder, training_base_folder
+):
+    pass
 
 
 def prepare_training_input_data(

@@ -15,8 +15,9 @@ AIRFLOW_DATA_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, "data")
 AIRFLOW_MODELS_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "models", "base")
 AIRFLOW_MODELS_CSV = os.path.join(AIRFLOW_DATA_FOLDER, "models", "model_list.csv")
 AIRFLOW_TRAINING_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "training")
-AIRFLOW_TRAINING_INPUT_FOLDER = os.path.join(AIRFLOW_TRAINING_FOLDER, "input")
+AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "labelbox", "output")
 AIRFLOW_TF_RECORD_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "tfrecord")
+
 
 default_args = {
     "owner": "airflow",
@@ -93,16 +94,34 @@ base_model_exist_or_download = PythonOperator(
     dag=dag,
 )
 
-for video_source in video_feed_sources:
 
+for video_source in video_feed_sources:
     check_labelmap_file_content_are_the_same = PythonOperator(
         task_id="check_labelmap_file_content_are_the_same_" + video_source,
         python_callable=prepare_model_and_data_for_training.compare_label_map_file,
         op_kwargs={"base_tf_record_folder": AIRFLOW_TF_RECORD_FOLDER, "video_source": video_source},
         dag=dag,
     )
+    create_training_folder_tree = PythonOperator(
+        task_id="create_training_folder_tree_" + video_source,
+        python_callable=prepare_model_and_data_for_training.create_training_folder,
+        op_kwargs={"tf_record_folder": AIRFLOW_TF_RECORD_FOLDER, "video_source": video_source,},
+        dag=dag,
+    )
+
+    populate_training_folder_with_required_data = PythonOperator(
+        task_id="populate_training_folder_with_required_data_" + video_source,
+        python_callable=prepare_model_and_data_for_training.populate_training_folder,
+        op_kwargs={
+            "tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
+            "video_source": video_source,
+            "labelbox_output_data_folder": AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER,
+            "training_base_folder": AIRFLOW_TRAINING_FOLDER,
+        },
+        dag=dag,
+    )
 
     start_task >> check_reference_file_exist >> [
         download_current_model_zoo_list,
         check_model_list_difference,
-    ] >> base_model_exist_or_download >> check_labelmap_file_content_are_the_same >> end_task
+    ] >> base_model_exist_or_download >> check_labelmap_file_content_are_the_same >> create_training_folder_tree >> populate_training_folder_with_required_data >> end_task
