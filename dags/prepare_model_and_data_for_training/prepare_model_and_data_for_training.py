@@ -71,6 +71,7 @@ def download_reference_model_list_as_csv(url, base_model_csv):
 
 def download_and_extract_base_model(base_model_csv, base_model_folder, base_model_list=None):
 
+    # TODO: Ease up model name handeling
     models_df = pd.read_csv(base_model_csv)
 
     models_subset = models_df[["model_folder_name", "model_file_name", "model_url"]]
@@ -80,7 +81,6 @@ def download_and_extract_base_model(base_model_csv, base_model_folder, base_mode
 
     models = [tuple(x) for x in models_subset.values]
     subfolders = file_ops.get_subfolders_names_in_directory(base_model_folder)
-    print(subfolders)
 
     for model_folder_name, model_file_name, model_url in models:
         if not model_folder_name in subfolders:
@@ -249,10 +249,6 @@ def copy_labelbox_output_data_to_training(
         labelmap_files.extend(glob.glob(subfolder + "/*.pbtxt"))
         trainval_files.extend(glob.glob(subfolder + "/*.txt"))
         tf_record_files.extend(glob.glob(subfolder + "/*.record"))
-
-    print(labelmap_files)
-    print(trainval_files)
-    print(tf_record_files)
 
     # shutil.copy2(labelmap_files[0], training_data_annotations_directory)
 
