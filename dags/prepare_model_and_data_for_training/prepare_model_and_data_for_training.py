@@ -165,7 +165,7 @@ def __create_training_folder_subtree(
 
 
 def create_training_folder(
-    training_data_folder, tf_record_folder, labelbox_output_folder, video_source, execution_date
+    training_data_folder, tf_record_folder, video_source, execution_date, **kwargs
 ):
     subfolders = file_ops.get_directory_subfolders_subset(tf_record_folder, video_source)
 
@@ -197,11 +197,78 @@ def create_training_folder(
             json_data, outfile, indent=4,
         )
 
-    # TODO: Copy labelmap.txt to annotations
-    # TODO: Create an aggregate of trainval.txt
-    # TODO: Copy all xmls to xmls folder
-    # TODO: Copy all images to images folder
-    # TODO: Copy train.record , val.record to tf_record folder
+    ti = kwargs["ti"]
+    ti.xcom_push(key="training_data_folder", value=training_data_folder)
+
+
+def copy_labelbox_output_data_to_training(
+    labelbox_output_data_folder, tf_record_folder, video_source, **kwargs
+):
+    ti = kwargs["ti"]
+
+    training_data_folder = ti.xcom_pull(
+        key="training_data_folder", task_ids=f"create_training_folder_tree_{video_source}"
+    )
+
+    # Training folder paths
+    training_data_images_folder = os.path.join(training_data_folder, "input_data", "images")
+    training_data_annotations_directory = os.path.join(
+        training_data_folder, "input_data", "annotations"
+    )
+    training_data_xmls_directory = os.path.join(training_data_annotations_directory, "xmls")
+
+    training_data_tfrecord_directory = os.path.join(training_data_folder, "input_data", "tf_record")
+
+    filtered_subfolders = file_ops.get_directory_subfolders_subset(
+        labelbox_output_data_folder, video_source
+    )
+
+    for subfolder in filtered_subfolders:
+        subfolders = file_ops.get_subfolders_in_directory(subfolder)
+
+        subfolders = [
+            image_subfolder for image_subfolder in subfolders if image_subfolder.endswith("images")
+        ]
+
+        images_folder = subfolders[0]
+
+        file_ops.copy_files_from_folder(images_folder, training_data_images_folder)
+
+        logging.info("Image files copy completed")
+
+        file_ops.copy_xml_files_from_folder(subfolder, training_data_xmls_directory)
+
+        logging.info("XML files copy completed")
+
+    subfolders = file_ops.get_directory_subfolders_subset(tf_record_folder, video_source)
+
+    labelmap_files = []
+    trainval_files = []
+    tf_record_files = []
+    for subfolder in subfolders:
+        labelmap_files.extend(glob.glob(subfolder + "/*.pbtxt"))
+        trainval_files.extend(glob.glob(subfolder + "/*.txt"))
+        tf_record_files.extend(glob.glob(subfolder + "/*.record"))
+
+    print(labelmap_files)
+    print(trainval_files)
+    print(tf_record_files)
+
+    # shutil.copy2(labelmap_files[0], training_data_annotations_directory)
+
+    with open(f"{training_data_annotations_directory}/labelmap.pbtxt", "w") as outfile:
+        with open(labelmap_files[0]) as infile:
+            for line in infile:
+                outfile.write(line)
+
+    with open(f"{training_data_annotations_directory}/trainval.txt", "wb") as outfile:
+        for trainval_file in trainval_files:
+            with open(trainval_file, "rb") as infile:
+                shutil.copyfileobj(infile, outfile)
+
+    for tf_record_file in tf_record_files:
+        shutil.copy2(tf_record_file, training_data_tfrecord_directory)
+
     # TODO: Add templated model config file
     # TODO: Edit value in templated model config file
     # TODO: Create archive of training folder
