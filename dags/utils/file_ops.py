@@ -180,9 +180,25 @@ def concat_json(json_files, output_path):
 
 
 def folder_exist_or_create(folder_path):
+    # TODO: Add docstring
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
 
 
 def file_exist(file_path):
+    # TODO: Add docstring
     return os.path.isfile(file_path)
+
+
+def get_directory_subfolders_subset(dir_path, filter):
+    # TODO: Add docstring
+    subfolders = get_sub_folders_list(dir_path)
+
+    parsed_subfolder = []
+    for subfolder in subfolders:
+        folder_name = os.path.basename(os.path.normpath(subfolder))
+
+        if folder_name.startswith(filter):
+            parsed_subfolder.append(subfolder)
+
+    return parsed_subfolder
