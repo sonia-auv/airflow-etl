@@ -265,6 +265,7 @@ def copy_labelbox_output_data_to_training(
     for tf_record_file in tf_record_files:
         shutil.copy2(tf_record_file, training_data_tfrecord_directory)
 
+    # TODO: Genereate one folder per model
     # TODO: Add templated model config file
     # TODO: Edit value in templated model config file
     # TODO: Create archive of training folder
