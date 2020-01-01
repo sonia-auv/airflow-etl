@@ -1,9 +1,11 @@
-import os
 import filecmp
 import json
 import logging
-import requests
+import os
+import shutil
 from glob import glob
+
+import requests
 
 
 def get_parent_folder_name(dir_path):
@@ -202,3 +204,19 @@ def get_directory_subfolders_subset(dir_path, filter):
             parsed_subfolder.append(subfolder)
 
     return parsed_subfolder
+
+
+def copy_xml_files_from_folder(source_dir, dest_dir):
+    # TODO: docs string
+    files = glob(os.path.join(source_dir, "*.xml"))
+    for file in files:
+        if os.path.isfile(file):
+            shutil.copy2(file, dest_dir)
+
+
+def copy_files_from_folder(source_dir, dest_dir):
+    # TODO: docs string
+    files = glob(os.path.join(source_dir, "*.*"))
+    for file in files:
+        if os.path.isfile(file):
+            shutil.copy2(file, dest_dir)
