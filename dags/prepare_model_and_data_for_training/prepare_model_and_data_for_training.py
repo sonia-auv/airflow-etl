@@ -1,10 +1,10 @@
-import csv
 import os
 import re
 import glob
 import shutil
 import filecmp
 import requests
+import json
 import mistune
 import logging
 import pandas as pd
@@ -105,19 +105,11 @@ def download_and_extract_base_model(base_model_csv, base_model_folder, base_mode
 
 def compare_label_map_file(base_tf_record_folder, video_source):
 
-    subfolders = file_ops.get_sub_folders_list(base_tf_record_folder)
+    subfolders = file_ops.get_directory_subfolders_subset(base_tf_record_folder, video_source)
 
-    parsed_subfolder = []
-    for subfolder in subfolders:
-        folder_name = os.path.basename(os.path.normpath(subfolder))
-
-        if folder_name.startswith(video_source):
-            parsed_subfolder.append(subfolder)
-
-    if len(parsed_subfolder) > 1:
-
+    if len(subfolders) > 1:
         label_maps = []
-        for subfolder in parsed_subfolder:
+        for subfolder in subfolders:
             label_maps.append(glob.glob(subfolder + "*.pbtxt")[0])
         reference_label_map = label_maps[0]
         labelmap_match = True
@@ -135,66 +127,82 @@ def compare_label_map_file(base_tf_record_folder, video_source):
         logging.warn(f"There were not enough dataset to compare i.g : Less than two")
 
 
-def create_training_folder(training_data_folder, video_source, execution_date):
+def __create_training_folder_subtree(
+    training_data_folder, video_source, object_names, execution_date
+):
 
-    # Base folder
-    base_folder = os.path.join(training_data_folder, video_source + execution_date)
-    input_data_folder = os.path.join(base_folder, "input_data")
-    output_data_folder = os.path.join(base_folder, "output_data")
+    # Base Folder
+
+    input_data_folder = os.path.join(training_data_folder, "input_data")
+    output_data_folder = os.path.join(training_data_folder, "output_data")
 
     # Input Data
+    input_images_folder = os.path.join(input_data_folder, "images")
     input_annotations_folder = os.path.join(input_data_folder, "annotations", "xmls")
     input_tf_record_folder = os.path.join(input_data_folder, "tf_record")
 
     # Output Data
     output_checkpoint_folder = os.path.join(output_data_folder, "checkpoints")
     output_tensorboard_data_folder = os.path.join(output_data_folder, "tensorboard")
+    output_tensorboard_training_folder = os.path.join(output_tensorboard_data_folder, "training")
+    output_tensorboard_evaluation_folder = os.path.join(
+        output_tensorboard_data_folder, "evaluation"
+    )
 
     data_folders = [
+        input_images_folder,
         input_annotations_folder,
         input_tf_record_folder,
         output_checkpoint_folder,
-        output_tensorboard_data_folder,
+        output_tensorboard_training_folder,
+        output_tensorboard_evaluation_folder,
     ]
 
     for folder in data_folders:
         os.makedirs(folder)
 
-
-def __aggregate_trainval_files():
-    pass
+    logging.info("Training folder subtree has been created successfully")
 
 
-def populate_training_folder(
-    base_tf_record_folder, video_source, labelbox_output_data_folder, training_base_folder
+def create_training_folder(
+    training_data_folder, tf_record_folder, labelbox_output_folder, video_source, execution_date
 ):
-    pass
+    subfolders = file_ops.get_directory_subfolders_subset(tf_record_folder, video_source)
 
+    # Parse
+    json_data = {"datasets": [], "objects": []}
+    object_names_set = set()
+    for subfolder in subfolders:
+        folder_name = os.path.basename(os.path.normpath(subfolder))
+        if folder_name.startswith(video_source):
 
-def prepare_training_input_data(
-    training_input_folder, model_folder, target_cam, base_model_folder, base_tf_record_folder
-):
-    today = datetime.today().strftime("%Y_%m_%d")
-    training_input_folder_name = f"{model_folder_name}_{target_cam}_{today}"
-    training_input_folder = os.path.join(training_input_folder, training_input_folder_name)
-    os.mkdir(training_input_folder)
+            json_data["datasets"].append(folder_name)
+            object_names = subfolder.split("_")[1]
+            object_names_set.update(object_names.split("-"))
 
-    if not os.path.isdir(model_folder_name):
-        ValueError(f"Model folder {model_folder} does not exist")
+    json_data["objects"] = list(object_names_set)
+    object_names = "-".join(json_data["objects"])
 
-    shutil.copytree(model_folder, training_input_data_folder)
-    training_input_data_folder = os.path.join(training_input_folder, "data")
+    training_data_folder = os.path.join(
+        training_data_folder, f"{video_source}_{object_names}_{execution_date}"
+    )
 
-    subfolders = file_ops.get_sub_folders_list(base_tf_record_folder)
-    subfolders = [folder for folder in subfolders if os.path.dirname(folder).startswith(target_cam)]
+    __create_training_folder_subtree(
+        training_data_folder, video_source, object_names, execution_date
+    )
 
-    for folder in subfolders:
-        shutil.copytree(folder, training_input_data_folder)
+    training_data_json_file = training_data_folder + "/datasets.json"
+    with open(training_data_json_file, "w") as outfile:
+        json.dump(
+            json_data, outfile, indent=4,
+        )
 
-
-# TODO: Compare all labelmap.pbtxt
-# TODO: Join all trainval content
-# TODO: Copy all train.record and val.record
-# TODO: Edit model config file
-# TODO: compress content
-# TODO: Export to GCP
+    # TODO: Copy labelmap.txt to annotations
+    # TODO: Create an aggregate of trainval.txt
+    # TODO: Copy all xmls to xmls folder
+    # TODO: Copy all images to images folder
+    # TODO: Copy train.record , val.record to tf_record folder
+    # TODO: Add templated model config file
+    # TODO: Edit value in templated model config file
+    # TODO: Create archive of training folder
+    # TODO: Delete all annotations, images, and upload training training folder to GCP

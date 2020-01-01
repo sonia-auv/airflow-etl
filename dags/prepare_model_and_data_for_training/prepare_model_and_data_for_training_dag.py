@@ -105,7 +105,12 @@ for video_source in video_feed_sources:
     create_training_folder_tree = PythonOperator(
         task_id="create_training_folder_tree_" + video_source,
         python_callable=prepare_model_and_data_for_training.create_training_folder,
-        op_kwargs={"tf_record_folder": AIRFLOW_TF_RECORD_FOLDER, "video_source": video_source,},
+        op_kwargs={
+            "training_data_folder": AIRFLOW_TRAINING_FOLDER,
+            "tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
+            "video_source": video_source,
+            "execution_date": "{{ts_nodash}}",
+        },
         dag=dag,
     )
 
