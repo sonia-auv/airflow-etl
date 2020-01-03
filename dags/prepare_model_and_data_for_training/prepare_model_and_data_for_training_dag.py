@@ -111,6 +111,8 @@ for video_source in video_feed_sources:
     )
     for model in tensorflow_models:
 
+        label_map_path = "test/test"
+
         create_training_folder_tree = PythonOperator(
             task_id="create_training_folder_tree_" + video_source + "_" + model,
             python_callable=prepare_model_and_data_for_training.create_training_folder,
@@ -147,8 +149,18 @@ for video_source in video_feed_sources:
                 "base_model_folder": AIRFLOW_MODELS_FOLDER,
                 "video_source": video_source,
                 "base_model": model,
-                "model_config": get_proper_model_config(model),
-                "label_map_path": "test/test",
+            },
+            dag=dag,
+        )
+
+        genereate_model_config_into_training_folder = PythonOperator(
+            task_id="genereate_model_config_into_training_folder_" + video_source + "_" + model,
+            python_callable=prepare_model_and_data_for_training.genereate_model_config_file,
+            provide_context=True,
+            op_kwargs={
+                "video_source": video_source,
+                "base_model": model,
+                "model_config_template": get_proper_model_config(model),
             },
             dag=dag,
         )
@@ -157,7 +169,7 @@ for video_source in video_feed_sources:
             download_current_model_zoo_list,
             check_model_list_difference,
         ] >> base_model_exist_or_download >> check_labelmap_file_content_are_the_same >> create_training_folder_tree
-        create_training_folder_tree >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder >> end_task
+        create_training_folder_tree >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder >> genereate_model_config_into_training_folder >> end_task
 
         # TODO: Remove config file from input_data / model
         # TODO: Add templated model config file

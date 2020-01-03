@@ -308,10 +308,9 @@ def copy_base_model_to_training_folder(
 
     os.remove(pipeline_file)
 
-    print(model_config)
+def genereate_model_config(video_source, model, model_config):
 
 
-# TODO: Add templated model config file
-# TODO: Edit value in templated model config file
+
 # TODO: Create archive of training folder
 # TODO: Delete all annotations, images, and upload training training folder to GCP
