@@ -40,6 +40,8 @@ def __parse_downloaded_model_file_list_response(response):
                 (model_release_date, model_folder_name, model_file_name, model_url, model_name)
             )
 
+    logging.info(f"Parsed all model data from the webpage {response.url}")
+
     return pd.DataFrame(
         data,
         columns=[
@@ -52,24 +54,13 @@ def __parse_downloaded_model_file_list_response(response):
     )
 
 
-def reference_model_list_exist_or_create(base_model_csv, positive_downstream, negative_downstream):
+def validate_reference_model_list_exist_or_create(
+    base_model_csv, positive_downstream, negative_downstream
+):
     if file_ops.file_exist(base_model_csv):
         return positive_downstream
     else:
         return negative_downstream
-
-
-def check_reference_model_list_different(url, base_model_csv):
-    try:
-        response = requests.get(url, allow_redirects=True)
-        new_models_reference_df = __parse_downloaded_model_file_list_response(response)
-        saved_models_reference_df = pd.read_csv(base_model_csv)
-
-        if not new_models_reference_df.equals(saved_models_reference_df):
-            new_models_reference_df.to_csv(base_model_csv)
-        # return True
-    except requests.exceptions.RequestException as e:
-        logging.error(f"An error occurred while downloading the file from {url}")
 
 
 def download_reference_model_list_as_csv(url, base_model_csv):
@@ -77,6 +68,7 @@ def download_reference_model_list_as_csv(url, base_model_csv):
         response = requests.get(url, allow_redirects=True)
         new_models_reference_df = __parse_downloaded_model_file_list_response(response)
         new_models_reference_df.to_csv(base_model_csv)
+        logging.info("Model list data saved to csv file")
     except requests.exceptions.RequestException as e:
         logging.error(f"An error occurred while downloading the file from {url}")
 
@@ -84,7 +76,6 @@ def download_reference_model_list_as_csv(url, base_model_csv):
 def download_and_extract_base_model(base_model_csv, base_model_folder, base_model_list=None):
 
     models_df = pd.read_csv(base_model_csv)
-
     models_subset = models_df[["model_folder_name", "model_file_name", "model_url", "model_name"]]
 
     if base_model_list is not None:
@@ -92,8 +83,6 @@ def download_and_extract_base_model(base_model_csv, base_model_folder, base_mode
 
     models = [tuple(x) for x in models_subset.values]
     subfolders = file_ops.get_subfolders_names_in_directory(base_model_folder)
-
-    print(models)
 
     for model_folder_name, model_file_name, model_url, model_name in models:
         if not model_folder_name in subfolders:
@@ -141,79 +130,77 @@ def compare_label_map_file(base_tf_record_folder, video_source):
 
 
 def __create_training_folder_subtree(
-    training_data_folder, video_source, object_names, execution_date
+    training_data_folder, video_source, object_names, execution_date, **kwargs
 ):
 
     # Base Folder
+    data_folder = os.path.join(training_data_folder, "data")
+    model_folder = os.path.join(training_data_folder, "model")
+    training_folder = os.path.join(training_data_folder, "training")
 
-    input_data_folder = os.path.join(training_data_folder, "input_data")
-    output_data_folder = os.path.join(training_data_folder, "output_data")
+    images_folder = os.path.join(data_folder, "images")
+    annotations_folder = os.path.join(data_folder, "annotations", "xmls")
+    tf_record_folder = os.path.join(data_folder, "tf_record")
+    base_model_folder = os.path.join(model_folder, "base")
+    trained_model_folder = os.path.join(model_folder, "trained")
 
-    # Input Data
-    input_images_folder = os.path.join(input_data_folder, "images")
-    input_annotations_folder = os.path.join(input_data_folder, "annotations", "xmls")
-    input_tf_record_folder = os.path.join(input_data_folder, "tf_record")
-    input_base_model_directory = os.path.join(input_data_folder, "model")
+    train_data_folder = os.path.join(training_folder, "training")
+    eval_data_folder = os.path.join(training_folder, "evaluation")
 
-    # Output Data
-    output_checkpoint_folder = os.path.join(output_data_folder, "checkpoints")
-    output_tensorboard_data_folder = os.path.join(output_data_folder, "tensorboard")
-    output_tensorboard_training_folder = os.path.join(output_tensorboard_data_folder, "training")
-    output_tensorboard_evaluation_folder = os.path.join(
-        output_tensorboard_data_folder, "evaluation"
-    )
+    training_folders = {
+        "base_folder": os.path.join(training_data_folder, "data"),
+        "data_folder": os.path.join(training_data_folder, "data"),
+        "model_folder": os.path.join(training_data_folder, "model"),
+        "training_folder": os.path.join(training_data_folder, "training"),
+        "images_folder": os.path.join(data_folder, "images"),
+        "annotations_folder": os.path.join(data_folder, "annotations", "xmls"),
+        "tf_record_folder": os.path.join(data_folder, "tf_record"),
+        "base_model_folder": os.path.join(model_folder, "base"),
+        "trained_model_folder": os.path.join(model_folder, "trained"),
+        "train_data_folder": os.path.join(training_folder, "training"),
+        "eval_data_folder": os.path.join(training_folder, "evaluation"),
+    }
 
     data_folders = [
-        input_images_folder,
-        input_annotations_folder,
-        input_tf_record_folder,
-        input_base_model_directory,
-        output_checkpoint_folder,
-        output_tensorboard_training_folder,
-        output_tensorboard_evaluation_folder,
+        images_folder,
+        annotations_folder,
+        tf_record_folder,
+        base_model_folder,
+        trained_model_folder,
     ]
 
     for folder in data_folders:
         os.makedirs(folder)
 
+    ti = kwargs["ti"]
+    ti.xcom_push(key="training_folders", value=training_folders)
+
     logging.info("Training folder subtree has been created successfully")
 
 
 def create_training_folder(
-    training_data_folder, tf_record_folder, video_source, execution_date, base_model, **kwargs
+    base_training_folder, tf_record_folder, video_source, execution_date, base_model, **kwargs
 ):
     subfolders = file_ops.get_directory_subfolders_subset(tf_record_folder, video_source)
 
-    # Parse
-    json_data = {"datasets": [], "objects": [], "model": {"name": base_model}}
     object_names_set = set()
     for subfolder in subfolders:
         folder_name = os.path.basename(os.path.normpath(subfolder))
         if folder_name.startswith(video_source):
 
-            json_data["datasets"].append(folder_name)
             object_names = subfolder.split("_")[1]
             object_names_set.update(object_names.split("-"))
 
-    json_data["objects"] = list(object_names_set)
-    object_names = "-".join(json_data["objects"])
+    object_names = "-".join(list(object_names_set))
 
-    training_data_folder = os.path.join(
-        training_data_folder, f"{video_source}_{object_names}_{base_model}_{execution_date}"
+    training_folder = os.path.join(
+        base_training_folder, f"{video_source}_{object_names}_{base_model}_{execution_date}"
     )
 
-    __create_training_folder_subtree(
-        training_data_folder, video_source, object_names, execution_date
-    )
-
-    training_data_json_file = training_data_folder + "/datasets.json"
-    with open(training_data_json_file, "w") as outfile:
-        json.dump(
-            json_data, outfile, indent=4,
-        )
+    __create_training_folder_subtree(training_folder, video_source, object_names, execution_date)
 
     ti = kwargs["ti"]
-    ti.xcom_push(key="training_data_folder", value=training_data_folder)
+    ti.xcom_push(key="training_folder", value=training_folder)
 
 
 def copy_labelbox_output_data_to_training(
@@ -221,13 +208,13 @@ def copy_labelbox_output_data_to_training(
 ):
     ti = kwargs["ti"]
 
-    training_data_folder = ti.xcom_pull(
-        key="training_data_folder",
-        task_ids=f"create_training_folder_tree_{video_source}_{base_model}",
+    training_folder = ti.xcom_pull(
+        key="training_folder", task_ids=f"create_training_folder_tree_{video_source}_{base_model}",
     )
 
     # Training folder paths
-    training_data_images_folder = os.path.join(training_data_folder, "input_data", "images")
+    # TODO : GET RIDE OF THOSE
+    training_data_images_folder = os.path.join(training_folder, "data", "images")
     training_data_annotations_directory = os.path.join(
         training_data_folder, "input_data", "annotations"
     )
@@ -292,6 +279,11 @@ def copy_base_model_to_training_folder(
         task_ids=f"copy_labelbox_output_data_to_training_folder_{video_source}_{base_model}",
     )
 
+    training_folders = ti.xcom_pull(
+        key="training_folders", tasks_ids=f"create_training_folder_tree_{video_source}_{base_model}"
+    )
+    print(training_folders)
+
     base_models_df = pd.read_csv(base_model_csv)
 
     model_df = base_models_df.loc[base_models_df["model_name"] == base_model]
@@ -308,8 +300,9 @@ def copy_base_model_to_training_folder(
 
     os.remove(pipeline_file)
 
-def genereate_model_config(video_source, model, model_config):
 
+def generate_model_config(video_source, model, model_config):
+    pass
 
 
 # TODO: Create archive of training folder
