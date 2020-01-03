@@ -24,6 +24,9 @@ def __parse_downloaded_model_file_list_response(response):
     for link in link_nodes:
         if "http://download.tensorflow.org/models/object_detection/" in link.attrs["href"]:
             model_name = link.text
+            model_name = model_name.replace("☆", "")
+            model_name = model_name.strip()
+
             model_url = link.attrs["href"]
             model_file_name = model_url.split("/")[-1]
             model_folder_name = os.path.splitext(os.path.basename(model_file_name))[0]
@@ -33,10 +36,19 @@ def __parse_downloaded_model_file_list_response(response):
             except:
                 model_release_date = None
 
-            data.append((model_release_date, model_folder_name, model_file_name, model_url))
+            data.append(
+                (model_release_date, model_folder_name, model_file_name, model_url, model_name)
+            )
 
     return pd.DataFrame(
-        data, columns=["model_release_date", "model_folder_name", "model_file_name", "model_url"]
+        data,
+        columns=[
+            "model_release_date",
+            "model_folder_name",
+            "model_file_name",
+            "model_url",
+            "model_name",
+        ],
     )
 
 
@@ -71,18 +83,19 @@ def download_reference_model_list_as_csv(url, base_model_csv):
 
 def download_and_extract_base_model(base_model_csv, base_model_folder, base_model_list=None):
 
-    # TODO: Ease up model name handeling
     models_df = pd.read_csv(base_model_csv)
 
-    models_subset = models_df[["model_folder_name", "model_file_name", "model_url"]]
+    models_subset = models_df[["model_folder_name", "model_file_name", "model_url", "model_name"]]
 
     if base_model_list is not None:
-        models_subset = models_subset[models_df.model_folder_name.isin(base_model_list)]
+        models_subset = models_subset[models_df.model_name.isin(base_model_list)]
 
     models = [tuple(x) for x in models_subset.values]
     subfolders = file_ops.get_subfolders_names_in_directory(base_model_folder)
 
-    for model_folder_name, model_file_name, model_url in models:
+    print(models)
+
+    for model_folder_name, model_file_name, model_url, model_name in models:
         if not model_folder_name in subfolders:
             logging.info(f"Model {model_folder_name} not found ")
             os.mkdir(os.path.join(base_model_folder, model_folder_name))
@@ -140,6 +153,7 @@ def __create_training_folder_subtree(
     input_images_folder = os.path.join(input_data_folder, "images")
     input_annotations_folder = os.path.join(input_data_folder, "annotations", "xmls")
     input_tf_record_folder = os.path.join(input_data_folder, "tf_record")
+    input_base_model_directory = os.path.join(input_data_folder, "input_data", "model")
 
     # Output Data
     output_checkpoint_folder = os.path.join(output_data_folder, "checkpoints")
@@ -153,6 +167,7 @@ def __create_training_folder_subtree(
         input_images_folder,
         input_annotations_folder,
         input_tf_record_folder,
+        input_base_model_directory,
         output_checkpoint_folder,
         output_tensorboard_training_folder,
         output_tensorboard_evaluation_folder,
@@ -165,12 +180,12 @@ def __create_training_folder_subtree(
 
 
 def create_training_folder(
-    training_data_folder, tf_record_folder, video_source, execution_date, **kwargs
+    training_data_folder, tf_record_folder, video_source, execution_date, base_model, **kwargs
 ):
     subfolders = file_ops.get_directory_subfolders_subset(tf_record_folder, video_source)
 
     # Parse
-    json_data = {"datasets": [], "objects": []}
+    json_data = {"datasets": [], "objects": [], "model": {"name": base_model}}
     object_names_set = set()
     for subfolder in subfolders:
         folder_name = os.path.basename(os.path.normpath(subfolder))
@@ -184,7 +199,7 @@ def create_training_folder(
     object_names = "-".join(json_data["objects"])
 
     training_data_folder = os.path.join(
-        training_data_folder, f"{video_source}_{object_names}_{execution_date}"
+        training_data_folder, f"{video_source}_{object_names}_{base_model}_{execution_date}"
     )
 
     __create_training_folder_subtree(
@@ -202,12 +217,13 @@ def create_training_folder(
 
 
 def copy_labelbox_output_data_to_training(
-    labelbox_output_data_folder, tf_record_folder, video_source, **kwargs
+    labelbox_output_data_folder, tf_record_folder, video_source, base_model, **kwargs
 ):
     ti = kwargs["ti"]
 
     training_data_folder = ti.xcom_pull(
-        key="training_data_folder", task_ids=f"create_training_folder_tree_{video_source}"
+        key="training_data_folder",
+        task_ids=f"create_training_folder_tree_{video_source}_{base_model}",
     )
 
     # Training folder paths
@@ -250,8 +266,6 @@ def copy_labelbox_output_data_to_training(
         trainval_files.extend(glob.glob(subfolder + "/*.txt"))
         tf_record_files.extend(glob.glob(subfolder + "/*.record"))
 
-    # shutil.copy2(labelmap_files[0], training_data_annotations_directory)
-
     with open(f"{training_data_annotations_directory}/labelmap.pbtxt", "w") as outfile:
         with open(labelmap_files[0]) as infile:
             for line in infile:
@@ -265,8 +279,39 @@ def copy_labelbox_output_data_to_training(
     for tf_record_file in tf_record_files:
         shutil.copy2(tf_record_file, training_data_tfrecord_directory)
 
-    # TODO: Genereate one folder per model
-    # TODO: Add templated model config file
-    # TODO: Edit value in templated model config file
-    # TODO: Create archive of training folder
-    # TODO: Delete all annotations, images, and upload training training folder to GCP
+    ti = kwargs["ti"]
+    ti.xcom_push(key="training_data_folder", value=training_data_folder)
+
+
+def copy_base_model_to_training_folder(
+    base_model_folder, base_model_csv, base_model, video_source, **kwargs
+):
+    ti = kwargs["ti"]
+    training_data_folder = ti.xcom_pull(
+        key="training_data_folder",
+        task_ids=f"copy_labelbox_output_data_to_training_folder_{video_source}_{base_model}",
+    )
+
+    base_models_df = pd.read_csv(base_model_csv)
+
+    model_df = base_models_df.loc[base_models_df["model_name"] == base_model]
+
+    base_model_folder_name = model_df.iloc[0]["model_folder_name"]
+
+    model_folder = os.path.join(base_model_folder, base_model_folder_name)
+
+    training_model_folder = os.path.join(training_data_folder, "input_data", "model")
+
+    os.makedirs(training_model_folder)
+
+    file_ops.copy_files_from_folder(model_folder, training_model_folder)
+
+    pipeline_file = os.path(training_model_folder, "pipeline.config")
+
+    os.remove(pipeline_file)
+
+
+# TODO: Add templated model config file
+# TODO: Edit value in templated model config file
+# TODO: Create archive of training folder
+# TODO: Delete all annotations, images, and upload training training folder to GCP

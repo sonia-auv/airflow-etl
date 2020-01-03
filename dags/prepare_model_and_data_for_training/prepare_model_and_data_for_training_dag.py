@@ -34,6 +34,7 @@ tensorflow_model_zoo_markdown_url = Variable.get("tensorflow_model_zoo_markdown_
 base_model = Variable.get("tensorflow_model_zoo_models").split(",")
 video_feed_sources = Variable.get("video_feed_sources").split(",")
 
+tensorflow_models = Variable.get("tensorflow_model_zoo_models").split(",")
 
 dag = DAG(
     "prepare_model_and_data_for_training",
@@ -102,32 +103,56 @@ for video_source in video_feed_sources:
         op_kwargs={"base_tf_record_folder": AIRFLOW_TF_RECORD_FOLDER, "video_source": video_source},
         dag=dag,
     )
-    create_training_folder_tree = PythonOperator(
-        task_id="create_training_folder_tree_" + video_source,
-        python_callable=prepare_model_and_data_for_training.create_training_folder,
-        provide_context=True,
-        op_kwargs={
-            "training_data_folder": AIRFLOW_TRAINING_FOLDER,
-            "tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
-            "video_source": video_source,
-            "execution_date": "{{ts_nodash}}",
-        },
-        dag=dag,
-    )
+    for model in tensorflow_models:
 
-    copy_labelbox_output_data_to_training_folder = PythonOperator(
-        task_id="copy_labelbox_output_data_to_training_folder_" + video_source,
-        python_callable=prepare_model_and_data_for_training.copy_labelbox_output_data_to_training,
-        provide_context=True,
-        op_kwargs={
-            "labelbox_output_data_folder": AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER,
-            "tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
-            "video_source": video_source,
-        },
-        dag=dag,
-    )
+        create_training_folder_tree = PythonOperator(
+            task_id="create_training_folder_tree_" + video_source + "_" + model,
+            python_callable=prepare_model_and_data_for_training.create_training_folder,
+            provide_context=True,
+            op_kwargs={
+                "training_data_folder": AIRFLOW_TRAINING_FOLDER,
+                "tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
+                "video_source": video_source,
+                "execution_date": "{{ts_nodash}}",
+                "base_model": model,
+            },
+            dag=dag,
+        )
 
-    start_task >> check_reference_file_exist >> [
-        download_current_model_zoo_list,
-        check_model_list_difference,
-    ] >> base_model_exist_or_download >> check_labelmap_file_content_are_the_same >> create_training_folder_tree >> copy_labelbox_output_data_to_training_folder >> end_task
+        copy_labelbox_output_data_to_training_folder = PythonOperator(
+            task_id="copy_labelbox_output_data_to_training_folder_" + video_source + "_" + model,
+            python_callable=prepare_model_and_data_for_training.copy_labelbox_output_data_to_training,
+            provide_context=True,
+            op_kwargs={
+                "labelbox_output_data_folder": AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER,
+                "tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
+                "video_source": video_source,
+                "base_model": model,
+            },
+            dag=dag,
+        )
+
+        copy_base_model_to_training_folder = PythonOperator(
+            task_id="copy_base_model_to_training_folder_" + video_source + "_" + model,
+            python_callable=prepare_model_and_data_for_training.copy_base_model_to_training_folder,
+            provide_context=True,
+            op_kwargs={
+                "base_model_csv": AIRFLOW_MODELS_CSV,
+                "base_model_folder": AIRFLOW_MODELS_FOLDER,
+                "video_source": video_source,
+                "base_model": model,
+            },
+            dag=dag,
+        )
+
+        start_task >> check_reference_file_exist >> [
+            download_current_model_zoo_list,
+            check_model_list_difference,
+        ] >> base_model_exist_or_download >> check_labelmap_file_content_are_the_same >> create_training_folder_tree
+        create_training_folder_tree >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder >> end_task
+
+        # TODO: Remove config file from input_data / model
+        # TODO: Add templated model config file
+        # TODO: Edit value in templated model config file
+        # TODO: Create archive of training folder
+        # TODO: Delete all annotations, images, and upload training training folder to GCP
