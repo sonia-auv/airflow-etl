@@ -36,6 +36,12 @@ video_feed_sources = Variable.get("video_feed_sources").split(",")
 
 tensorflow_models = Variable.get("tensorflow_model_zoo_models").split(",")
 
+
+def get_proper_model_config(model_name):
+    model_config_variable = f"model_config_{model_name}"
+    return Variable.get(model_config_variable)
+
+
 dag = DAG(
     "prepare_model_and_data_for_training",
     default_args=default_args,
@@ -141,6 +147,8 @@ for video_source in video_feed_sources:
                 "base_model_folder": AIRFLOW_MODELS_FOLDER,
                 "video_source": video_source,
                 "base_model": model,
+                "model_config": get_proper_model_config(model),
+                "label_map_path": "test/test",
             },
             dag=dag,
         )

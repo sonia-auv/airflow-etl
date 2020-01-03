@@ -153,7 +153,7 @@ def __create_training_folder_subtree(
     input_images_folder = os.path.join(input_data_folder, "images")
     input_annotations_folder = os.path.join(input_data_folder, "annotations", "xmls")
     input_tf_record_folder = os.path.join(input_data_folder, "tf_record")
-    input_base_model_directory = os.path.join(input_data_folder, "input_data", "model")
+    input_base_model_directory = os.path.join(input_data_folder, "model")
 
     # Output Data
     output_checkpoint_folder = os.path.join(output_data_folder, "checkpoints")
@@ -284,7 +284,7 @@ def copy_labelbox_output_data_to_training(
 
 
 def copy_base_model_to_training_folder(
-    base_model_folder, base_model_csv, base_model, video_source, **kwargs
+    base_model_folder, base_model_csv, base_model, video_source, model_config, **kwargs
 ):
     ti = kwargs["ti"]
     training_data_folder = ti.xcom_pull(
@@ -302,13 +302,13 @@ def copy_base_model_to_training_folder(
 
     training_model_folder = os.path.join(training_data_folder, "input_data", "model")
 
-    os.makedirs(training_model_folder)
-
     file_ops.copy_files_from_folder(model_folder, training_model_folder)
 
-    pipeline_file = os.path(training_model_folder, "pipeline.config")
+    pipeline_file = os.path.join(training_model_folder, "pipeline.config")
 
     os.remove(pipeline_file)
+
+    print(model_config)
 
 
 # TODO: Add templated model config file
