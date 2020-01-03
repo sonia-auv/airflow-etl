@@ -1,14 +1,15 @@
+import filecmp
+import glob
+import json
+import logging
 import os
 import re
-import glob
 import shutil
-import filecmp
-import requests
-import json
-import mistune
-import logging
-import pandas as pd
 
+import pandas as pd
+import requests
+
+import mistune
 from bs4 import BeautifulSoup
 from utils import file_ops
 
@@ -139,7 +140,8 @@ def __create_training_folder_subtree(
     training_folder = os.path.join(training_data_folder, "training")
 
     images_folder = os.path.join(data_folder, "images")
-    annotations_folder = os.path.join(data_folder, "annotations", "xmls")
+    annotations_folder = os.path.join(data_folder, "annotations")
+    xmls_folder = os.path.join(data_folder, "annotations", "xmls")
     tf_record_folder = os.path.join(data_folder, "tf_record")
     base_model_folder = os.path.join(model_folder, "base")
     trained_model_folder = os.path.join(model_folder, "trained")
@@ -148,25 +150,28 @@ def __create_training_folder_subtree(
     eval_data_folder = os.path.join(training_folder, "evaluation")
 
     training_folders = {
-        "base_folder": os.path.join(training_data_folder, "data"),
-        "data_folder": os.path.join(training_data_folder, "data"),
-        "model_folder": os.path.join(training_data_folder, "model"),
-        "training_folder": os.path.join(training_data_folder, "training"),
-        "images_folder": os.path.join(data_folder, "images"),
-        "annotations_folder": os.path.join(data_folder, "annotations", "xmls"),
-        "tf_record_folder": os.path.join(data_folder, "tf_record"),
-        "base_model_folder": os.path.join(model_folder, "base"),
-        "trained_model_folder": os.path.join(model_folder, "trained"),
-        "train_data_folder": os.path.join(training_folder, "training"),
-        "eval_data_folder": os.path.join(training_folder, "evaluation"),
+        "base_folder": training_data_folder,
+        "data_folder": data_folder,
+        "model_folder": model_folder,
+        "training_folder": training_folder,
+        "images_folder": images_folder,
+        "annotations_folder": annotations_folder,
+        "xmls_folder": xmls_folder,
+        "tf_record_folder": tf_record_folder,
+        "base_model_folder": base_model_folder,
+        "trained_model_folder": trained_model_folder,
+        "train_data_folder": train_data_folder,
+        "eval_data_folder": eval_data_folder,
     }
 
     data_folders = [
-        images_folder,
-        annotations_folder,
-        tf_record_folder,
-        base_model_folder,
-        trained_model_folder,
+        training_folders["images_folder"],
+        training_folders["xmls_folder"],
+        training_folders["tf_record_folder"],
+        training_folders["base_model_folder"],
+        training_folders["trained_model_folder"],
+        training_folders["train_data_folder"],
+        training_folders["eval_data_folder"],
     ]
 
     for folder in data_folders:
@@ -174,7 +179,6 @@ def __create_training_folder_subtree(
 
     ti = kwargs["ti"]
     ti.xcom_push(key="training_folders", value=training_folders)
-
     logging.info("Training folder subtree has been created successfully")
 
 
@@ -197,7 +201,9 @@ def create_training_folder(
         base_training_folder, f"{video_source}_{object_names}_{base_model}_{execution_date}"
     )
 
-    __create_training_folder_subtree(training_folder, video_source, object_names, execution_date)
+    __create_training_folder_subtree(
+        training_folder, video_source, object_names, execution_date, **kwargs
+    )
 
     ti = kwargs["ti"]
     ti.xcom_push(key="training_folder", value=training_folder)
@@ -207,20 +213,9 @@ def copy_labelbox_output_data_to_training(
     labelbox_output_data_folder, tf_record_folder, video_source, base_model, **kwargs
 ):
     ti = kwargs["ti"]
-
-    training_folder = ti.xcom_pull(
-        key="training_folder", task_ids=f"create_training_folder_tree_{video_source}_{base_model}",
+    training_folders = ti.xcom_pull(
+        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
     )
-
-    # Training folder paths
-    # TODO : GET RIDE OF THOSE
-    training_data_images_folder = os.path.join(training_folder, "data", "images")
-    training_data_annotations_directory = os.path.join(
-        training_data_folder, "input_data", "annotations"
-    )
-    training_data_xmls_directory = os.path.join(training_data_annotations_directory, "xmls")
-
-    training_data_tfrecord_directory = os.path.join(training_data_folder, "input_data", "tf_record")
 
     filtered_subfolders = file_ops.get_directory_subfolders_subset(
         labelbox_output_data_folder, video_source
@@ -235,11 +230,11 @@ def copy_labelbox_output_data_to_training(
 
         images_folder = subfolders[0]
 
-        file_ops.copy_files_from_folder(images_folder, training_data_images_folder)
+        file_ops.copy_files_from_folder(images_folder, training_folders["images_folder"])
 
         logging.info("Image files copy completed")
 
-        file_ops.copy_xml_files_from_folder(subfolder, training_data_xmls_directory)
+        file_ops.copy_xml_files_from_folder(subfolder, training_folders["xmls_folder"])
 
         logging.info("XML files copy completed")
 
@@ -253,36 +248,44 @@ def copy_labelbox_output_data_to_training(
         trainval_files.extend(glob.glob(subfolder + "/*.txt"))
         tf_record_files.extend(glob.glob(subfolder + "/*.record"))
 
-    with open(f"{training_data_annotations_directory}/labelmap.pbtxt", "w") as outfile:
+    labelmap_file = f"{training_folders['annotations_folder']}/labelmap.pbtxt"
+    trainval_file = f"{training_folders['annotations_folder']}/trainval.txt"
+
+    with open(labelmap_file, "w") as outfile:
         with open(labelmap_files[0]) as infile:
             for line in infile:
                 outfile.write(line)
 
-    with open(f"{training_data_annotations_directory}/trainval.txt", "wb") as outfile:
+    with open(trainval_file, "w") as outfile:
         for trainval_file in trainval_files:
-            with open(trainval_file, "rb") as infile:
+            with open(trainval_file, "r") as infile:
                 shutil.copyfileobj(infile, outfile)
 
     for tf_record_file in tf_record_files:
-        shutil.copy2(tf_record_file, training_data_tfrecord_directory)
+        shutil.copy2(tf_record_file, training_folders["tf_record_folder"])
+
+    training_files = {
+        "label_map_file": labelmap_file,
+        "trainval_file": trainval_file,
+        "tf_records_files": tf_record_files,
+    }
 
     ti = kwargs["ti"]
-    ti.xcom_push(key="training_data_folder", value=training_data_folder)
+    training_folders = ti.xcom_push(key="training_files", value=training_files)
 
 
 def copy_base_model_to_training_folder(
-    base_model_folder, base_model_csv, base_model, video_source, model_config, **kwargs
+    base_model_folder, base_model_csv, base_model, video_source, **kwargs
 ):
     ti = kwargs["ti"]
-    training_data_folder = ti.xcom_pull(
-        key="training_data_folder",
-        task_ids=f"copy_labelbox_output_data_to_training_folder_{video_source}_{base_model}",
+    training_folders = ti.xcom_pull(
+        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
     )
 
-    training_folders = ti.xcom_pull(
-        key="training_folders", tasks_ids=f"create_training_folder_tree_{video_source}_{base_model}"
+    training_files = ti.xcom_pull(
+        key="training_files",
+        task_ids=f"copy_labelbox_output_data_to_training_folder_{video_source}_{base_model}",
     )
-    print(training_folders)
 
     base_models_df = pd.read_csv(base_model_csv)
 
@@ -292,18 +295,40 @@ def copy_base_model_to_training_folder(
 
     model_folder = os.path.join(base_model_folder, base_model_folder_name)
 
-    training_model_folder = os.path.join(training_data_folder, "input_data", "model")
+    file_ops.copy_files_from_folder(model_folder, training_folders["base_model_folder"])
 
-    file_ops.copy_files_from_folder(model_folder, training_model_folder)
+    logging.info("Successfully copied all base model file to training folder")
 
-    pipeline_file = os.path.join(training_model_folder, "pipeline.config")
+    pipeline_file = os.path.join(training_folders["base_model_folder"], "pipeline.config")
 
     os.remove(pipeline_file)
 
+    logging.info("Successfully removed pipeline.config file")
 
-def generate_model_config(video_source, model, model_config):
+
+def generate_model_config(video_source, base_model, model_config_template, **kwargs):
+
+    ti = kwargs["ti"]
+    training_folders = ti.xcom_pull(
+        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
+    )
+
+    config_file = os.path.join(training_folders["base_folder"], "pipeline.config")
+
+    try:
+        with open(config_file, "w") as outfile:
+            outfile.write(model_config_template)
+        logging.info("Model config file has been created succesfully")
+    except IOError as e:
+        logging.error(
+            "An error has been raised while trying to save the model config to a file on disk"
+        )
+        raise e
+
+
+def archive_training_folder():
     pass
 
 
-# TODO: Create archive of training folder
-# TODO: Delete all annotations, images, and upload training training folder to GCP
+def clean_up_training_folder():
+    pass

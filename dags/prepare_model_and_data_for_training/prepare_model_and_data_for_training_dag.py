@@ -36,8 +36,8 @@ base_models = Variable.get("tensorflow_model_zoo_models").split(",")
 video_feed_sources = Variable.get("video_feed_sources").split(",")
 
 
-def get_proper_model_config(model_name):
-    model_config_variable = f"model_config_{model_name}"
+def get_proper_model_config(video_source, model_name):
+    model_config_variable = f"model_config_{video_source}_{model_name}"
     return Variable.get(model_config_variable)
 
 
@@ -79,6 +79,7 @@ validate_base_model_exist_or_download = PythonOperator(
         "base_model_folder": AIRFLOW_MODELS_FOLDER,
         "base_model_list": base_models,
     },
+    trigger_rule="none_failed",
     dag=dag,
 )
 
@@ -97,7 +98,7 @@ for video_source in video_feed_sources:
             python_callable=prepare_model_and_data_for_training.create_training_folder,
             provide_context=True,
             op_kwargs={
-                "training_data_folder": AIRFLOW_TRAINING_FOLDER,
+                "base_training_folder": AIRFLOW_TRAINING_FOLDER,
                 "tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
                 "video_source": video_source,
                 "execution_date": "{{ts_nodash}}",
@@ -135,17 +136,14 @@ for video_source in video_feed_sources:
             dag=dag,
         )
 
-        genereate_model_config_into_training_folder = PythonOperator(
-            task_id="genereate_model_config_into_training_folder_"
-            + video_source
-            + "_"
-            + base_model,
+        genereate_model_config = PythonOperator(
+            task_id="genereate_model_config_" + video_source + "_" + base_model,
             python_callable=prepare_model_and_data_for_training.generate_model_config,
             provide_context=True,
             op_kwargs={
                 "video_source": video_source,
                 "base_model": base_model,
-                "model_config_template": get_proper_model_config(base_model),
+                "model_config_template": get_proper_model_config(video_source, base_model),
             },
             dag=dag,
         )
@@ -156,10 +154,7 @@ for video_source in video_feed_sources:
         ]
         download_reference_model_list_as_csv >> validate_base_model_exist_or_download
         validate_base_model_exist_or_download >> check_labelmap_file_content_are_the_same >> create_training_folder_tree
-        create_training_folder_tree >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder >> genereate_model_config_into_training_folder >> end_task
+        create_training_folder_tree >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder >> genereate_model_config >> end_task
 
-        # TODO: Remove config file from input_data / model
-        # TODO: Add templated model config file
-        # TODO: Edit value in templated model config file
         # TODO: Create archive of training folder
         # TODO: Delete all annotations, images, and upload training training folder to GCP
