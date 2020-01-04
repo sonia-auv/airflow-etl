@@ -414,5 +414,13 @@ def archiving_training_folder(
     )
 
 
-def clean_up_training_folder():
-    pass
+def remove_raw_images_and_annotations_from_training_folder(video_source, base_model, **kwargs):
+    ti = kwargs["ti"]
+    training_folders = ti.xcom_pull(
+        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
+    )
+    shutil.rmtree(training_folders["xmls_folder"])
+    shutil.rmtree(training_folders["images_folder"])
+    os.remove(os.path.join(training_folders["annotations_folder"], "trainval.txt"))
+
+    logging.info("Successfully deleted useless files for training")

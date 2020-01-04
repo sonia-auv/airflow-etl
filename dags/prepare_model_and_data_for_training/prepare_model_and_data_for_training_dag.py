@@ -5,6 +5,7 @@ from airflow import DAG
 from airflow.hooks.base_hook import BaseHook
 from airflow.models import Variable
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import BranchPythonOperator, PythonOperator
 
 from prepare_model_and_data_for_training import prepare_model_and_data_for_training
@@ -46,6 +47,15 @@ def get_object_class_count(video_source):
     onthology_name = f"ontology_{video_source}"
     onthology = Variable.get(onthology_name, deserialize_json=True)
     return len(onthology["tools"])
+
+
+def xcom_pull__base_training_folder(video_source, base_model, **kwargs):
+    ti = kwargs["ti"]
+    training_folders = ti.xcom_pull(
+        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
+    )
+
+    return training_folders["base_folder"]
 
 
 dag = DAG(
@@ -173,6 +183,25 @@ for video_source in video_feed_sources:
             dag=dag,
         )
 
+        remove_raw_images_and_annotations_from_training_folder = PythonOperator(
+            task_id="remove_raw_images_and_annotations_from_training_folder_"
+            + video_source
+            + "_"
+            + base_model,
+            python_callable=prepare_model_and_data_for_training.remove_raw_images_and_annotations_from_training_folder,
+            provide_context=True,
+            op_kwargs={"video_source": video_source, "base_model": base_model,},
+            dag=dag,
+        )
+
+        upload_cmd = f"gsutil cp -r {xcom_pull__base_training_folder(video_source, base_model)} {gcp_base_bucket_url}/training"
+        upload_training_folder_to_gcp_bucket = BashOperator(
+            task_id="upload_training_folder_to_gcp_bucket_" + video_source + "_" + base_model,
+            bash_command=upload_cmd,
+            provide_context=True,
+            dag=dag,
+        )
+
         start_task >> validate_reference_model_list_exist_or_create >> [
             validate_base_model_exist_or_download,
             download_reference_model_list_as_csv,
@@ -180,7 +209,7 @@ for video_source in video_feed_sources:
         download_reference_model_list_as_csv >> validate_base_model_exist_or_download
         validate_base_model_exist_or_download >> check_labelmap_file_content_are_the_same >> create_training_folder_tree
         create_training_folder_tree >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder
-        copy_base_model_to_training_folder >> genereate_model_config >> archiving_training_folder >> end_task
+        copy_base_model_to_training_folder >> genereate_model_config >> archiving_training_folder
+        archiving_training_folder >> remove_raw_images_and_annotations_from_training_folder >> upload_training_folder_to_gcp_bucket >> end_task
 
-        # TODO: Delete all annotations, images,
         # TODO: Upload training training folder to GCP
