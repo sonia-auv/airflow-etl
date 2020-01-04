@@ -41,6 +41,12 @@ def get_proper_model_config(video_source, model_name):
     return Variable.get(model_config_variable)
 
 
+def get_object_class_count(video_source):
+    onthology_name = f"ontology_{video_source}"
+    onthology = Variable.get(onthology_name, deserialize_json=True)
+    return len(onthology["tools"])
+
+
 dag = DAG(
     "prepare_model_and_data_for_training",
     default_args=default_args,
@@ -144,6 +150,7 @@ for video_source in video_feed_sources:
                 "video_source": video_source,
                 "base_model": base_model,
                 "model_config_template": get_proper_model_config(video_source, base_model),
+                "num_classes": get_object_class_count(video_source),
             },
             dag=dag,
         )

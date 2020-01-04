@@ -261,13 +261,22 @@ def copy_labelbox_output_data_to_training(
             with open(trainval_file, "r") as infile:
                 shutil.copyfileobj(infile, outfile)
 
+    train_tf_records = []
+    val_tf_records = []
+
     for tf_record_file in tf_record_files:
+        if (tf_record_file).endswith("train.record"):
+            train_tf_records.append(tf_record_file)
+        else:
+            val_tf_records.append(tf_record_file)
+
         shutil.copy2(tf_record_file, training_folders["tf_record_folder"])
 
     training_files = {
         "label_map_file": labelmap_file,
         "trainval_file": trainval_file,
-        "tf_records_files": tf_record_files,
+        "train_tf_records": train_tf_records,
+        "val_tf_records": val_tf_records,
     }
 
     ti = kwargs["ti"]
@@ -303,19 +312,46 @@ def copy_base_model_to_training_folder(
 
     os.remove(pipeline_file)
 
+    model_checkpoint = os.path.join(training_folders["base_model_folder"], "model.ckpt")
+
     logging.info("Successfully removed pipeline.config file")
 
+    training_files["model_checkpoint"] = model_checkpoint
 
-def generate_model_config(video_source, base_model, model_config_template, **kwargs):
+    ti = kwargs["ti"]
+    training_folders = ti.xcom_push(key="training_files", value=training_files)
+
+
+def generate_model_config(video_source, base_model, model_config_template, num_classes, **kwargs):
 
     ti = kwargs["ti"]
     training_folders = ti.xcom_pull(
         key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
     )
+    training_files = ti.xcom_pull(
+        key="training_files",
+        task_ids=f"copy_base_model_to_training_folder_{video_source}_{base_model}",
+    )
 
-    config_file = os.path.join(training_folders["base_folder"], "pipeline.config")
+    # Replacing placeholders in airflow variables for values
+    model_config_template = re.sub("NUM_CLASSES", str(num_classes), model_config_template)
+    model_config_template = re.sub(
+        "PRE_TRAINED_MODEL_CHECKPOINT_PATH",
+        training_files["model_checkpoint"],
+        model_config_template,
+    )
+    model_config_template = re.sub(
+        "LABEL_MAP_PATH", training_files["label_map_file"], model_config_template
+    )
+    model_config_template = re.sub(
+        "TRAIN_TF_RECORD_PATHS", str(training_files["train_tf_records"]), model_config_template
+    )
+    model_config_template = re.sub(
+        "VAL_TF_RECORD_PATHS", str(training_files["val_tf_records"]), model_config_template
+    )
 
     try:
+        config_file = os.path.join(training_folders["base_folder"], "pipeline.config")
         with open(config_file, "w") as outfile:
             outfile.write(model_config_template)
         logging.info("Model config file has been created succesfully")
