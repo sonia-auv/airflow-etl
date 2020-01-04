@@ -78,6 +78,16 @@ def get_filename(file_path, with_extension=True):
     return os.path.splitext(os.path.basename(file_path))[0]
 
 
+def get_folder_name(folder_path):
+    """
+    A Utility function to get the name of the latest folder in a path
+
+    :param folder_path: Folder path
+    :return: Folder name
+    """
+    return os.path.basename(folder_path)
+
+
 def get_object_name_from_file(file_path):
     """
     get_object_name_from_file

@@ -17,7 +17,7 @@ AIRFLOW_MODELS_CSV_FILE = os.path.join(AIRFLOW_DATA_FOLDER, "models", "model_lis
 AIRFLOW_TRAINING_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "training")
 AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "labelbox", "output")
 AIRFLOW_TF_RECORD_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "tfrecord")
-
+TRAINING_ARCHIVING_PATH = os.path.join(AIRFLOW_DATA_FOLDER, "archive")
 
 default_args = {
     "owner": "airflow",
@@ -34,6 +34,7 @@ default_args = {
 tensorflow_model_zoo_markdown_url = Variable.get("tensorflow_model_zoo_markdown_url")
 base_models = Variable.get("tensorflow_model_zoo_models").split(",")
 video_feed_sources = Variable.get("video_feed_sources").split(",")
+gcp_base_bucket_url = f"gs://{Variable.get('bucket_name')}/"
 
 
 def get_proper_model_config(video_source, model_name):
@@ -125,6 +126,8 @@ for video_source in video_feed_sources:
                 "tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
                 "video_source": video_source,
                 "base_model": base_model,
+                "airflow_base_folder": AIRFLOW_DATA_FOLDER,
+                "gcp_base_bucket_url": gcp_base_bucket_url,
             },
             dag=dag,
         )
@@ -138,6 +141,8 @@ for video_source in video_feed_sources:
                 "base_model_folder": AIRFLOW_MODELS_FOLDER,
                 "video_source": video_source,
                 "base_model": base_model,
+                "airflow_base_folder": AIRFLOW_DATA_FOLDER,
+                "gcp_base_bucket_url": gcp_base_bucket_url,
             },
             dag=dag,
         )
@@ -155,13 +160,27 @@ for video_source in video_feed_sources:
             dag=dag,
         )
 
+        archiving_training_folder = PythonOperator(
+            task_id="archiving_training_folder_" + video_source + "_" + base_model,
+            python_callable=prepare_model_and_data_for_training.archiving_training_folder,
+            provide_context=True,
+            op_kwargs={
+                "training_archiving_path": TRAINING_ARCHIVING_PATH,
+                "video_source": video_source,
+                "base_model": base_model,
+                "execution_date": "{{ts_nodash}}",
+            },
+            dag=dag,
+        )
+
         start_task >> validate_reference_model_list_exist_or_create >> [
             validate_base_model_exist_or_download,
             download_reference_model_list_as_csv,
         ]
         download_reference_model_list_as_csv >> validate_base_model_exist_or_download
         validate_base_model_exist_or_download >> check_labelmap_file_content_are_the_same >> create_training_folder_tree
-        create_training_folder_tree >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder >> genereate_model_config >> end_task
+        create_training_folder_tree >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder
+        copy_base_model_to_training_folder >> genereate_model_config >> archiving_training_folder >> end_task
 
-        # TODO: Create archive of training folder
-        # TODO: Delete all annotations, images, and upload training training folder to GCP
+        # TODO: Delete all annotations, images,
+        # TODO: Upload training training folder to GCP
