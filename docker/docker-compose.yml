@@ -31,7 +31,6 @@ services:
       - ${AIRFLOW_DAG_DIR}:/usr/local/airflow/dags
       - $PWD/data:/usr/local/airflow/data
       - $PWD/logs:/usr/local/airflow/logs
-      #TODO: Convert copy to image to bindmount - $PWD/config/variables.json:usr/local/airflow/variables.json
       - /var/run/docker.sock:/var/run/docker.sock
 
     ports:
