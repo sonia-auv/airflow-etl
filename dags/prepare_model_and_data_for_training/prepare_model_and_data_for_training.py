@@ -394,9 +394,7 @@ def generate_model_config(
         raise e
 
 
-def archiving_training_folder(
-    training_archiving_path, video_source, base_model, execution_date, **kwargs
-):
+def archiving_training_folder(training_archiving_path, video_source, base_model, **kwargs):
     ti = kwargs["ti"]
     training_folders = ti.xcom_pull(
         key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
@@ -414,7 +412,9 @@ def archiving_training_folder(
     )
 
 
-def remove_raw_images_and_annotations_from_training_folder(video_source, base_model, **kwargs):
+def remove_raw_images_and_annotations_from_training_folder(
+    video_source, base_model, gcp_base_bucket_url, airflow_trainable_folder, **kwargs
+):
     ti = kwargs["ti"]
     training_folders = ti.xcom_pull(
         key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
@@ -422,5 +422,20 @@ def remove_raw_images_and_annotations_from_training_folder(video_source, base_mo
     shutil.rmtree(training_folders["xmls_folder"])
     shutil.rmtree(training_folders["images_folder"])
     os.remove(os.path.join(training_folders["annotations_folder"], "trainval.txt"))
+
+    training_folder = training_folders["base_folder"]
+
+    prepared_cmd = f"gsutil -m cp -r {training_folder} {gcp_base_bucket_url}"
+
+    training_folder_name = file_ops.get_folder_name(training_folder)
+
+    json_data = {}
+    json_data["gcp_url"] = f"{gcp_base_bucket_url}/{training_folder_name}"
+
+    json_file = os.path.join(airflow_trainable_folder, f"{training_folder_name}.json")
+    with open(json_file, "w") as outfile:
+        json.dump(json_data, outfile, indent=4)
+
+    ti.xcom_push(key="gcp_copy_cmd", value=prepared_cmd)
 
     logging.info("Successfully deleted useless files for training")

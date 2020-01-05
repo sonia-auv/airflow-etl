@@ -16,6 +16,7 @@ AIRFLOW_DATA_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, "data")
 AIRFLOW_MODELS_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "models", "base")
 AIRFLOW_MODELS_CSV_FILE = os.path.join(AIRFLOW_DATA_FOLDER, "models", "model_list.csv")
 AIRFLOW_TRAINING_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "training")
+AIRFLOW_TRAINABLE_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "trainable")
 AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "labelbox", "output")
 AIRFLOW_TF_RECORD_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "tfrecord")
 TRAINING_ARCHIVING_PATH = os.path.join(AIRFLOW_DATA_FOLDER, "archive")
@@ -35,7 +36,7 @@ default_args = {
 tensorflow_model_zoo_markdown_url = Variable.get("tensorflow_model_zoo_markdown_url")
 base_models = Variable.get("tensorflow_model_zoo_models").split(",")
 video_feed_sources = Variable.get("video_feed_sources").split(",")
-gcp_base_bucket_url = f"gs://{Variable.get('bucket_name')}/"
+gcp_base_bucket_url = f"gs://{Variable.get('bucket_name')}-training/"
 
 
 def get_proper_model_config(video_source, model_name):
@@ -49,15 +50,6 @@ def get_object_class_count(video_source):
     return len(onthology["tools"])
 
 
-def xcom_pull__base_training_folder(video_source, base_model, **kwargs):
-    ti = kwargs["ti"]
-    training_folders = ti.xcom_pull(
-        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
-    )
-
-    return training_folders["base_folder"]
-
-
 dag = DAG(
     "prepare_model_and_data_for_training",
     default_args=default_args,
@@ -66,7 +58,7 @@ dag = DAG(
 )
 
 start_task = DummyOperator(task_id="start_task", dag=dag)
-end_task = DummyOperator(task_id="end_task", dag=dag)
+join_task = DummyOperator(task_id="join_task", dag=dag)
 
 
 validate_reference_model_list_exist_or_create = BranchPythonOperator(
@@ -100,6 +92,22 @@ validate_base_model_exist_or_download = PythonOperator(
     dag=dag,
 )
 
+create_data_bucket_cmd = f"gsutil ls -b {gcp_base_bucket_url} || gsutil mb {gcp_base_bucket_url}"
+create_data_bucket = BashOperator(
+    task_id="create_data_bucket",
+    bash_command=create_data_bucket_cmd,
+    provide_context=True,
+    dag=dag,
+)
+
+# clean_up_bucket_cmd = f"gsutil rm -r {gcp_base_bucket_url}training/data/ && gsutil rm -r {gcp_base_bucket_url}training/model/ && gsutil rm {gcp_base_bucket_url}training/pipeline.config"
+# clean_up_bucket = BashOperator(
+#     task_id="clean_up_bucket", bash_command=clean_up_bucket_cmd, provide_context=True, dag=dag,
+# )
+
+# clean_up_post_training = PythonOperator(task_id="clean_up_post_training")
+
+upload_tasks = []
 
 for video_source in video_feed_sources:
     check_labelmap_file_content_are_the_same = PythonOperator(
@@ -178,7 +186,6 @@ for video_source in video_feed_sources:
                 "training_archiving_path": TRAINING_ARCHIVING_PATH,
                 "video_source": video_source,
                 "base_model": base_model,
-                "execution_date": "{{ts_nodash}}",
             },
             dag=dag,
         )
@@ -190,17 +197,27 @@ for video_source in video_feed_sources:
             + base_model,
             python_callable=prepare_model_and_data_for_training.remove_raw_images_and_annotations_from_training_folder,
             provide_context=True,
-            op_kwargs={"video_source": video_source, "base_model": base_model,},
+            op_kwargs={
+                "video_source": video_source,
+                "base_model": base_model,
+                "gcp_base_bucket_url": gcp_base_bucket_url,
+                "airflow_trainable_folder": AIRFLOW_TRAINABLE_FOLDER,
+            },
             dag=dag,
         )
 
-        upload_cmd = f"gsutil cp -r {xcom_pull__base_training_folder(video_source, base_model)} {gcp_base_bucket_url}/training"
         upload_training_folder_to_gcp_bucket = BashOperator(
             task_id="upload_training_folder_to_gcp_bucket_" + video_source + "_" + base_model,
-            bash_command=upload_cmd,
+            bash_command="{{{{ ti.xcom_pull(key='gcp_copy_cmd',task_ids='remove_raw_images_and_annotations_from_training_folder_{}_{}')}}}}".format(
+                video_source, base_model
+            ),
             provide_context=True,
             dag=dag,
+            task_concurrency=1,
         )
+
+        # To fix parallelism error with gsutil
+        upload_tasks.append(upload_training_folder_to_gcp_bucket)
 
         start_task >> validate_reference_model_list_exist_or_create >> [
             validate_base_model_exist_or_download,
@@ -210,6 +227,14 @@ for video_source in video_feed_sources:
         validate_base_model_exist_or_download >> check_labelmap_file_content_are_the_same >> create_training_folder_tree
         create_training_folder_tree >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder
         copy_base_model_to_training_folder >> genereate_model_config >> archiving_training_folder
-        archiving_training_folder >> remove_raw_images_and_annotations_from_training_folder >> upload_training_folder_to_gcp_bucket >> end_task
+        archiving_training_folder >> remove_raw_images_and_annotations_from_training_folder >> join_task
 
-        # TODO: Upload training training folder to GCP
+        # To fix parallelism error with gsutil
+        for index, task in enumerate(upload_tasks):
+            if index == 0:
+                join_task >> create_data_bucket
+                create_data_bucket >> task
+            else:
+                upload_tasks[index - 1] >> task
+
+# upload_tasks[-1] >> clean_up_bucket
