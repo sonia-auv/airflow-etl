@@ -33,6 +33,8 @@ ARG TENSORFLOW_OBJECT_DETECTION_SLIM_PATH=${AIRFLOW_HOME}/models-${TENSORFLOW_OB
 
 ENV PROTOC_VERSION=${PROTOC_VERSION}
 ENV TENSORFLOW_OBJECT_DETECTION_VERSION=${TENSORFLOW_OBJ_DETECTION_VERSION}
+ENV TENSORFLOW_OBJECT_DETECTION_BASE_FOLDER=${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}
+ENV TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER=${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}/research/
 
 
 # Define en_US.
@@ -135,6 +137,7 @@ RUN set -ex \
     $buildDeps \
     && wget -q -c https://github.com/tensorflow/models/archive/v${TENSORFLOW_OBJECT_DETECTION_VERSION}.tar.gz -O - | tar -xz -C ${AIRFLOW_HOME} \
     && cd ${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}/research/ \
+    && chmod +x object_detection/dataset_tools/create_pycocotools_package.sh \
     && protoc object_detection/protos/*.proto --python_out=. \
     && apt-get purge --auto-remove -yqq $buildDeps\
     && rm -rf \
