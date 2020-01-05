@@ -6,8 +6,8 @@ import os
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.models import Variable
 from airflow.hooks.base_hook import BaseHook
+from airflow.models import Variable
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import BranchPythonOperator, PythonOperator
 
@@ -51,7 +51,9 @@ def get_proper_ontology(json_file):
         return ontology_bottom
 
 
-dag = DAG("create_project_into_labelbox", default_args=default_args, catchup=False)
+dag = DAG(
+    "create_project_into_labelbox", default_args=default_args, catchup=False, schedule_interval=None
+)
 
 
 start_task = DummyOperator(task_id="start_task", dag=dag)

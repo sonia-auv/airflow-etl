@@ -1,43 +1,125 @@
 #!/usr/bin/env bash
 
+# -- ABOUT THIS PROGRAM: ------------------------------------------------------
+#
+# Author:       Martin Gauthier
+# Version:      1.0.0
+# Description:  A simple shell script to launch our Airflow services
+# Source:       https://github.com/sonia-auv/docker-ros-airflow/start.sh
+#
+# -- INSTRUCTIONS: ------------------------------------------------------------
+#
+# Execute:
+#   $ chmod u+x start.sh && ./start.sh --env dev
+#
+# Options:
+#   -h, --help      output program instructions
+#   -v, --version   output program version
+#   -e, --env       set build environment variable (e.g: dev, prod)
+#
+# ------------------------------------------------------------------------------
+# | VARIABLES                                                                  |
+# ------------------------------------------------------------------------------
+
 RED="$(tput setaf 1)"
 GREEN="$(tput setaf 2)"
 YELLOW="$(tput setaf 3)"
+ORANGE='\033[0;33m'
 BOLD="$(tput bold)"
 RESET="$(tput sgr0)"
 
+VERSION="1.0.0"
+PROGRAM="start"
+
 export AIRFLOW_DOCKER_IMAGE_NAME="soniaauvets/airflow-ros-tensorflow"
 export AIRFLOW_DOCKER_IMAGE_TAG="$(cat VERSION)"
+AIRFLOW_DAG_DIR=$PWD/dags
 
 CURRENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 DOCKER_DIR="${CURRENT_DIR}/docker"
 
+# ------------------------------------------------------------------------------
+# | UTILS                                                                      |
+# ------------------------------------------------------------------------------
 
-function error() {
-    echo
-    echo "${RED}${BOLD}ERROR${RESET}${BOLD} : $1${RESET}"
-    echo
+# Header logging
+e_info() {
+    echo "${YELLOW}[INFO]:${RESET}" "$@"
+}
+
+# Success logging
+e_success() {
+    echo "${GREEN}✔${RESET}" "$@"
+}
+
+# Error logging
+e_error() {
+    echo "${RED}[ERROR]:${RESET}" "$@"
     exit 1
 }
 
-function collectArgs() {
-    BUILD_ENV=$1
-    DAGS_DIR=$2
+# Warning logging
+e_warning() {
+    printf "${ORANGE}![WARNING]:${RESET}" "$@"
+}
 
+e_airflow_container_starting() {
+    echo "#########################################################################"
+    echo
+    echo "Launching sonia-auv airflow docker containers"
+}
+
+e_airflow_container_started() {
+    echo "#########################################################################"
+    echo
+    e_success "Airflow containers have ${GREEN}${BOLD}STARTED${GREEN}${BOLD}"
+}
+
+e_airflow_image_pulling() {
+    echo "#########################################################################"
+    echo
+    echo  "Pulling image '${AIRFLOW_DOCKER_IMAGE_NAME}' using tag '${AIRFLOW_DOCKER_IMAGE_TAG}'"
+}
+
+# ------------------------------------------------------------------------------
+# | MAIN FUNCTIONS                                                             |
+# ------------------------------------------------------------------------------
+
+context(){
+    e_info "Build context:${BUILD_ENV}"
+}
+
+help() {
+
+cat <<EOT
+
+------------------------------------------------------------------------------
+Start - DESCRIPTION
+------------------------------------------------------------------------------
+
+Usage: ./start.sh
+Example: ./start.sh
+
+
+Options:
+    -h, --help      output program instructions
+    -v, --version   output program version
+    -e, --env       set build environment variable (e.g: dev, prod)
+
+EOT
+
+}
+
+parseArgs() {
+    BUILD_ENV=${1}
     if [[ -z ${BUILD_ENV} ]]; then
-        error "BUILD_ENV argument must be defined on calling ! i.e : ./start.sh [BUILD_ENV]"
+        e_error "BUILD_ENV argument must be defined on calling ! i.e : ./start.sh [BUILD_ENV]"
     elif [[ "${BUILD_ENV}" -ne "dev" || "${BUILD_ENV}" -ne "prod" ]]; then
-        error "BUILD_ENV argument value must be dev or prod"
-    fi
-
-    if [[ ! -z $DAGS_DIR ]]; then
-        AIRFLOW_DAG_DIR=${DAGS_DIR}
-    else
-        AIRFLOW_DAG_DIR=$PWD/dags
+        e_error "BUILD_ENV argument value must be dev or prod"
     fi
 }
 
-function checkRequiredFolderExist() {
+requiredFolderExist() {
     declare -a List=(
                  "${CURRENT_DIR}/dags"
                  "${CURRENT_DIR}/data"
@@ -57,51 +139,53 @@ function checkRequiredFolderExist() {
     done
 }
 
-collectArgs $* || error "Error while defining airflow dags directory"
+start(){
+    parseArgs $*
+    context
+    requiredFolderExist || e_error "Error while creating folder required by airflow on localhost"
+    if [[ ${BUILD_ENV} == 'prod' ]]; then
+        start_prod || e_error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
+    else
+        start_dev || e_error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
+    fi
 
-[ -f .env ] || error "'.env' file does not exist in current directory! ($(pwd))"
+    e_airflow_container_started
+}
 
-docker_status=
+start_dev() {
+    e_airflow_container_starting
+    AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} HOST_ROOT_FOLDER=${CURRENT_DIR}  docker-compose -f ${DOCKER_DIR}/docker-compose.yml -f ${DOCKER_DIR}/docker-compose-local.yml up -d --build || e_error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
+}
 
-if [[ ! "$(docker -v)" ]]; then
-     error "You must install docker to be able to use this script"
-fi
+start_prod() {
+    e_airflow_image_pulling
+    docker pull ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} ||e_error "Error pulling '${AIRLFLOW_DOCKER_IMAGE_NAME}'"
 
+    e_airflow_container_starting
+    AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} HOST_ROOT_FOLDER=${CURRENT_DIR}  docker-compose -f ${DOCKER_DIR}/docker-compose.yml -f ${DOCKER_DIR}/docker-compose-prod.yml up -d|| e_error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
+}
 
-echo "#########################################################################"
-echo
-echo
-echo "Build context:${BUILD_ENV}"
-echo
-echo
+version() {
+    echo "$PROGRAM: v$VERSION"
+}
 
-echo "#########################################################################"
-echo
-echo "Validating presence of airflow required folder and creating missing folders"
-echo
-checkRequiredFolderExist ||error "Error while creating folder required by airflow on localhost"
-echo
-echo
+# ------------------------------------------------------------------------------
+# | INITIALIZE SCRIPT                                                          |
+# ------------------------------------------------------------------------------
 
-echo ${BUILD_ENV}
-if [[ ${BUILD_ENV} == 'prod' ]]; then
-    echo "#########################################################################"
-    echo
-    echo "Generating '${AIRFLOW_DOCKER_IMAGE_NAME}' image using tag '${AIRFLOW_DOCKER_IMAGE_TAG}'"
-    docker pull ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG} ||error "Error pulling '${AIRLFLOW_DOCKER_IMAGE_NAME}'"
+main() {
 
-    echo "#########################################################################"
-    echo
-    echo "Launching sonia-auv airflow docker containers"
-    echo ${CURRENT_DIR}
-    AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} HOST_ROOT_FOLDER=${CURRENT_DIR}  docker-compose -f ${DOCKER_DIR}/docker-compose.yml up -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
-else
-    echo "#########################################################################"
-    echo
-    echo "Launching sonia-auv airflow docker containers"
-    echo ${CURRENT_DIR}
-    AIRFLOW_DAG_DIR=${AIRFLOW_DAG_DIR} HOST_ROOT_FOLDER=${CURRENT_DIR}  docker-compose -f ${DOCKER_DIR}/docker-compose.yml -f ${DOCKER_DIR}/docker-compose-local.yml up -d|| error "Error while starting '${AIRFLOW_DOCKER_IMAGE_NAME}'"
-fi
-echo "#########################################################################"
-echo
-echo "Airflow containers have ${GREEN}${BOLD}STARTED${GREEN}${BOLD}"
+    if [[ "${1}" == "-h" || "${1}" == "--help" ]]; then
+        help ${1}
+    elif [[ "${1}" == "-v" || "${1}" == "--version" ]]; then
+        version ${1}
+    elif [[ "${1}" == "-e" || "${1}" == "--env" ]]; then
+        start ${2}
+    else
+        e_error "You must provide an build enviroment using the -e or --env flag"
+    fi
+
+}
+
+# Initialize
+main $*

@@ -107,8 +107,6 @@ cp .env.template .env
 ```
 #### Airflow Fernet Key (Database data encryption)
 
-//TODO: Feed the key through CI/CD Pipeline
-
 First of all you must generate an Fernet Key to encrypt (connexions data) into Airflow database
 
 Here are the step to generate a fernet key
@@ -124,11 +122,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 
 Replace the **AIRFLOW_FERNET_KEY** field value by the newly created key into the **.env** file
 
-#### Google Cloud SDK
-
-Google cloud SDK credential are are automatically deployed into the production images through CI/CD
-
-#### Start Airflow
+#### Launch Airflow services
 
 ```bash
 ./start.sh prod
@@ -156,7 +150,26 @@ sonia-auv-airflow_airflow-webserver_1 is ... done
 Airflow containers have STARTED
 ```
 
-#### Importing Airflow Variables
+#### Google Cloud SDK
+
+**NOTE:** Make sure to that the file glcoud_service_account.json exist in docker-ros-airflow/config on the VM
+**NOTE:** Make sure the webserver docker container is running
+
+Then from the vm run the following command
+
+```bash
+docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud auth activate-service-account airflow-etl-sonia@deep-learning-detection.iam.gserviceaccount.com --key-file=gcloud_service_account.json
+docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud config set project deep-learning-detection && gcloud config set compute/zone us-east1 && gcloud config set compute/region us-east1-c
+```
+
+#### Airflow UI User
+
+To create a user to access the Airflow UI through a web browser you must run the following command
+```bash
+docker exec -it sonia-auv-airflow_airflow-webserver_1 airflow create_user --role Admin --username USERNAME --email EMAIL --firstname FIRSTNAME --lastname LASTNAME --password PASSWORD
+```
+
+#### Airflow Variables (Variables)
 
 To import airflow variables from saved json file you must run the following command :
 
@@ -168,38 +181,15 @@ The variables file is added to the docker image during build and it's located in
 It can be modified if new variables are added to the airflow instance.
 Their is an airflow command to extract it see [airflow variables](https://airflow.apache.org/docs/stable/concepts.html?highlight=variable)
 
-#### Airflow UI User
 
-To create a user to access the Airflow UI through a web browser you must run the following command
-```bash
-docker exec -it sonia-auv-airflow_airflow-webserver_1 airflow create_user --role Admin --username USERNAME --email EMAIL --firstname FIRSTNAME --lastname LASTNAME --password PASSWORD
-```
+### Airflow connections
 
-```bash
-./start.sh prod
-```
+You must create connections into Airflow UI to be able to launch all our pipelines.
 
-This will pull the docker-ros-airflow image from the docker repository, and start the containers locally.
-It will start both the airflow container as the postgres container use to store airflow metadata.
+* Slack connection :[Medium Article](https://medium.com/datareply/integrating-slack-alerts-in-airflow-c9dcd155105) (see Using Slack Webhook section)
 
-The output of the script should look like this
+* Labelbox : Delete existing labelbox key into into the labelbox setting menu an create a new one using the club.sonia@etsmtl.net account
 
-```bash
-#########################################################################
-
- Generating 'soniaauvets/airflow-ros-tensorflow' image using tag '1.1.3'
-1.1.3: Pulling from soniaauvets/airflow-ros-tensorflow
-Digest: sha256:778224fdeb5b89a790376084913d272b87a8f24d6352af527e1b472839e7b0dd
-Status: Image is up to date for soniaauvets/airflow-ros-tensorflow:1.1.3
-#########################################################################
-
-Launching sonia-auv airflow docker containers
-Starting sonia-auv-airflow_airflow-postgres_1 ... done
-sonia-auv-airflow_airflow-webserver_1 is ... done
-#########################################################################
-
-Airflow containers have STARTED
-```
 
 ### Usage
 

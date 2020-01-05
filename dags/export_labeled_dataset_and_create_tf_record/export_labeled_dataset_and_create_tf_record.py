@@ -104,13 +104,12 @@ def generate_trainval_file(annotation_dir, output_dir, output_file):
         shutil.rmtree(output_dir)
     os.makedirs(output_dir)
 
-    files = []
-    file_path = os.path.join(output_dir, f"{output_file}.txt")
-    with open(file_path, "w") as fd:
-        for r, d, f in os.walk(annotation_dir):
-            for file in f:
-                line = file.split(".")[0]
-                fd.write(line + "\n")
+    trainval_file_path = os.path.join(output_dir, f"{output_file}.txt")
+    xml_files = file_ops.get_files_in_directory(annotation_dir, "*.xml")
+    with open(trainval_file_path, "w") as outfile:
+        for xml_file in xml_files:
+            filename = file_ops.get_filename(xml_file, with_extension=False)
+            outfile.write(filename + "\n")
 
 
 def generate_labelmap_file(labels, output_dir, output_file):

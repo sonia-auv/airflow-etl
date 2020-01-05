@@ -4,13 +4,10 @@ services:
 env:
   global:
     - IMAGE_NAME=soniaauvets/airflow-ros-tensorflow
-before_install:
-  - openssl aes-256-cbc -K $encrypted_171740cf799b_key -iv $encrypted_171740cf799b_iv
-    -in config/gcloud_service_account.json.enc -out config/gcloud_service_account.json -d
 before_script:
   - version="$(cat VERSION)"
 script:
-  - docker build --pull --cache-from "$IMAGE_NAME" --tag "$IMAGE_NAME" --target prod-env --build-arg GCLOUD_SERVICE_ACCOUNT_EMAIL="${GCLOUD_SERVICE_ACCOUNT_EMAIL}"
+  - docker build --pull --cache-from "$IMAGE_NAME" --tag "$IMAGE_NAME" --build-arg GCLOUD_SERVICE_ACCOUNT_EMAIL="${GCLOUD_SERVICE_ACCOUNT_EMAIL}"
     .
 after_script:
   - docker images

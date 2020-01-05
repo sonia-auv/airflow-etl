@@ -2,7 +2,7 @@
 # DESCRIPTION: Airflow and ROS container
 # HIGHLY INSPIRED BY: https://github.com/puckel/docker-airflow
 
-FROM python:3.7-slim-stretch as release
+FROM python:3.7-slim-stretch
 LABEL maintainer="gauthiermartin86@gmail.com"
 LABEL description="A docker image of Airflow an ETL orchestration plateform"
 
@@ -145,7 +145,6 @@ RUN set -ex \
     /usr/share/doc \
     /usr/share/doc-base
 
-
 ENV PYTHONPATH=${PYTHONPATH}:${TENSORFLOW_OBJECT_DETECTION_LIB_PATH}:${TENSORFLOW_OBJECT_DETECTION_SLIM_PATH}
 # Testing installation of the API
 RUN cd ${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}/research/ \
@@ -164,22 +163,8 @@ RUN chown -R airflow: ${AIRFLOW_HOME}
 # Copying our docker entrypoint
 COPY script/entrypoint.sh /entrypoint.sh
 
-
 EXPOSE 8080
 
-
-FROM release as dev-env
-
 USER airflow
 WORKDIR ${AIRFLOW_HOME}
 ENTRYPOINT ["/entrypoint.sh"]
-
-FROM release as prod-env
-COPY config/gcloud_service_account.json ${AIRFLOW_HOME}/gcloud_service_account.json
-RUN gcloud auth activate-service-account ${GCLOUD_SERVICE_ACCOUNT_EMAIL} --key-file=${AIRFLOW_HOME}/gcloud_service_account.json
-
-USER airflow
-WORKDIR ${AIRFLOW_HOME}
-ENTRYPOINT ["/entrypoint.sh"]
-
-FROM release

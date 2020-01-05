@@ -37,6 +37,7 @@ slack_webhook_token = BaseHook.get_connection("slack").password
 ontology_front = json.loads(Variable.get("ontology_front"))
 ontology_bottom = json.loads(Variable.get("ontology_bottom"))
 
+# TODO: Document this since it could be an issues
 export_project_name = Variable.get("labelbox_export_project_list").split(",")
 
 front_cam_object_list = [tool["name"] for tool in ontology_front["tools"]]
@@ -54,7 +55,12 @@ default_args = {
     "retries": 0,
 }
 
-dag = DAG("import_labeled_dataset_and_create_tf_record", default_args=default_args, catchup=False)
+dag = DAG(
+    "import_labeled_dataset_and_create_tf_record",
+    default_args=default_args,
+    catchup=False,
+    schedule_interval=None,
+)
 
 
 def get_proper_label_list(project_name):
@@ -98,9 +104,10 @@ for index, project_name in enumerate(export_project_name):
     input_folder = HOST_LABELBOX_INPUT_FOLDER + project_name
     output_folder = HOST_LABELBOX_OUTPUT_FOLDER + project_name
 
+    # TODO : Rename input since it is ambiguous
     extract_labeled_data_from_labelbox = DockerOperator(
         task_id="extract_labeled_data_from_labelbox_" + project_name,
-        image="soniaauvets/labelbox-exporter:1.0.0",
+        image="soniaauvets/labelbox-exporter:1.1.0",
         force_pull=True,
         auto_remove=True,
         command=f"python main.py /input/{project_name}.json /output",
@@ -148,7 +155,7 @@ for index, project_name in enumerate(export_project_name):
     labelmap_file = os.path.join(trainval_dir, f"label_map_{project_name}")
     tfrecord_output_dir = os.path.join(AIRFLOW_TF_RECORD_FOLDER, project_name)
 
-    create_tf_record_command = f"python {AIRFLOW_CURRENT_DAG_FOLDER}/create_tf_record.py --annotation_dir={voc_annotation_extract_dir} --image_dir={voc_image_extract_dir} --label_map_file={labelmap_file}.pbtxt --trainval_file={trainval_file}.txt --output_dir={tfrecord_output_dir}"
+    create_tf_record_command = f"python {AIRFLOW_CURRENT_DAG_FOLDER}/create_tf_record.py --annotation_dir={voc_annotation_extract_dir} --image_dir={voc_image_extract_dir} --label_map_file={labelmap_file}.pbtxt --trainval_file={trainval_file}.txt --output_dir={tfrecord_output_dir} --dataset_name={project_name}"
 
     create_tf_record = BashOperator(
         task_id="create_tf_record_" + project_name, bash_command=create_tf_record_command, dag=dag

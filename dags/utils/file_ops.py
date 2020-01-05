@@ -1,14 +1,16 @@
-import os
 import filecmp
 import json
 import logging
-import requests
+import os
+import shutil
 from glob import glob
+
+import requests
 
 
 def get_parent_folder_name(dir_path):
     """
-     Utility function to get lastest folder name from path
+    Utility function to get lastest folder name from path
     :param dir_path: path
     :return: parent folder name
     """
@@ -17,13 +19,49 @@ def get_parent_folder_name(dir_path):
 
 def get_files_in_directory(dir_path, file_ext):
     """
-     Utility function to get all files from a given folder
+    Utility function to get all files from a given folder
     :param dir_path: path
     :param file_ext: file extension
     :return: a list of filepath
     """
-    print(os.path.join(dir_path, file_ext))
     return glob(os.path.join(dir_path, file_ext))
+
+
+def get_subfolders_in_directory(dir_path):
+    """
+    Utility function to get all first level subfolder paths from a given directory
+    :param dir_path: A directory path
+    :raises ValueError: Error raised when given path is not a folder
+    :return: A list of subfolder paths
+    """
+
+    if os.path.isdir(dir_path):
+        folder_paths = []
+        for entry_name in os.listdir(dir_path):
+            entry_path = os.path.join(dir_path, entry_name)
+            if os.path.isdir(entry_path):
+                folder_paths.append(entry_path)
+        return folder_paths
+
+    raise ValueError("The value of the dir_path argument must be a valid directory path")
+
+
+def get_subfolders_names_in_directory(dir_path):
+    """
+    Utility function to get all the subfolders names
+
+    :param dir_path: A directory path
+    :raises ValueError: Error raised when given path is not a folder
+    :return: A list of subfolder paths
+    """
+    if os.path.isdir(dir_path):
+        folder_names = []
+        for entry_name in os.listdir(dir_path):
+            entry_path = os.path.join(dir_path, entry_name)
+            if os.path.isdir(entry_path):
+                folder_names.append(entry_name)
+        return folder_names
+    raise ValueError("The value of the dir_path argument must be a valid directory path")
 
 
 def get_filename(file_path, with_extension=True):
@@ -38,6 +76,16 @@ def get_filename(file_path, with_extension=True):
         return os.path.basename(file_path)
 
     return os.path.splitext(os.path.basename(file_path))[0]
+
+
+def get_folder_name(folder_path):
+    """
+    A Utility function to get the name of the latest folder in a path
+
+    :param folder_path: Folder path
+    :return: Folder name
+    """
+    return os.path.basename(folder_path)
 
 
 def get_object_name_from_file(file_path):
@@ -144,9 +192,57 @@ def concat_json(json_files, output_path):
 
 
 def folder_exist_or_create(folder_path):
+    # TODO: Add docstring
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
 
 
 def file_exist(file_path):
+    # TODO: Add docstring
     return os.path.isfile(file_path)
+
+
+def get_directory_subfolders_subset(dir_path, filter):
+    # TODO: Add docstring
+    subfolders = get_sub_folders_list(dir_path)
+
+    parsed_subfolder = []
+    for subfolder in subfolders:
+        folder_name = os.path.basename(os.path.normpath(subfolder))
+
+        if folder_name.startswith(filter):
+            parsed_subfolder.append(subfolder)
+
+    return parsed_subfolder
+
+
+def copy_xml_files_from_folder(source_dir, dest_dir):
+    # TODO: docs string
+    files = glob(os.path.join(source_dir, "*.xml"))
+    for file in files:
+        if os.path.isfile(file):
+            shutil.copy2(file, dest_dir)
+
+
+def copy_files_from_folder(source_dir, dest_dir):
+    # TODO: docs string
+    files = glob(os.path.join(source_dir, "*.*"))
+    for file in files:
+        if os.path.isfile(file):
+            shutil.copy2(file, dest_dir)
+
+
+def clean_up_folder_content(folders):
+
+    for folder in folders:
+        folder_content = glob(folder + "*.*")
+        for content in folder_content:
+            logging.info(f"Deleting Folder : {content}")
+            if os.path.isdir(content):
+                shutil.rmtree(content)
+            else:
+                if not content.endswith(".gitignore"):
+                    logging.info(f"Deleting File : {content}")
+                    os.remove(content)
+
+    logging.info("Clean up completed")

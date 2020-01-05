@@ -1,0 +1,6 @@
+version: "3.7"
+services:
+  airflow-webserver:
+    volumes:
+      - $HOME/Archive:/usr/local/airflow/data/archive
+      - $PWD/config/gcloud_service_account.json:/usr/local/airflow/gcloud_service_account.json
