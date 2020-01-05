@@ -13,11 +13,13 @@ from utils import file_ops, slack
 
 BASE_AIRFLOW_FOLDER = "/usr/local/airflow/"
 AIRFLOW_DATA_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, "data")
+AIRFLOW_JSON_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, "json")
 AIRFLOW_MODELS_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "models", "base")
 AIRFLOW_MODELS_CSV_FILE = os.path.join(AIRFLOW_DATA_FOLDER, "models", "model_list.csv")
 AIRFLOW_TRAINING_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "training")
 AIRFLOW_TRAINABLE_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "trainable")
-AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "labelbox", "output")
+AIRFLOW_LABELBOX_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "labelbox")
+AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER = os.path.join(AIRFLOW_LABELBOX_FOLDER, "output")
 AIRFLOW_TF_RECORD_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "tfrecord")
 TRAINING_ARCHIVING_PATH = os.path.join(AIRFLOW_DATA_FOLDER, "archive")
 
@@ -100,12 +102,20 @@ create_data_bucket = BashOperator(
     dag=dag,
 )
 
-# clean_up_bucket_cmd = f"gsutil rm -r {gcp_base_bucket_url}training/data/ && gsutil rm -r {gcp_base_bucket_url}training/model/ && gsutil rm {gcp_base_bucket_url}training/pipeline.config"
-# clean_up_bucket = BashOperator(
-#     task_id="clean_up_bucket", bash_command=clean_up_bucket_cmd, provide_context=True, dag=dag,
-# )
-
-# clean_up_post_training = PythonOperator(task_id="clean_up_post_training")
+clean_up_post_training_prep = PythonOperator(
+    task_id="clean_up_post_training_prep",
+    python_callable=prepare_model_and_data_for_training.clean_up_post_training_prep,
+    op_kwargs={
+        "folders": [
+            AIRFLOW_JSON_FOLDER,
+            AIRFLOW_LABELBOX_FOLDER,
+            AIRFLOW_TF_RECORD_FOLDER,
+            AIRFLOW_JSON_FOLDER,
+            AIRFLOW_TRAINING_FOLDER,
+        ]
+    },
+    dag=dag,
+)
 
 upload_tasks = []
 
@@ -237,4 +247,4 @@ for video_source in video_feed_sources:
             else:
                 upload_tasks[index - 1] >> task
 
-# upload_tasks[-1] >> clean_up_bucket
+upload_tasks[-1] >> clean_up_post_training_prep

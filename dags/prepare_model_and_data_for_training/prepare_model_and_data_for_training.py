@@ -439,3 +439,20 @@ def remove_raw_images_and_annotations_from_training_folder(
     ti.xcom_push(key="gcp_copy_cmd", value=prepared_cmd)
 
     logging.info("Successfully deleted useless files for training")
+
+
+def clean_up_post_training_prep(folders, **kwargs):
+
+    print(folders)
+    for folder in folders:
+        folder_content = glob.glob(f"{folder}/*")
+        print(folder_content)
+
+        for content in folder_content:
+            if os.path.isdir(content):
+                logging.info(f"Deleting Folder:{content}")
+                shutil.rmtree(content)
+            else:
+                if not content.endswith(".gitignore"):
+                    logging.info(f"Deleting File:{content}")
+                    os.remove(content)

@@ -230,3 +230,19 @@ def copy_files_from_folder(source_dir, dest_dir):
     for file in files:
         if os.path.isfile(file):
             shutil.copy2(file, dest_dir)
+
+
+def clean_up_folder_content(folders):
+
+    for folder in folders:
+        folder_content = glob(folder + "*.*")
+        for content in folder_content:
+            logging.info(f"Deleting Folder : {content}")
+            if os.path.isdir(content):
+                shutil.rmtree(content)
+            else:
+                if not content.endswith(".gitignore"):
+                    logging.info(f"Deleting File : {content}")
+                    os.remove(content)
+
+    logging.info("Clean up completed")
