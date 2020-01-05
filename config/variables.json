@@ -1,6 +1,6 @@
 {
     "bucket_name": "robosub-2020",
-    "labelbox_export_project_list": "bottom_roulette_cvm_20190909",
+    "labelbox_export_project_list": "bottom_roulette_cvm_20190909,bottom_roulette_cvm_20191111,front_roulette_cvm_20190707,front_roulette_cvm_20190909",
     "ontology_bottom": {
         "classifications": [],
         "tools": [
@@ -47,5 +47,6 @@
         ]
     },
     "tensorflow_model_zoo_markdown_url": "https://raw.githubusercontent.com/tensorflow/models/master/research/object_detection/g3doc/detection_model_zoo.md",
-    "tensorflow_model_zoo_models": "faster_rcnn_inception_resnet_v2_atrous_coco_2018_01_28,faster_rcnn_inception_resnet_v2_atrous_lowproposals_coco_2018_01_28"
+    "tensorflow_model_zoo_models": "faster_rcnn_inception_resnet_v2_atrous_coco_2018_01_28,faster_rcnn_inception_resnet_v2_atrous_lowproposals_coco_2018_01_28",
+    "video_feed_sources": "front,bottom"
 }

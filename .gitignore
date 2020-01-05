@@ -109,8 +109,8 @@ ENV/
 # dags
 dags/__pycache__
 
-
+# Apple
 .DS_Store
 
-
+# GCloud config
 gcloud_service_account.json

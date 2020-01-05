@@ -19,7 +19,7 @@ default_args = {
     "retries": 0,
 }
 
-dag = DAG("train_model", default_args=default_args, catchup=False)
+dag = DAG("train_model", default_args=default_args, catchup=False, schedule_interval=None)
 
 start_task = DummyOperator(task_id="start_task", dag=dag)
 end_task = DummyOperator(task_id="end_task", dag=dag)

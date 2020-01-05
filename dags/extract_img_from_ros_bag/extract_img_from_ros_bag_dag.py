@@ -38,14 +38,16 @@ default_args = {
     "depends_on_past": False,
     "start_date": datetime(2019, 1, 24),
     "email": ["club.sonia@etsmtl.net"],
-    "schedule_interval": None,
+    "schedule_interval": "None",
     "email_on_failure": False,
     "email_on_retry": False,
     "on_failure_callback": slack.task_fail_slack_alert,
     "retries": 0,
 }
 
-with DAG("extract_image_from_ros_bag", catchup=False, default_args=default_args) as dag:
+with DAG(
+    "extract_image_from_ros_bag", default_args=default_args, catchup=False, schedule_interval=None,
+) as dag:
 
     formated_topics = " ".join(TOPICS)
 
