@@ -273,40 +273,23 @@ def copy_labelbox_output_data_to_training(
             with open(trainval_file, "r") as infile:
                 shutil.copyfileobj(infile, outfile)
 
-    train_tf_records = []
-    val_tf_records = []
-
     for tf_record_file in tf_record_files:
 
         if (tf_record_file).endswith("train.record"):
-            train_tf_records.append(tf_record_file)
             shutil.copy2(tf_record_file, training_folders["tf_record_train_folder"])
         else:
-            val_tf_records.append(tf_record_file)
             shutil.copy2(tf_record_file, training_folders["tf_record_val_folder"])
 
-    local_training_files = {
-        "label_map_file": labelmap_file,
-        "trainval_file": trainval_file,
-        "train_tf_records": train_tf_records,
-        "val_tf_records": val_tf_records,
-    }
+    project_name = training_folders["base_folder"].replace(airflow_base_folder + "/training/", "")
+    gcp_project_folder = f"{gcp_base_bucket_url}{project_name}/"
 
     gcp_training_files = {
-        "label_map_file": labelmap_file.replace(airflow_base_folder, gcp_base_bucket_url),
-        "trainval_file": trainval_file.replace(airflow_base_folder, gcp_base_bucket_url),
-        "train_tf_records": [
-            tf_record.replace(airflow_base_folder, gcp_base_bucket_url)
-            for tf_record in train_tf_records
-        ],
-        "val_tf_records": [
-            tf_record.replace(airflow_base_folder, gcp_base_bucket_url)
-            for tf_record in val_tf_records
-        ],
+        "label_map_file": labelmap_file.replace(airflow_base_folder + "/", gcp_base_bucket_url),
+        "train_tf_records": f"{gcp_project_folder}data/tf_record/train/*.record",
+        "val_tf_records": f"{gcp_project_folder}data/tf_record/val/*.record",
     }
 
     ti = kwargs["ti"]
-    ti.xcom_push(key="local_training_files", value=local_training_files)
     ti.xcom_push(key="gcp_training_files", value=gcp_training_files)
 
 
@@ -350,7 +333,7 @@ def copy_base_model_to_training_folder(
     logging.info("Successfully removed pipeline.config file")
 
     gcp_training_files["model_checkpoint"] = model_checkpoint.replace(
-        airflow_base_folder, gcp_base_bucket_url
+        airflow_base_folder + "/training/", gcp_base_bucket_url
     )
 
     ti = kwargs["ti"]
@@ -381,10 +364,10 @@ def generate_model_config(
         "LABEL_MAP_PATH", gcp_training_files["label_map_file"], model_config_template
     )
     model_config_template = re.sub(
-        "TRAIN_TF_RECORD_PATHS", str(gcp_training_files["train_tf_records"]), model_config_template
+        "TRAIN_TF_RECORD_PATH", str(gcp_training_files["train_tf_records"]), model_config_template
     )
     model_config_template = re.sub(
-        "VAL_TF_RECORD_PATHS", str(gcp_training_files["val_tf_records"]), model_config_template
+        "VAL_TF_RECORD_PATH", str(gcp_training_files["val_tf_records"]), model_config_template
     )
 
     try:
