@@ -280,10 +280,10 @@ def copy_labelbox_output_data_to_training(
 
         if (tf_record_file).endswith("train.record"):
             train_tf_records.append(tf_record_file)
+            shutil.copy2(tf_record_file, training_folders["tf_record_train_folder"])
         else:
             val_tf_records.append(tf_record_file)
-
-        shutil.copy2(tf_record_file, training_folders["tf_record_folder"])
+            shutil.copy2(tf_record_file, training_folders["tf_record_val_folder"])
 
     local_training_files = {
         "label_map_file": labelmap_file,
