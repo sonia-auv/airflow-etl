@@ -430,7 +430,7 @@ def remove_raw_images_and_annotations_from_training_folder(
     training_folder_name = file_ops.get_folder_name(training_folder)
 
     json_data = {}
-    json_data["gcp_url"] = f"{gcp_base_bucket_url}/{training_folder_name}"
+    json_data["gcp_url"] = f"{gcp_base_bucket_url}{training_folder_name}"
 
     json_file = os.path.join(airflow_trainable_folder, f"{training_folder_name}.json")
     with open(json_file, "w") as outfile:
