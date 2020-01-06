@@ -27,7 +27,7 @@ ENV GCLOUD_SERVICE_ACCOUNT_EMAIL=${GCLOUD_SERVICE_ACCOUNT_EMAIL}
 # Tensorflow
 ARG PROTOC_VERSION=3.10.1
 ARG PROTOC_ZIP=protoc-${PROTOC_VERSION}-linux-x86_64.zip
-ARG TENSORFLOW_OBJ_DETECTION_VERSION=1.12.0
+ARG TENSORFLOW_OBJ_DETECTION_VERSION=1.13.0
 ARG TENSORFLOW_OBJECT_DETECTION_LIB_PATH=${AIRFLOW_HOME}/models-${TENSORFLOW_OBJ_DETECTION_VERSION}/research/
 ARG TENSORFLOW_OBJECT_DETECTION_SLIM_PATH=${AIRFLOW_HOME}/models-${TENSORFLOW_OBJ_DETECTION_VERSION}/research/slim
 
@@ -53,7 +53,6 @@ RUN set -ex \
     libssl-dev \
     libffi-dev \
     libpq-dev \
-    git \
     unzip \
     wget \
     lsb-release \
@@ -72,6 +71,7 @@ RUN set -ex \
     rsync \
     netcat \
     locales \
+    git \
     ca-certificates \
     apt-transport-https \
     libglib2.0-0 \
