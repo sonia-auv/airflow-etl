@@ -144,6 +144,8 @@ def __create_training_folder_subtree(
     annotations_folder = os.path.join(data_folder, "annotations")
     xmls_folder = os.path.join(data_folder, "annotations", "xmls")
     tf_record_folder = os.path.join(data_folder, "tf_record")
+    tf_record_train_folder = os.path.join(tf_record_folder, "train")
+    tf_record_val_folder = os.path.join(tf_record_folder, "val")
     base_model_folder = os.path.join(model_folder, "base")
     trained_model_folder = os.path.join(model_folder, "trained")
 
@@ -159,6 +161,8 @@ def __create_training_folder_subtree(
         "annotations_folder": annotations_folder,
         "xmls_folder": xmls_folder,
         "tf_record_folder": tf_record_folder,
+        "tf_record_train_folder": tf_record_train_folder,
+        "tf_record_val_folder": tf_record_val_folder,
         "base_model_folder": base_model_folder,
         "trained_model_folder": trained_model_folder,
         "train_data_folder": train_data_folder,
@@ -168,7 +172,8 @@ def __create_training_folder_subtree(
     data_folders = [
         training_folders["images_folder"],
         training_folders["xmls_folder"],
-        training_folders["tf_record_folder"],
+        training_folders["tf_record_train_folder"],
+        training_folders["tf_record_val_folder"],
         training_folders["base_model_folder"],
         training_folders["trained_model_folder"],
         training_folders["train_data_folder"],
