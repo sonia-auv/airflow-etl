@@ -1,17 +1,18 @@
 import os
-import filecmp
+import json
 import logging
 
 from utils import file_ops
 
 
-def get_tf_record_folders(source_camera, tfrecord_dir):
-    subfolders = file_ops.get_sub_folders_list(tfrecord_dir)
-
-    tf_record_folders = []
-    for subfolder in subfolders:
-        source_feed = file_ops.get_source_feed_from_folder_name()
-        if source_feed == source_camera:
-            tf_record_folders.append(subfolder)
-
-    return tf_record_folders
+def get_gcp_training_data_url(json_file, **kwargs):
+    with open(json_file, "r") as infile:
+        json_data = json.load(infile)
+    try:
+        gcp_url = json_data["gcp_url"]
+        return gcp_url
+        # ti = kwargs["ti"]
+        # ti.xcom_push(key="gcp_training_data_url", value=gcp_url)
+    except KeyError as e:
+        logging.error(f"gcp_url key does not exist in json data. Validate file content {json_file}")
+        raise e

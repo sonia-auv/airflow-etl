@@ -1,5 +1,7 @@
 import os
+import json
 from datetime import datetime
+from glob import glob
 
 from airflow import DAG
 from airflow.hooks.base_hook import BaseHook
@@ -8,6 +10,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 
+from train_models import train_models
 from utils import file_ops, slack
 
 AIRFLOW_BASE_FOLDER = "/usr/local/airflow/"
@@ -17,6 +20,8 @@ AIRFLOW_TRAINABLE_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "trainable")
 TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER = os.environ[
     "TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER"
 ]
+
+TPU_ZONE = "us-central1"
 
 default_args = {
     "owner": "airflow",
@@ -28,6 +33,7 @@ default_args = {
     "on_failure_callback": slack.task_fail_slack_alert,
     "retries": 0,
 }
+
 
 dag = DAG("train_model", default_args=default_args, catchup=False, schedule_interval=None)
 
@@ -43,7 +49,48 @@ package_tensorflow_libs_with_dependencies = BashOperator(
     dag=dag,
 )
 
-start_task >> package_tensorflow_libs_with_dependencies >> end_task
+training_tasks = []
+
+for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
+
+    training_name = file_ops.get_filename(json_file, with_extension=False)
+    now = datetime.now().strftime("%Y-%m-%dT%H:%M")
+    training_name_with_date = f"{training_name}_{now}"
+    gcp_url = train_models.get_gcp_training_data_url(json_file)
+
+    go_obj_detect_api = f"cd {TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER}"
+    job_dir = gcp_url
+    packages = "dist/object_detection-0.1.tar.gz,slim/dist/slim-0.1.tar.gz,/tmp/pycocotools/pycocotools-2.0.tar.gz"
+    module_name = "object_detection.model_tpu_main"
+    runtime_version = "1.13"
+    scale_tier = "BASIC_TPU"
+    region = TPU_ZONE
+    model_dir = gcp_url
+    pipeline_config_path = f"{gcp_url}/pipeline.config"
+    tpu_zone = TPU_ZONE
+
+    train_model_cmd = f"cd {TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER} && gcloud ai-platform jobs submit training {training_name}_`date +%s` --job-dir {job_dir} --packages {packages} --module-name {module_name} --runtime-version {runtime_version} --scale-tier {scale_tier} --region {region} -- --model-dir={model_dir} --pipeline_config_path={pipeline_config_path} --tpu_zone {tpu_zone}"
+
+    # gcloud ml-engine jobs submit training `whoami`_object_detection_`date +%s` \
+    #     --job-dir=gs://${YOUR_GCS_BUCKET}/train \
+    #     --packages dist/object_detection-0.1.tar.gz,slim/dist/slim-0.1.tar.gz,/tmp/pycocotools/pycocotools-2.0.tar.gz \
+    #     --module-name object_detection.model_tpu_main \
+    #     --runtime-version 1.8 \
+    #     --scale-tier BASIC_TPU \
+    #     --region us-central1 \
+    #     -- \
+    #     --model_dir=gs://${YOUR_GCS_BUCKET}/train \
+    #     --tpu_zone us-central1 \
+    #     --pipeline_config_path=gs://${YOUR_GCS_BUCKET}/data/pipeline.config
+
+    train_model_on_tpu = BashOperator(
+        task_id="train_model_" + training_name + "_on_tpu", bash_command=train_model_cmd, dag=dag
+    )
+
+    training_tasks.append(train_model_on_tpu)
+
+
+start_task >> package_tensorflow_libs_with_dependencies >> training_tasks >> end_task
 
 
 # gcloud ai-platform jobs submit training $1_`date +%s` --job-dir=gs://sonia-test/training/$1/model/ --packages dist/object_detection-0.1.tar.gz,slim/dist/slim-0.1.tar.gz,/tmp/pycocotools/pycocotools-2.0.tar.gz --module-name object_detection.model_tpu_main --runtime-version 1.13 --scale-tier BASIC_TPU --region us-central1 -- --model_dir=gs://sonia-test/training/$1/model/ --pipeline_config_path=gs://sonia-test/training/$1/data/pipeline.config --tpu_zone us-central1
