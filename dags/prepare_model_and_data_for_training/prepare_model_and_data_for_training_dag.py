@@ -102,20 +102,20 @@ create_data_bucket = BashOperator(
     dag=dag,
 )
 
-clean_up_post_training_prep = PythonOperator(
-    task_id="clean_up_post_training_prep",
-    python_callable=prepare_model_and_data_for_training.clean_up_post_training_prep,
-    op_kwargs={
-        "folders": [
-            AIRFLOW_JSON_FOLDER,
-            AIRFLOW_LABELBOX_FOLDER,
-            AIRFLOW_TF_RECORD_FOLDER,
-            AIRFLOW_JSON_FOLDER,
-            AIRFLOW_TRAINING_FOLDER,
-        ]
-    },
-    dag=dag,
-)
+# clean_up_post_training_prep = PythonOperator(
+#     task_id="clean_up_post_training_prep",
+#     python_callable=prepare_model_and_data_for_training.clean_up_post_training_prep,
+#     op_kwargs={
+#         "folders": [
+#             AIRFLOW_JSON_FOLDER,
+#             AIRFLOW_LABELBOX_FOLDER,
+#             AIRFLOW_TF_RECORD_FOLDER,
+#             AIRFLOW_JSON_FOLDER,
+#             AIRFLOW_TRAINING_FOLDER,
+#         ]
+#     },
+#     dag=dag,
+# )
 
 upload_tasks = []
 
@@ -247,4 +247,4 @@ for video_source in video_feed_sources:
             else:
                 upload_tasks[index - 1] >> task
 
-upload_tasks[-1] >> clean_up_post_training_prep
+# upload_tasks[-1] >> clean_up_post_training_prep
