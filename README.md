@@ -58,6 +58,20 @@ Once it's done you should be prompted to input the project name which should be 
 
 And you must set you default region to *us-east-1-c*
 
+Then run the following command :
+
+```bash
+docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud auth login
+```
+You will the be asked to select your google account using a link that will displayed in the terminal.
+
+Afterward you will need to input the verification code into the terminal.
+
+
+```bash
+$ docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud config set compute/region us-central1
+
+
 #### Airflow UI User
 
 To create a user to access the Airflow UI through a web browser you must run the following command
