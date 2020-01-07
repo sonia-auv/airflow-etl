@@ -21,7 +21,7 @@ TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER = os.environ[
     "TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER"
 ]
 
-TPU_ZONE = "us-central1"
+GCP_ZONE = Variable.get("gcp_zone")
 
 default_args = {
     "owner": "airflow",
@@ -58,24 +58,39 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
     training_name_with_date = f"{training_name}_{now}"
     gcp_url = train_models.get_gcp_training_data_url(json_file)
 
-    go_obj_detect_api = f"cd {TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER}"
-    job_dir = gcp_url
+    cd_obj_detect_api_cmd = f"cd {TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER}"
+    job_dir = gcp_url + "/"
     packages = "dist/object_detection-0.1.tar.gz,slim/dist/slim-0.1.tar.gz,/tmp/pycocotools/pycocotools-2.0.tar.gz"
     module_name = "object_detection.model_main"
     runtime_version = "1.13"
     scale_tier = "BASIC_GPU"
-    region = TPU_ZONE
-    model_dir = gcp_url
+    region = GCP_ZONE
+    model_dir = gcp_url + "/train_data/"
     pipeline_config_path = f"{gcp_url}/pipeline.config"
-    tpu_zone = TPU_ZONE
+    checkpoint_dir = model_dir
 
-    train_model_cmd = f"cd {TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER} && gcloud ai-platform jobs submit training {training_name}_`date +%s` --job-dir {job_dir} --packages {packages} --module-name {module_name} --runtime-version {runtime_version} --scale-tier {scale_tier} --region {region} -- --model-dir={model_dir} --pipeline_config_path={pipeline_config_path}"
+    train_model_on_basic_gpu_cmd = f"{cd_obj_detect_api_cmd} && gcloud ai-platform jobs submit training train_{training_name}_`date +%s` --job-dir={job_dir} --packages {packages} --module-name {module_name} --runtime-version {runtime_version} --scale-tier {scale_tier} --region {region} -- --model_dir={model_dir} --pipeline_config_path={pipeline_config_path}"
 
-    train_model_on_tpu = BashOperator(
-        task_id="train_model_" + training_name + "_on_tpu", bash_command=train_model_cmd, dag=dag
+    train_model_on_basic_gpu = BashOperator(
+        task_id="train_model_" + training_name + "_on_basic_gpu",
+        bash_command=train_model_on_basic_gpu_cmd,
+        dag=dag,
     )
 
-    training_tasks.append(train_model_on_tpu)
+    delay_eval_task = BashOperator(
+        task_id="delay_eval_" + training_name, bash_command="sleep 6m", dag=dag
+    )
 
+    eval_model_on_basic_gpu_cmd = f"{cd_obj_detect_api_cmd} && gcloud ai-platform jobs submit training eval_{training_name}_`date +%s` --job-dir={job_dir} --packages {packages} --module-name {module_name} --runtime-version {runtime_version} --scale-tier {scale_tier} --region {region} -- --model_dir={model_dir}train_data --pipeline_config_path={pipeline_config_path} --checkpoint_dir={checkpoint_dir}"
 
-start_task >> package_tensorflow_libs_with_dependencies >> training_tasks >> end_task
+    eval_model_on_basic_gpu = BashOperator(
+        task_id="eval_model_" + training_name + "_on_basic_gpu",
+        bash_command=eval_model_on_basic_gpu_cmd,
+        dag=dag,
+    )
+
+    start_task >> package_tensorflow_libs_with_dependencies
+    package_tensorflow_libs_with_dependencies >> train_model_on_basic_gpu >> delay_eval_task >> eval_model_on_basic_gpu >> end_task
+
+# TODO: Handle tpu training
+# TODO: Handle parallel gpu training
