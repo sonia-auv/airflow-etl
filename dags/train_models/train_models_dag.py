@@ -61,7 +61,7 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
     # TODO: Handle distributed training ---
     # TODO: Define model config.yaml
 
-    # TODO: Create frozen_graph post training
+    # TODO: Create frozen_graph post training ---
 
     training_name = file_ops.get_filename(json_file, with_extension=False)
     now = datetime.now().strftime("%Y-%m-%dT%H:%M")
