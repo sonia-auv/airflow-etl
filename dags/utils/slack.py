@@ -67,17 +67,15 @@ def dag_notify_success_slack_alert(dag):
     )
     return success_alert
 
-    def task_notify_training_in_progress(dag, training_name, tensorboard_url):
+    def task_notify_training_in_progress(dag, training_name, tensorboard_cmd):
         slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
         slack_msg = """
                 :hourglass: Training in progress.
-                *Task*: {task}
                 *Dag*: {dag}
-                *Execution Time*: {exec_date}
-                *Log Url*: {log_url}
-                *Tensorboard Url*: {tensorboard_url}
+                *Training* : {training_name}
+                *Launch tensorboard cmd*: {tensorboard_url}
                 """.format(
-            dag=dag.dag_id, tensorboard_url=tensorboard_url,
+            dag=dag.dag_id, training_name=training_name, tensorboard_url=tensorboard_cmd,
         )
         training_alert = SlackWebhookOperator(
             task_id="slack_task_training_in_progress_{training_name}",
