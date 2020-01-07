@@ -35,6 +35,9 @@ default_args = {
 }
 
 
+tpu_supported_models = Variable.get("tpu_training_supported_models").split(",")
+# distributed_training = Variable.get("distributed_training")
+
 dag = DAG("train_model", default_args=default_args, catchup=False, schedule_interval=None)
 
 start_task = DummyOperator(task_id="start_task", dag=dag)
@@ -49,9 +52,16 @@ package_tensorflow_libs_with_dependencies = BashOperator(
     dag=dag,
 )
 
-training_tasks = []
-
 for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
+
+    # TODO: Handle tpu training ---
+    # TODO: Extract model name from training_name
+    # TODO: Compare tpu_supported_models list content with model_name
+
+    # TODO: Handle distributed training ---
+    # TODO: Define model config.yaml
+
+    # TODO: Create frozen_graph post training
 
     training_name = file_ops.get_filename(json_file, with_extension=False)
     now = datetime.now().strftime("%Y-%m-%dT%H:%M")
@@ -91,6 +101,3 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
 
     start_task >> package_tensorflow_libs_with_dependencies
     package_tensorflow_libs_with_dependencies >> train_model_on_basic_gpu >> delay_eval_task >> eval_model_on_basic_gpu >> end_task
-
-# TODO: Handle tpu training
-# TODO: Handle parallel gpu training
