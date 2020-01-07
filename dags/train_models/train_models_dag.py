@@ -64,7 +64,7 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
     # TODO: Create frozen_graph post training ---
 
     training_name = file_ops.get_filename(json_file, with_extension=False)
-    now = datetime.now().strftime("%Y-%m-%dT%H:%M")
+    now = datetime.now().strftime("%Y%m%dT%H%M")
     training_name_with_date = f"{training_name}_{now}"
     gcp_url = train_models.get_gcp_training_data_url(json_file)
 
@@ -77,9 +77,12 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
     region = GCP_ZONE
     model_dir = gcp_url + "/train_data/"
     pipeline_config_path = f"{gcp_url}/pipeline.config"
-    checkpoint_dir = model_dir
+    checkpoint_dir = gcp_url + "/eval_data/"
 
-    train_model_on_basic_gpu_cmd = f"{cd_obj_detect_api_cmd} && gcloud ai-platform jobs submit training train_{training_name}_`date +%s` --job-dir={job_dir} --packages {packages} --module-name {module_name} --runtime-version {runtime_version} --scale-tier {scale_tier} --region {region} -- --model_dir={model_dir} --pipeline_config_path={pipeline_config_path}"
+    training_task_name = f"train_{training_name}_{now}"
+    eval_task_name = f"eval_{training_name}_{now}"
+
+    train_model_on_basic_gpu_cmd = f"{cd_obj_detect_api_cmd} && gcloud ai-platform jobs submit training {training_task_name} --job-dir={job_dir} --packages {packages} --module-name {module_name} --runtime-version {runtime_version} --scale-tier {scale_tier} --region {region} -- --model_dir={model_dir} --pipeline_config_path={pipeline_config_path}"
 
     train_model_on_basic_gpu = BashOperator(
         task_id="train_model_" + training_name + "_on_basic_gpu",
@@ -87,11 +90,22 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
         dag=dag,
     )
 
+    delay_train_log_task = BashOperator(
+        task_id="delay_train_log_" + training_name, bash_command="sleep 30s", dag=dag
+    )
+
+    display_train_model_logs_cmd = "gcloud ai-platform jobs stream-logs {training_task_name}"
+    display_train_model_logs = BashOperator(
+        task_id="display_train_model_logs_" + training_task_name,
+        bash_command=display_train_model_logs_cmd,
+        dag=dag,
+    )
+
     delay_eval_task = BashOperator(
         task_id="delay_eval_" + training_name, bash_command="sleep 6m", dag=dag
     )
 
-    eval_model_on_basic_gpu_cmd = f"{cd_obj_detect_api_cmd} && gcloud ai-platform jobs submit training eval_{training_name}_`date +%s` --job-dir={job_dir} --packages {packages} --module-name {module_name} --runtime-version {runtime_version} --scale-tier {scale_tier} --region {region} -- --model_dir={model_dir} --pipeline_config_path={pipeline_config_path} --checkpoint_dir={checkpoint_dir}"
+    eval_model_on_basic_gpu_cmd = f"{cd_obj_detect_api_cmd} && gcloud ai-platform jobs submit training {eval_task_name} --job-dir={job_dir} --packages {packages} --module-name {module_name} --runtime-version {runtime_version} --scale-tier {scale_tier} --region {region} -- --model_dir={model_dir} --pipeline_config_path={pipeline_config_path} --checkpoint_dir={checkpoint_dir}"
 
     eval_model_on_basic_gpu = BashOperator(
         task_id="eval_model_" + training_name + "_on_basic_gpu",
@@ -99,5 +113,37 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
         dag=dag,
     )
 
+    delay_eval_log_task = BashOperator(
+        task_id="delay_eval_log_" + training_name, bash_command="sleep 30s", dag=dag
+    )
+
+    display_eval_model_logs_cmd = "gcloud ai-platform jobs stream-logs {training_task_name}"
+    display_eval_model_logs = BashOperator(
+        task_id="display_eval_model_logs_" + eval_task_name,
+        bash_command=display_eval_model_logs_cmd,
+        dag=dag,
+    )
+
+    download_trained_model_cmd = ""
+    download_trained_model = BashOperator(
+        task_id="download_trained_model" + training_name,
+        bash_command=download_trained_model_cmd,
+        dag=dag,
+    )
+
+    export_frozen_graph_cmd = "python object_detection/export_inference_graph.py --input_type image_tensor --pipeline_config_path {downloaded_model_pipeline_config_path} --trained_checkpoint_prefix {trained_checkpoint_prefix} --output_directory {frozen_graph_export_directory}"
+
+    generate_model_frozen_graph_cmd = "{cd_obj_detect_api_cmd} && {export_frozen_graph_cmd} "
+    generate_model_frozen_graph = BashOperator(
+        task_id="generate_model_frozen_graphl" + training_name,
+        bash_command=generate_model_frozen_graph_cmd,
+        dag=dag,
+    )
+
+    # TODO: Slack message tensorboard
+    # TODO: Export model to git or docker image for deploy ?
     start_task >> package_tensorflow_libs_with_dependencies
-    package_tensorflow_libs_with_dependencies >> train_model_on_basic_gpu >> delay_eval_task >> eval_model_on_basic_gpu >> end_task
+    package_tensorflow_libs_with_dependencies >> train_model_on_basic_gpu
+    train_model_on_basic_gpu >> [delay_train_log_task, delay_eval_task]
+    delay_train_log_task >> display_train_model_logs >> end_task
+    delay_eval_task >> eval_model_on_basic_gpu >> delay_eval_log_task >> display_eval_model_logs >> end_task
