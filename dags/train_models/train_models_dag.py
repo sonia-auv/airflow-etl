@@ -81,7 +81,7 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
         task_id="delay_eval_" + training_name, bash_command="sleep 6m", dag=dag
     )
 
-    eval_model_on_basic_gpu_cmd = f"{cd_obj_detect_api_cmd} && gcloud ai-platform jobs submit training eval_{training_name}_`date +%s` --job-dir={job_dir} --packages {packages} --module-name {module_name} --runtime-version {runtime_version} --scale-tier {scale_tier} --region {region} -- --model_dir={model_dir}train_data --pipeline_config_path={pipeline_config_path} --checkpoint_dir={checkpoint_dir}"
+    eval_model_on_basic_gpu_cmd = f"{cd_obj_detect_api_cmd} && gcloud ai-platform jobs submit training eval_{training_name}_`date +%s` --job-dir={job_dir} --packages {packages} --module-name {module_name} --runtime-version {runtime_version} --scale-tier {scale_tier} --region {region} -- --model_dir={model_dir} --pipeline_config_path={pipeline_config_path} --checkpoint_dir={checkpoint_dir}"
 
     eval_model_on_basic_gpu = BashOperator(
         task_id="eval_model_" + training_name + "_on_basic_gpu",
