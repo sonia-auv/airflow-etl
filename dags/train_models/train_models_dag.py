@@ -54,15 +54,6 @@ package_tensorflow_libs_with_dependencies = BashOperator(
 
 for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
 
-    # TODO: Handle tpu training ---
-    # TODO: Extract model name from training_name
-    # TODO: Compare tpu_supported_models list content with model_name
-
-    # TODO: Handle distributed training ---
-    # TODO: Define model config.yaml
-
-    # TODO: Create frozen_graph post training ---
-
     training_name = file_ops.get_filename(json_file, with_extension=False)
     now = datetime.now().strftime("%Y%m%dT%H%M")
     training_name_with_date = f"{training_name}_{now}"
@@ -140,10 +131,22 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
         dag=dag,
     )
 
-    # TODO: Slack message tensorboard
+    tensorboard_cmd = f"tensorboard --logdir {model_dir}:{checkpoint_dir}"
+    notify_slack_channel_with_tensorboard_cmd = slack.task_notify_training_in_progress(
+        dag=dag, training_name=training_name, tensorboard_cmd=tensorboard_cmd
+    )
+
+    # TODO: Create frozen_graph post training ---
+    # TODO: Handle tpu training ---
+    # TODO: Extract model name from training_name
+    # TODO: Compare tpu_supported_models list content with model_name
+
+    # TODO: Handle distributed training ---
+    # TODO: Define model config.yaml
     # TODO: Export model to git or docker image for deploy ?
     start_task >> package_tensorflow_libs_with_dependencies
     package_tensorflow_libs_with_dependencies >> train_model_on_basic_gpu
     train_model_on_basic_gpu >> [delay_train_log_task, delay_eval_task]
-    delay_train_log_task >> display_train_model_logs >> end_task
-    delay_eval_task >> eval_model_on_basic_gpu >> delay_eval_log_task >> display_eval_model_logs >> end_task
+    delay_train_log_task >> display_train_model_logs >> notify_slack_channel_with_tensorboard_cmd
+    delay_eval_task >> eval_model_on_basic_gpu >> delay_eval_log_task >> display_eval_model_logs >> notify_slack_channel_with_tensorboard_cmd
+    notify_slack_channel_with_tensorboard_cmd >> end_task
