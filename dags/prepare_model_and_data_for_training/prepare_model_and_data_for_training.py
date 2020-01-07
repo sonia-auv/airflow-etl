@@ -284,7 +284,9 @@ def copy_labelbox_output_data_to_training(
     gcp_project_folder = f"{gcp_base_bucket_url}{project_name}/"
 
     gcp_training_files = {
-        "label_map_file": labelmap_file.replace(airflow_base_folder + "/", gcp_base_bucket_url),
+        "label_map_file": labelmap_file.replace(
+            airflow_base_folder + "/training/", gcp_base_bucket_url
+        ),
         "train_tf_records": f"{gcp_project_folder}data/tf_record/train/*.record",
         "val_tf_records": f"{gcp_project_folder}data/tf_record/val/*.record",
     }
