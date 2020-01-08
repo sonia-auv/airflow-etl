@@ -21,6 +21,12 @@ AIRFLOW_TRAINABLE_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "trainable")
 AIRFLOW_LABELBOX_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "labelbox")
 AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER = os.path.join(AIRFLOW_LABELBOX_FOLDER, "output")
 AIRFLOW_TF_RECORD_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "tfrecord")
+AIRFLOW_VCS_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "vcs")
+AIRFLOW_MODEL_REPO_FOLDER = os.path.join(AIRFLOW_VCS_FOLDER, "deep-detector-model")
+
+DEEP_DETECTOR_MODEL_REPO_URL = "git@github.com:sonia-auv/deep-detector-model.git"
+
+# TODO: Remove after updating
 TRAINING_ARCHIVING_PATH = os.path.join(AIRFLOW_DATA_FOLDER, "archive")
 
 default_args = {
@@ -91,6 +97,14 @@ validate_base_model_exist_or_download = PythonOperator(
         "base_model_list": base_models,
     },
     trigger_rule="none_failed",
+    dag=dag,
+)
+
+validate_deep_detector_model_repo_exist_or_clone = BashOperator(
+    task_id="validate_deep_detector_model_repo_exist_or_clone",
+    bash_command="[ -d '{{params.repo_folder}}' ] || git clone {{params.repo_url}} {{params.repo_folder}}",
+    params={"repo_folder": AIRFLOW_MODEL_REPO_FOLDER, "repo_url": DEEP_DETECTOR_MODEL_REPO_URL},
+    provide_context=True,
     dag=dag,
 )
 
@@ -234,7 +248,7 @@ for video_source in video_feed_sources:
             download_reference_model_list_as_csv,
         ]
         download_reference_model_list_as_csv >> validate_base_model_exist_or_download
-        validate_base_model_exist_or_download >> check_labelmap_file_content_are_the_same >> create_training_folder_tree
+        validate_base_model_exist_or_download >> validate_deep_detector_model_repo_exist_or_clone >> check_labelmap_file_content_are_the_same >> create_training_folder_tree
         create_training_folder_tree >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder
         copy_base_model_to_training_folder >> genereate_model_config >> archiving_training_folder
         archiving_training_folder >> remove_raw_images_and_annotations_from_training_folder >> join_task
