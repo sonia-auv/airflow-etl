@@ -72,6 +72,7 @@ RUN set -ex \
     netcat \
     locales \
     git \
+    ssh-client\
     ca-certificates \
     apt-transport-https \
     libglib2.0-0 \
