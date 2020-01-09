@@ -3,7 +3,6 @@ google-api-python-client~=1.7.11
 tensorflow~=1.13.0
 labelbox~=2.0.1
 graphqlclient~=0.2.4
-tqdm==4.23.4
 certifi~=2019.9.11
 pytz~=2019.2
 pyOpenSSL~=19.0.0

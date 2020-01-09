@@ -67,21 +67,23 @@ def dag_notify_success_slack_alert(dag):
     )
     return success_alert
 
-    def task_notify_training_in_progress(dag, training_name, tensorboard_cmd):
-        slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
-        slack_msg = """
-                :hourglass: Training in progress.
-                *Dag*: {dag}
-                *Training* : {training_name}
-                *Launch tensorboard cmd*: {tensorboard_url}
-                """.format(
-            dag=dag.dag_id, training_name=training_name, tensorboard_url=tensorboard_cmd,
-        )
-        training_alert = SlackWebhookOperator(
-            task_id="slack_task_training_in_progress_{training_name}",
-            http_conn_id="slack",
-            webhook_token=slack_webhook_token,
-            message=slack_msg,
-            username="airflow",
-        )
-        return training_alert
+
+def task_notify_training_in_progress(dag, training_name, tensorboard_cmd):
+    slack_webhook_token = BaseHook.get_connection(SLACK_CONN_ID).password
+    slack_msg = """
+            :hourglass: Training in progress.
+            *Dag*: {dag}
+            *Training* : {training_name}
+            *Launch tensorboard cmd*: {tensorboard_url}
+            """.format(
+        dag=dag.dag_id, training_name=training_name, tensorboard_url=tensorboard_cmd,
+    )
+    training_alert = SlackWebhookOperator(
+        task_id="slack_task_training_in_progress_" + training_name,
+        http_conn_id="slack",
+        webhook_token=slack_webhook_token,
+        message=slack_msg,
+        username="airflow",
+        dag=dag,
+    )
+    return training_alert
