@@ -32,6 +32,7 @@ def bag_filename_syntax_valid(bag_path):
             filename = os.path.basename(bag)
             filename_wo_extension = os.path.splitext(filename)[0]
 
+            # TODO: Handle error here
             splited_filename = filename_wo_extension.split("_")
 
             source_name = splited_filename[0]
