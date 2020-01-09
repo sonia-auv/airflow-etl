@@ -149,8 +149,11 @@ def validate_requested_model_exist_in_model_zoo_list(base_models_csv, required_b
     logging.info("All required model exist in the official tensorflow model zoo reference list")
 
 
-def validate_model_presence_in_model_repo_or_create():
-    pass
+def validate_model_presence_in_model_repo_or_create(model_repo_folder, base_model):
+
+    model_folder = os.path.join(model_repo_folder, base_model)
+
+    file_ops.folder_exist_or_create(model_folder)
 
 
 def __create_training_folder_subtree(
