@@ -75,13 +75,13 @@ def download_reference_model_list_as_csv(url, base_model_csv):
         logging.error(f"An error occurred while downloading the file from {url}")
 
 
-def download_and_extract_base_model(base_model_csv, base_model_folder, base_model_list=None):
+def download_and_extract_base_model(base_model_csv, base_model_folder, required_base_models=None):
 
     models_df = pd.read_csv(base_model_csv)
     models_subset = models_df[["model_folder_name", "model_file_name", "model_url", "model_name"]]
 
-    if base_model_list is not None:
-        models_subset = models_subset[models_df.model_name.isin(base_model_list)]
+    if required_base_models is not None:
+        models_subset = models_subset[models_df.model_name.isin(required_base_models)]
 
     models = [tuple(x) for x in models_subset.values]
     subfolders = file_ops.get_subfolders_names_in_directory(base_model_folder)
@@ -129,6 +129,28 @@ def compare_label_map_file(base_tf_record_folder, video_source):
         return labelmap_match
     else:
         logging.warn(f"There were not enough dataset to compare i.g : Less than two")
+
+
+def validate_requested_model_exist_in_model_zoo_list(base_models_csv, required_base_models):
+
+    df = pd.read_csv(base_models_csv)
+    available_models = df["model_name"].unique()
+
+    if len(required_base_models) <= 0:
+        raise ValueError(
+            "Airflow variable training_required_base_models should contain at least one model to train"
+        )
+
+    for required_model in required_base_models:
+        if required_model not in available_models:
+            raise ValueError(
+                "Required model {required_model} does not exist in the official tensorflow model zoo"
+            )
+    logging.info("All required model exist in the official tensorflow model zoo reference list")
+
+
+def validate_model_presence_in_model_repo_or_create():
+    pass
 
 
 def __create_training_folder_subtree(
