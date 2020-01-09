@@ -42,11 +42,12 @@ default_args = {
 
 # Variables
 tensorflow_model_zoo_markdown_url = Variable.get("tensorflow_model_zoo_markdown_url")
-base_models = Variable.get("tensorflow_model_zoo_models").split(",")
+required_base_models = Variable.get("tensorflow_model_zoo_models").split(",")
 video_feed_sources = Variable.get("video_feed_sources").split(",")
 gcp_base_bucket_url = f"gs://{Variable.get('bucket_name')}-training/"
 
 
+# DAG Specific Methods
 def get_proper_model_config(video_source, model_name):
     model_config_variable = f"model_config_{video_source}_{model_name}"
     return Variable.get(model_config_variable)
@@ -94,9 +95,19 @@ validate_base_model_exist_or_download = PythonOperator(
     op_kwargs={
         "base_model_csv": AIRFLOW_MODELS_CSV_FILE,
         "base_model_folder": AIRFLOW_MODELS_FOLDER,
-        "base_model_list": base_models,
+        "required_base_models": required_base_models,
     },
     trigger_rule="none_failed",
+    dag=dag,
+)
+
+validate_requested_model_exist_in_model_zoo_list = PythonOperator(
+    task_id="validate_requested_model_exist_in_model_zoo_list",
+    python_callable=prepare_model_and_data_for_training.validate_requested_model_exist_in_model_zoo_list,
+    op_kwargs={
+        "base_models_csv": AIRFLOW_MODELS_CSV_FILE,
+        "required_base_models": required_base_models,
+    },
     dag=dag,
 )
 
@@ -108,6 +119,7 @@ validate_deep_detector_model_repo_exist_or_clone = BashOperator(
     dag=dag,
 )
 
+
 create_data_bucket_cmd = f"gsutil ls -b {gcp_base_bucket_url} || gsutil mb {gcp_base_bucket_url}"
 create_data_bucket = BashOperator(
     task_id="create_data_bucket",
@@ -116,31 +128,23 @@ create_data_bucket = BashOperator(
     dag=dag,
 )
 
-# clean_up_post_training_prep = PythonOperator(
-#     task_id="clean_up_post_training_prep",
-#     python_callable=prepare_model_and_data_for_training.clean_up_post_training_prep,
-#     op_kwargs={
-#         "folders": [
-#             AIRFLOW_JSON_FOLDER,
-#             AIRFLOW_LABELBOX_FOLDER,
-#             AIRFLOW_TF_RECORD_FOLDER,
-#             AIRFLOW_JSON_FOLDER,
-#             AIRFLOW_TRAINING_FOLDER,
-#         ]
-#     },
-#     dag=dag,
-# )
-
 upload_tasks = []
 
 for video_source in video_feed_sources:
     check_labelmap_file_content_are_the_same = PythonOperator(
-        task_id="check_labelmap_file_content_are_the_same_" + video_source,
+        task_id=f"check_labelmap_file_content_are_the_same_" + video_source,
         python_callable=prepare_model_and_data_for_training.compare_label_map_file,
         op_kwargs={"base_tf_record_folder": AIRFLOW_TF_RECORD_FOLDER, "video_source": video_source},
         dag=dag,
     )
-    for base_model in base_models:
+    for base_model in required_base_models:
+
+        validate_model_presence_in_model_repo_or_create = PythonOperator(
+            task_id=f"validate_model_{base_model}_present_in_model_repo_or_create",
+            python_callable=prepare_model_and_data_for_training.validate_model_presence_in_model_repo_or_create,
+            op_kwargs={""},
+            dag=dag,
+        )
 
         create_training_folder_tree = PythonOperator(
             task_id="create_training_folder_tree_" + video_source + "_" + base_model,
