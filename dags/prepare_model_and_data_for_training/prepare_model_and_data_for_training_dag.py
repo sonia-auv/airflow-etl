@@ -113,12 +113,14 @@ validate_requested_model_exist_in_model_zoo_list = PythonOperator(
 
 validate_deep_detector_model_repo_exist_or_clone = BashOperator(
     task_id="validate_deep_detector_model_repo_exist_or_clone",
-    bash_command="[ -d '{{params.repo_folder}}' ] || git clone {{params.repo_url}} {{params.repo_folder}}",
-    params={"repo_folder": AIRFLOW_MODEL_REPO_FOLDER, "repo_url": DEEP_DETECTOR_MODEL_REPO_URL},
+    bash_command="[ -d '{{params.model_repo_folder}}' ] || git clone {{params.model_repo_url}} {{params.repo_folder}}",
+    params={
+        "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
+        "repo_url": DEEP_DETECTOR_MODEL_REPO_URL,
+    },
     provide_context=True,
     dag=dag,
 )
-
 
 create_data_bucket_cmd = f"gsutil ls -b {gcp_base_bucket_url} || gsutil mb {gcp_base_bucket_url}"
 create_data_bucket = BashOperator(
@@ -142,7 +144,7 @@ for video_source in video_feed_sources:
         validate_model_presence_in_model_repo_or_create = PythonOperator(
             task_id=f"validate_model_{base_model}_present_in_model_repo_or_create",
             python_callable=prepare_model_and_data_for_training.validate_model_presence_in_model_repo_or_create,
-            op_kwargs={""},
+            op_kwargs={"model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER, "base_model": base_model},
             dag=dag,
         )
 
@@ -251,8 +253,9 @@ for video_source in video_feed_sources:
             validate_base_model_exist_or_download,
             download_reference_model_list_as_csv,
         ]
-        download_reference_model_list_as_csv >> validate_base_model_exist_or_download
-        validate_base_model_exist_or_download >> validate_deep_detector_model_repo_exist_or_clone >> check_labelmap_file_content_are_the_same >> create_training_folder_tree
+        download_reference_model_list_as_csv >> validate_base_model_exist_or_download >> validate_requested_model_exist_in_model_zoo_list
+        validate_requested_model_exist_in_model_zoo_list >> validate_deep_detector_model_repo_exist_or_clone >> check_labelmap_file_content_are_the_same
+        check_labelmap_file_content_are_the_same >> validate_model_presence_in_model_repo_or_create >> create_training_folder_tree
         create_training_folder_tree >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder
         copy_base_model_to_training_folder >> genereate_model_config >> archiving_training_folder
         archiving_training_folder >> remove_raw_images_and_annotations_from_training_folder >> join_task
