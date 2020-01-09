@@ -1,27 +1,37 @@
 # AUTHOR: Martin Gauthier
-# DESCRIPTION: Airflow and ROS container
+# DESCRIPTION: Airflow container image
 # HIGHLY INSPIRED BY: https://github.com/puckel/docker-airflow
-
 FROM python:3.7-slim-stretch
 LABEL maintainer="gauthiermartin86@gmail.com"
 LABEL description="A docker image of Airflow an ETL orchestration plateform"
 
 # *********************************************
 # Declaring arguments variables
+
+ARG AIRFLOW_HOME=/usr/local/airflow
+ARG BUILD_ENV="local"
 ARG DOCKER_GROUP_ID=999
 ARG GCLOUD_SERVICE_ACCOUNT_EMAIL
-ARG BUILD_ENV="local"
+ARG GIT_USER_EMAIL
+ARG GIT_USER_NAME
+ARG DVC_REMOTE_GDRIVE_NAME
+ARG DVC_REMOTE_GDRIVE_URL
+ARG DVC_REMOTE_GDRIVE_CLIENT_ID
+ARG DVC_REMOTE_GDRIVE_CLIENT_SECRET
 # *********************************************
 # Declaring environements variables
-
 # Never prompts the user for choices on installation/configuration of packages
 ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
-# Airflow
-ENV AIRFLOW_HOME=/usr/local/airflow
+# Define en_US.
+ENV LANGUAGE en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
+ENV LC_CTYPE en_US.UTF-8
+ENV LC_MESSAGES en_US.UTF-8
 
-# Google cloud
+ENV AIRFLOW_HOME=${AIRFLOW_HOME}
 ENV GCLOUD_SERVICE_ACCOUNT_EMAIL=${GCLOUD_SERVICE_ACCOUNT_EMAIL}
 
 # Tensorflow
@@ -35,14 +45,6 @@ ENV PROTOC_VERSION=${PROTOC_VERSION}
 ENV TENSORFLOW_OBJECT_DETECTION_VERSION=${TENSORFLOW_OBJ_DETECTION_VERSION}
 ENV TENSORFLOW_OBJECT_DETECTION_BASE_FOLDER=${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}
 ENV TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER=${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}/research/
-
-
-# Define en_US.
-ENV LANGUAGE en_US.UTF-8
-ENV LANG en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
-ENV LC_CTYPE en_US.UTF-8
-ENV LC_MESSAGES en_US.UTF-8
 
 # *********************************************
 RUN set -ex \
@@ -154,6 +156,8 @@ ENV PYTHONPATH=${PYTHONPATH}:${TENSORFLOW_OBJECT_DETECTION_LIB_PATH}:${TENSORFLO
 # Testing installation of the API
 RUN cd ${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}/research/ \
     && python object_detection/builders/model_builder_test.py
+
+
 # *********************************************
 # Creating airflow logs folder
 RUN mkdir -p ${AIRFLOW_HOME}/logs
@@ -163,16 +167,20 @@ RUN mkdir -p ${AIRFLOW_HOME}/.config/gcloud/
 RUN mkdir ${AIRFLOW_HOME}/.ssh/ \
     && ssh-keyscan -H github.com >> ${AIRFLOW_HOME}/.ssh/known_hosts
 
+# ********************************************
+# Setting Git
+RUN git config --global user.name "${GIT_USER_NAME}" && git config --global user.email "${GIT_USER_EMAIL}"
+# ********************************************
+# Setting up DVC Remote
+RUN dvc remote add ${DVC_REMOTE_GDRIVE_NAME} ${DVC_REMOTE_GDRIVE_URL} --system --default
+RUN dvc remote modify ${DVC_REMOTE_GDRIVE_NAME} gdrive_client_id "${DVC_REMOTE_GDRIVE_CLIENT_ID}" --system
+RUN dvc remote modify ${DVC_REMOTE_GDRIVE_NAME} gdrive_client_secret ${DVC_REMOTE_GDRIVE_CLIENT_SECRET} --system
+
 # *********************************************
 #Copying our airflow config and setting ownership
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
 COPY config/variables.json ${AIRFLOW_HOME}/variables.json
 RUN chown -R airflow: ${AIRFLOW_HOME}
-
-#TODO: HANDLE CREDENTIAL INJECTION (CI/CD)
-#TODO: Git config
-#TODO:
-
 
 # Copying our docker entrypoint
 COPY script/entrypoint.sh /entrypoint.sh
