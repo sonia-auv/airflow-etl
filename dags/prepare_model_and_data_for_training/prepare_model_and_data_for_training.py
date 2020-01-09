@@ -149,39 +149,36 @@ def validate_requested_model_exist_in_model_zoo_list(base_models_csv, required_b
     logging.info("All required model exist in the official tensorflow model zoo reference list")
 
 
-def validate_model_presence_in_model_repo_or_create(model_repo_folder, base_model):
+def validate_model_presence_in_model_repo_or_create(model_repo_folder, video_source, base_model):
 
-    model_folder = os.path.join(model_repo_folder, base_model)
+    model_folder = os.path.join(model_repo_folder, f"{video_source}_{base_model}")
 
     file_ops.folder_exist_or_create(model_folder)
 
 
-def __create_training_folder_subtree(
-    training_data_folder, video_source, object_names, execution_date, **kwargs
-):
+def __create_training_folder_subtree(training_data_folder, **kwargs):
 
     # Base Folder
     data_folder = os.path.join(training_data_folder, "data")
     model_folder = os.path.join(training_data_folder, "model")
-    training_folder = os.path.join(training_data_folder, "training")
+    # training_folder = os.path.join(training_data_folder, "training")
 
     images_folder = os.path.join(data_folder, "images")
     annotations_folder = os.path.join(data_folder, "annotations")
     xmls_folder = os.path.join(data_folder, "annotations", "xmls")
-    tf_record_folder = os.path.join(data_folder, "tf_record")
+    tf_record_folder = os.path.join(data_folder, "tf_records")
     tf_record_train_folder = os.path.join(tf_record_folder, "train")
     tf_record_val_folder = os.path.join(tf_record_folder, "val")
     base_model_folder = os.path.join(model_folder, "base")
-    trained_model_folder = os.path.join(model_folder, "trained")
+    # trained_model_folder = os.path.join(model_folder, "trained")
 
-    train_data_folder = os.path.join(training_folder, "training")
-    eval_data_folder = os.path.join(training_folder, "evaluation")
+    # train_data_folder = os.path.join(training_folder, "training")
+    # eval_data_folder = os.path.join(training_folder, "evaluation")
 
     training_folders = {
         "base_folder": training_data_folder,
         "data_folder": data_folder,
         "model_folder": model_folder,
-        "training_folder": training_folder,
         "images_folder": images_folder,
         "annotations_folder": annotations_folder,
         "xmls_folder": xmls_folder,
@@ -189,9 +186,9 @@ def __create_training_folder_subtree(
         "tf_record_train_folder": tf_record_train_folder,
         "tf_record_val_folder": tf_record_val_folder,
         "base_model_folder": base_model_folder,
-        "trained_model_folder": trained_model_folder,
-        "train_data_folder": train_data_folder,
-        "eval_data_folder": eval_data_folder,
+        # "trained_model_folder": trained_model_folder,
+        # "train_data_folder": train_data_folder,
+        # "eval_data_folder": eval_data_folder,
     }
 
     data_folders = [
@@ -200,9 +197,9 @@ def __create_training_folder_subtree(
         training_folders["tf_record_train_folder"],
         training_folders["tf_record_val_folder"],
         training_folders["base_model_folder"],
-        training_folders["trained_model_folder"],
-        training_folders["train_data_folder"],
-        training_folders["eval_data_folder"],
+        # training_folders["trained_model_folder"],
+        # training_folders["train_data_folder"],
+        # training_folders["eval_data_folder"],
     ]
 
     for folder in data_folders:
@@ -232,15 +229,13 @@ def create_training_folder(
         base_training_folder, f"{video_source}_{object_names}_{base_model}_{execution_date}"
     )
 
-    __create_training_folder_subtree(
-        training_folder, video_source, object_names, execution_date, **kwargs
-    )
+    __create_training_folder_subtree(training_folder, **kwargs)
 
     ti = kwargs["ti"]
     ti.xcom_push(key="training_folder", value=training_folder)
 
 
-def copy_labelbox_output_data_to_training(
+def copy_labelbox_output_data_to_training_folder(
     labelbox_output_data_folder,
     tf_record_folder,
     video_source,

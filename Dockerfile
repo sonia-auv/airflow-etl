@@ -149,6 +149,7 @@ RUN set -ex \
     /usr/share/doc \
     /usr/share/doc-base
 
+
 ENV PYTHONPATH=${PYTHONPATH}:${TENSORFLOW_OBJECT_DETECTION_LIB_PATH}:${TENSORFLOW_OBJECT_DETECTION_SLIM_PATH}
 # Testing installation of the API
 RUN cd ${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}/research/ \
@@ -158,11 +159,20 @@ RUN cd ${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}/research/ \
 RUN mkdir -p ${AIRFLOW_HOME}/logs
 RUN mkdir -p ${AIRFLOW_HOME}/.config/gcloud/
 
+# Creating SSH folder and adding github to know host
+RUN mkdir ${AIRFLOW_HOME}/.ssh/ \
+    && ssh-keyscan -H github.com >> ${AIRFLOW_HOME}/.ssh/known_hosts
+
 # *********************************************
 #Copying our airflow config and setting ownership
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
 COPY config/variables.json ${AIRFLOW_HOME}/variables.json
 RUN chown -R airflow: ${AIRFLOW_HOME}
+
+#TODO: HANDLE CREDENTIAL INJECTION (CI/CD)
+#TODO: Git config
+#TODO:
+
 
 # Copying our docker entrypoint
 COPY script/entrypoint.sh /entrypoint.sh
