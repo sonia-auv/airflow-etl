@@ -2,15 +2,15 @@
 
 ## Type of ticket
 <!-- Choose here if the ticket is an issue to be fixed or a feature to be added -->
-- [] issue
-- [] feature
+- [ ] issue
+- [ ] feature
 
 ## Priority
 <!-- Choose here the priority of the ticket -->
-- [] low
-- [] medium
-- [] high
-- [] critical
+- [ ] low
+- [ ] medium
+- [ ] high
+- [ ] critical
 
 ## Description
 <!-- Give a brief description of the issue/feature to be implemented -->
