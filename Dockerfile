@@ -12,10 +12,6 @@ ARG AIRFLOW_HOME=/usr/local/airflow
 ARG BUILD_ENV="local"
 ARG DOCKER_GROUP_ID=999
 ARG GCLOUD_SERVICE_ACCOUNT_EMAIL
-ARG DVC_REMOTE_GDRIVE_NAME
-ARG DVC_REMOTE_GDRIVE_URL
-ARG DVC_REMOTE_GDRIVE_CLIENT_ID
-ARG DVC_REMOTE_GDRIVE_CLIENT_SECRET
 # *********************************************
 # Declaring environements variables
 # Never prompts the user for choices on installation/configuration of packages
@@ -164,12 +160,6 @@ RUN mkdir -p ${AIRFLOW_HOME}/.config/gcloud/
 # Creating SSH folder and adding github to know host
 RUN mkdir ${AIRFLOW_HOME}/.ssh/ \
     && ssh-keyscan -H github.com >> ${AIRFLOW_HOME}/.ssh/known_hosts
-
-# ********************************************
-# Setting up DVC Remote
-RUN dvc remote add ${DVC_REMOTE_GDRIVE_NAME} ${DVC_REMOTE_GDRIVE_URL} --system --default
-RUN dvc remote modify ${DVC_REMOTE_GDRIVE_NAME} gdrive_client_id "${DVC_REMOTE_GDRIVE_CLIENT_ID}" --system
-RUN dvc remote modify ${DVC_REMOTE_GDRIVE_NAME} gdrive_client_secret ${DVC_REMOTE_GDRIVE_CLIENT_SECRET} --system
 
 # ********************************************
 # Setting Git
