@@ -161,7 +161,6 @@ def __create_training_folder_subtree(training_data_folder, **kwargs):
     # Base Folder
     data_folder = os.path.join(training_data_folder, "data")
     model_folder = os.path.join(training_data_folder, "model")
-    # training_folder = os.path.join(training_data_folder, "training")
 
     images_folder = os.path.join(data_folder, "images")
     annotations_folder = os.path.join(data_folder, "annotations")
@@ -170,10 +169,6 @@ def __create_training_folder_subtree(training_data_folder, **kwargs):
     tf_record_train_folder = os.path.join(tf_record_folder, "train")
     tf_record_val_folder = os.path.join(tf_record_folder, "val")
     base_model_folder = os.path.join(model_folder, "base")
-    # trained_model_folder = os.path.join(model_folder, "trained")
-
-    # train_data_folder = os.path.join(training_folder, "training")
-    # eval_data_folder = os.path.join(training_folder, "evaluation")
 
     training_folders = {
         "base_folder": training_data_folder,
@@ -186,9 +181,6 @@ def __create_training_folder_subtree(training_data_folder, **kwargs):
         "tf_record_train_folder": tf_record_train_folder,
         "tf_record_val_folder": tf_record_val_folder,
         "base_model_folder": base_model_folder,
-        # "trained_model_folder": trained_model_folder,
-        # "train_data_folder": train_data_folder,
-        # "eval_data_folder": eval_data_folder,
     }
 
     data_folders = [
@@ -197,11 +189,7 @@ def __create_training_folder_subtree(training_data_folder, **kwargs):
         training_folders["tf_record_train_folder"],
         training_folders["tf_record_val_folder"],
         training_folders["base_model_folder"],
-        # training_folders["trained_model_folder"],
-        # training_folders["train_data_folder"],
-        # training_folders["eval_data_folder"],
     ]
-
     for folder in data_folders:
         os.makedirs(folder)
 
@@ -210,8 +198,29 @@ def __create_training_folder_subtree(training_data_folder, **kwargs):
     logging.info("Training folder subtree has been created successfully")
 
 
+def __create_model_repo_folder_subtree(model_repo_folder, video_source, base_model):
+    # Base Folder
+    # TODO: Complete
+    data_folder = os.path.join(training_data_folder, "data")
+    model_folder = os.path.join(training_data_folder, "model")
+
+    images_folder = os.path.join(data_folder, "images")
+    annotations_folder = os.path.join(data_folder, "annotations")
+    xmls_folder = os.path.join(data_folder, "annotations", "xmls")
+    tf_record_folder = os.path.join(data_folder, "tf_records")
+    tf_record_train_folder = os.path.join(tf_record_folder, "train")
+    tf_record_val_folder = os.path.join(tf_record_folder, "val")
+    base_model_folder = os.path.join(model_folder, "base")
+
+
 def create_training_folder(
-    base_training_folder, tf_record_folder, video_source, execution_date, base_model, **kwargs,
+    base_training_folder,
+    model_repo_folder,
+    tf_record_folder,
+    video_source,
+    execution_date,
+    base_model,
+    **kwargs,
 ):
     subfolders = file_ops.get_directory_subfolders_subset(tf_record_folder, video_source)
 
@@ -229,10 +238,14 @@ def create_training_folder(
         base_training_folder, f"{video_source}_{object_names}_{base_model}_{execution_date}"
     )
 
-    __create_training_folder_subtree(training_folder, **kwargs)
+    __create_training_folder_subtree(training_folder, model_repo_folder, **kwargs)
 
     ti = kwargs["ti"]
     ti.xcom_push(key="training_folder", value=training_folder)
+
+
+def copy_images_from_labelbox_output(labelbox_output_folder, video_source, base_model, **kwargs):
+    pass
 
 
 def copy_labelbox_output_data_to_training_folder(
