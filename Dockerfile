@@ -12,8 +12,6 @@ ARG AIRFLOW_HOME=/usr/local/airflow
 ARG BUILD_ENV="local"
 ARG DOCKER_GROUP_ID=999
 ARG GCLOUD_SERVICE_ACCOUNT_EMAIL
-ARG GIT_USER_EMAIL
-ARG GIT_USER_NAME
 ARG DVC_REMOTE_GDRIVE_NAME
 ARG DVC_REMOTE_GDRIVE_URL
 ARG DVC_REMOTE_GDRIVE_CLIENT_ID
@@ -168,15 +166,15 @@ RUN mkdir ${AIRFLOW_HOME}/.ssh/ \
     && ssh-keyscan -H github.com >> ${AIRFLOW_HOME}/.ssh/known_hosts
 
 # ********************************************
-# Setting Git
-RUN git config --global user.name "${GIT_USER_NAME}" && git config --global user.email "${GIT_USER_EMAIL}"
-# ********************************************
 # Setting up DVC Remote
 RUN dvc remote add ${DVC_REMOTE_GDRIVE_NAME} ${DVC_REMOTE_GDRIVE_URL} --system --default
 RUN dvc remote modify ${DVC_REMOTE_GDRIVE_NAME} gdrive_client_id "${DVC_REMOTE_GDRIVE_CLIENT_ID}" --system
 RUN dvc remote modify ${DVC_REMOTE_GDRIVE_NAME} gdrive_client_secret ${DVC_REMOTE_GDRIVE_CLIENT_SECRET} --system
 
-# *********************************************
+# ********************************************
+# Setting Git
+COPY config/.gitconfig ${AIRFLOW_HOME}/.gitconfig
+
 #Copying our airflow config and setting ownership
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
 COPY config/variables.json ${AIRFLOW_HOME}/variables.json
