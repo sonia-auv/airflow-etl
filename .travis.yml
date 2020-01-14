@@ -1,4 +1,6 @@
 sudo: required
+notifications:
+  slack: sonia-auv:VuDl4QAG49oxkr53yCiKMAxH
 services:
   - docker
 env:
