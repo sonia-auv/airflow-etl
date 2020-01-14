@@ -11,6 +11,7 @@ from airflow.operators.python_operator import BranchPythonOperator, PythonOperat
 from prepare_model_and_data_for_training import prepare_model_and_data_for_training
 from utils import file_ops, slack
 
+# TODO: Refactor remove AIRFLOW NAME
 AIRFLOW_BASE_FOLDER = "/usr/local/airflow/"
 AIRFLOW_DATA_FOLDER = os.path.join(AIRFLOW_BASE_FOLDER, "data")
 AIRFLOW_JSON_FOLDER = os.path.join(AIRFLOW_BASE_FOLDER, "json")
@@ -39,6 +40,12 @@ default_args = {
     "on_failure_callback": slack.task_fail_slack_alert,
     "retries": 0,
 }
+
+# Connections
+dvc_remote_name = BaseHook.get_connection("dvc").schema
+dvc_remote_url = BaseHook.get_connection("dvc").host
+dvc_remote_client_id = BaseHook.get_connection("dvc").login
+dvc_remote_client_secret = BaseHook.get_connection("dvc").password
 
 # Variables
 tensorflow_model_zoo_markdown_url = Variable.get("tensorflow_model_zoo_markdown_url")
@@ -113,25 +120,34 @@ validate_requested_model_exist_in_model_zoo_list = PythonOperator(
 
 validate_deep_detector_model_repo_exist_or_clone = BashOperator(
     task_id="validate_deep_detector_model_repo_exist_or_clone",
-    bash_command="[ -d '{{params.model_repo_folder}}' ] || git clone {{params.model_repo_url}} {{params.repo_folder}}",
+    bash_command="[ -d '{{params.model_repo_folder}}' ] || git clone -v {{params.model_repo_url}} {{params.model_repo_folder}}",
     params={
         "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
-        "repo_url": DEEP_DETECTOR_MODEL_REPO_URL,
+        "model_repo_url": DEEP_DETECTOR_MODEL_REPO_URL,
     },
     provide_context=True,
     dag=dag,
 )
 
-# create_data_bucket_cmd = f"gsutil ls -b {gcp_base_bucket_url} || gsutil mb {gcp_base_bucket_url}"
-# create_data_bucket = BashOperator(
-#     task_id="create_data_bucket",
-#     bash_command=create_data_bucket_cmd,
-#     provide_context=True,
-#     dag=dag,
-# )
+validate_deep_detector_dvc_remote_credential_present_or_add = BashOperator(
+    task_id="validate_deep_detector_dvc_remote_credential_present_or_add",
+    bash_command="\
+        [ -f '{{params.model_repo_folder}}/.dvc/config' ] || cd {{params.model_repo_folder}} && \
+        dvc remote add {{params.dvc_remote_name}} {{params.dvc_remote_url}} --default && \
+        dvc remote modify {{params.dvc_remote_name}} gdrive_client_id {{params.dvc_remote_client_id}} && \
+        dvc remote modify {{params.dvc_remote_name}} gdrive_client_secret {{params.dvc_remote_client_secret}}",
+    params={
+        "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
+        "dvc_remote_name": dvc_remote_name,
+        "dvc_remote_url": dvc_remote_url,
+        "dvc_remote_client_id": dvc_remote_client_id,
+        "dvc_remote_client_secret": dvc_remote_client_secret,
+    },
+    dag=dag,
+)
 
 for video_source in video_feed_sources:
-    check_labelmap_file_content_are_the_same = PythonOperator(
+    validate_labelmap_file_content_are_the_same = PythonOperator(
         task_id=f"check_labelmap_file_content_are_the_same_" + video_source,
         python_callable=prepare_model_and_data_for_training.compare_label_map_file,
         op_kwargs={"base_tf_record_folder": AIRFLOW_TF_RECORD_FOLDER, "video_source": video_source},
@@ -157,6 +173,7 @@ for video_source in video_feed_sources:
             op_kwargs={
                 "base_training_folder": AIRFLOW_TRAINING_FOLDER,
                 "tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
+                "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
                 "video_source": video_source,
                 "execution_date": "{{ts_nodash}}",
                 "base_model": base_model,
@@ -164,58 +181,24 @@ for video_source in video_feed_sources:
             dag=dag,
         )
 
-        copy_labelbox_output_data_to_training_folder = PythonOperator(
-            task_id="copy_labelbox_output_data_to_training_folder_"
+        copy_images_to_training_from_labelbox_output = PythonOperator(
+            task_id="copy_images_to_training_from_labelbox_output_"
             + video_source
             + "_"
             + base_model,
-            python_callable=prepare_model_and_data_for_training.copy_labelbox_output_data_to_training_folder,
+            python_callable=prepare_model_and_data_for_training.copy_images_from_labelbox_output,
             provide_context=True,
             op_kwargs={
-                "labelbox_output_data_folder": AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER,
-                "tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
+                "labelbox_output_folder": AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER,
                 "video_source": video_source,
                 "base_model": base_model,
-                "airflow_base_folder": AIRFLOW_DATA_FOLDER,
-                "gcp_base_bucket_url": gcp_base_bucket_url,
             },
             dag=dag,
         )
 
-        copy_base_model_to_training_folder = PythonOperator(
-            task_id="copy_base_model_to_training_folder_" + video_source + "_" + base_model,
-            python_callable=prepare_model_and_data_for_training.copy_base_model_to_training_folder,
-            provide_context=True,
-            op_kwargs={
-                "base_model_csv": AIRFLOW_MODELS_CSV_FILE,
-                "base_model_folder": AIRFLOW_MODELS_FOLDER,
-                "video_source": video_source,
-                "base_model": base_model,
-                "airflow_base_folder": AIRFLOW_DATA_FOLDER,
-                "gcp_base_bucket_url": gcp_base_bucket_url,
-            },
-            dag=dag,
-        )
-
-        genereate_model_config = PythonOperator(
-            task_id="genereate_model_config_" + video_source + "_" + base_model,
-            python_callable=prepare_model_and_data_for_training.generate_model_config,
-            provide_context=True,
-            op_kwargs={
-                "video_source": video_source,
-                "base_model": base_model,
-                "model_config_template": get_proper_model_config(video_source, base_model),
-                "num_classes": get_object_class_count(video_source),
-            },
-            dag=dag,
-        )
-
-        copy_training_folder_content_to_model_repo = BashOperator(
-            task_id=f"copy_training_folder_content_to_model_repo_{video_source}_{base_model}",
-            bash_command="cp -r {{{{ti.xcom_pull(key='training_folder',task_ids='create_training_folder_tree_{}_{}')}}}}/ ".format(
-                video_source, base_model
-            )
-            + "{{params.model_repo_folder}}/{{params.video_source}}_{{params.base_model}}/",
+        add_images_to_repo_through_dvc = BashOperator(
+            task_id=f"add_images_to_repo_through_dvc_{video_source}_{base_model}",
+            bash_command="cd {{params.model_repo_folder}}/{{params.video_source}}_{{params.base_model}} && dvc add data/images/* && git add data/images/.gitignore data/images/*.dvc && git commit -m 'Added images to {{params.base_model}}'",
             provide_context=True,
             params={
                 "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
@@ -224,18 +207,79 @@ for video_source in video_feed_sources:
             },
             dag=dag,
         )
-        # TODO: Race condition
-        versioning_data = BashOperator(
-            task_id=f"versioning_model_repo_data_{video_source}_{base_model}",
-            bash_command="cd {{params.model_repo_folder}} && dvc add {{params.video_source}}_{{params.base_model}}  && git commit -m Autocommit: modified {{params.video_source}}_{{params.base_model}} && git push",
-            provide_context=True,
-            params={
-                "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
-                "video_source": video_source,
-                "base_model": base_model,
-            },
-            dag=dag,
-        )
+
+        # copy_labelbox_output_data_to_training_folder = PythonOperator(
+        #     task_id="copy_labelbox_output_data_to_training_folder_"
+        #     + video_source
+        #     + "_"
+        #     + base_model,
+        #     python_callable=prepare_model_and_data_for_training.copy_labelbox_output_data_to_training_folder,
+        #     provide_context=True,
+        #     op_kwargs={
+        #         "labelbox_output_data_folder": AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER,
+        #         "tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
+        #         "video_source": video_source,
+        #         "base_model": base_model,
+        #         "airflow_base_folder": AIRFLOW_DATA_FOLDER,
+        #         "gcp_base_bucket_url": gcp_base_bucket_url,
+        #     },
+        #     dag=dag,
+        # )
+
+        # copy_base_model_to_training_folder = PythonOperator(
+        #     task_id="copy_base_model_to_training_folder_" + video_source + "_" + base_model,
+        #     python_callable=prepare_model_and_data_for_training.copy_base_model_to_training_folder,
+        #     provide_context=True,
+        #     op_kwargs={
+        #         "base_model_csv": AIRFLOW_MODELS_CSV_FILE,
+        #         "base_model_folder": AIRFLOW_MODELS_FOLDER,
+        #         "video_source": video_source,
+        #         "base_model": base_model,
+        #         "airflow_base_folder": AIRFLOW_DATA_FOLDER,
+        #         "gcp_base_bucket_url": gcp_base_bucket_url,
+        #     },
+        #     dag=dag,
+        # )
+
+        # genereate_model_config = PythonOperator(
+        #     task_id="genereate_model_config_" + video_source + "_" + base_model,
+        #     python_callable=prepare_model_and_data_for_training.generate_model_config,
+        #     provide_context=True,
+        #     op_kwargs={
+        #         "video_source": video_source,
+        #         "base_model": base_model,
+        #         "model_config_template": get_proper_model_config(video_source, base_model),
+        #         "num_classes": get_object_class_count(video_source),
+        #     },
+        #     dag=dag,
+        # )
+
+        # copy_training_folder_content_to_model_repo = BashOperator(
+        #     task_id=f"copy_training_folder_content_to_model_repo_{video_source}_{base_model}",
+        #     bash_command="cp -r {{{{ti.xcom_pull(key='training_folder',task_ids='create_training_folder_tree_{}_{}')}}}}/ ".format(
+        #         video_source, base_model
+        #     )
+        #     + "{{params.model_repo_folder}}/{{params.video_source}}_{{params.base_model}}/",
+        #     provide_context=True,
+        #     params={
+        #         "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
+        #         "video_source": video_source,
+        #         "base_model": base_model,
+        #     },
+        #     dag=dag,
+        # )
+        # # TODO: Race condition
+        # versioning_data = BashOperator(
+        #     task_id=f"versioning_model_repo_data_{video_source}_{base_model}",
+        #     bash_command="cd {{params.model_repo_folder}} && dvc add {{params.video_source}}_{{params.base_model}}  && git commit -m Autocommit: modified {{params.video_source}}_{{params.base_model}} && git push",
+        #     provide_context=True,
+        #     params={
+        #         "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
+        #         "video_source": video_source,
+        #         "base_model": base_model,
+        #     },
+        #     dag=dag,
+        # )
 
         # archiving_training_folder = PythonOperator(
         #     task_id="archiving_training_folder_" + video_source + "_" + base_model,
@@ -283,8 +327,10 @@ for video_source in video_feed_sources:
             download_reference_model_list_as_csv,
         ]
         download_reference_model_list_as_csv >> validate_base_model_exist_or_download >> validate_requested_model_exist_in_model_zoo_list
-        validate_requested_model_exist_in_model_zoo_list >> validate_deep_detector_model_repo_exist_or_clone >> check_labelmap_file_content_are_the_same
-        check_labelmap_file_content_are_the_same >> validate_model_presence_in_model_repo_or_create >> create_training_folder_tree >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder >> genereate_model_config >> copy_training_folder_content_to_model_repo >> versioning_data
+        validate_requested_model_exist_in_model_zoo_list >> validate_deep_detector_model_repo_exist_or_clone >> validate_deep_detector_dvc_remote_credential_present_or_add >> validate_labelmap_file_content_are_the_same
+
+        validate_labelmap_file_content_are_the_same >> validate_model_presence_in_model_repo_or_create >> create_training_folder_tree >> copy_images_to_training_from_labelbox_output >> add_images_to_repo_through_dvc
+        # >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder >> genereate_model_config >> copy_training_folder_content_to_model_repo >> versioning_data
 
 # archiving_training_folder >> remove_raw_images_and_annotations_from_training_folder >> join_task
 
