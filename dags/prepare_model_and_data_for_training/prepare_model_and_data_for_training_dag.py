@@ -154,59 +154,102 @@ for video_source in video_feed_sources:
         dag=dag,
     )
     for base_model in required_base_models:
+        execution_date = "{{ts_nodash}}"
+
+        model_folder = f"{video_source}_{base_model}"
+        model_folder_with_ts = f"{model_folder}_{execution_date}"
+
+        model_training_folder = f"{AIRFLOW_TRAINING_FOLDER}/{model_folder_with_ts}"
+        model_training_image_folder = (
+            f"{AIRFLOW_TRAINING_FOLDER}/{model_folder_with_ts}/data/images",
+        )
+
+        model_repo_folder = f"{AIRFLOW_MODEL_REPO_FOLDER}/{model_folder}"
+        model_repo_image_folder = f"{AIRFLOW_MODEL_REPO_FOLDER}/{model_folder}/data/images"
 
         validate_model_presence_in_model_repo_or_create = PythonOperator(
             task_id=f"validate_model_{video_source}_{base_model}_present_in_model_repo_or_create",
             python_callable=prepare_model_and_data_for_training.validate_model_presence_in_model_repo_or_create,
-            op_kwargs={
-                "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
-                "video_source": video_source,
-                "base_model": base_model,
-            },
+            op_kwargs={"model_repo_folder": model_repo_folder},
             dag=dag,
         )
 
-        create_training_folder_tree = PythonOperator(
-            task_id="create_training_folder_tree_" + video_source + "_" + base_model,
+        create_training_folder = PythonOperator(
+            task_id=f"create_training_folder_tree_{video_source}_{base_model}",
             python_callable=prepare_model_and_data_for_training.create_training_folder,
-            provide_context=True,
-            op_kwargs={
-                "base_training_folder": AIRFLOW_TRAINING_FOLDER,
-                "tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
-                "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
-                "video_source": video_source,
-                "execution_date": "{{ts_nodash}}",
-                "base_model": base_model,
-            },
+            op_kwargs={"training_folder": model_training_folder},
             dag=dag,
         )
 
-        copy_images_to_training_from_labelbox_output = PythonOperator(
-            task_id="copy_images_to_training_from_labelbox_output_"
-            + video_source
-            + "_"
-            + base_model,
-            python_callable=prepare_model_and_data_for_training.copy_images_from_labelbox_output,
-            provide_context=True,
+        copy_labelbox_output_images_to_training_folder = PythonOperator(
+            task_id="copy_labelbox_output_images_to_training_folder_{video_source}_{base_model}",
+            python_callable=prepare_model_and_data_for_training.copy_labelbox_output_images_to_training_folder,
             op_kwargs={
                 "labelbox_output_folder": AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER,
-                "video_source": video_source,
-                "base_model": base_model,
+                "training_images_folder": model_training_image_folder,
+            },
+            dag=dag,
+        )
+
+        copy_labelbox_output_images_to_model_repo_folder = PythonOperator(
+            task_id="copy_labelbox_output_images_to_model_repo_folder_{video_source}_{base_model}",
+            python_callable=None,
+            op_kwargs={
+                "labelbox_output_folder": AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER,
+                "model_repo_images_folder": model_repo_image_folder,
             },
             dag=dag,
         )
 
         add_images_to_repo_through_dvc = BashOperator(
             task_id=f"add_images_to_repo_through_dvc_{video_source}_{base_model}",
-            bash_command="cd {{params.model_repo_folder}}/{{params.video_source}}_{{params.base_model}} && dvc add data/images/* && git add data/images/.gitignore data/images/*.dvc && git commit -m 'Added images to {{params.base_model}}'",
+            bash_command="cd {{params.model_repo_folder}} && dvc add data/images/* && git add data/images/.gitignore data/images/*.dvc && git commit -m 'Added images to {{params.model_folder}}'",
             provide_context=True,
-            params={
-                "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
-                "video_source": video_source,
-                "base_model": base_model,
-            },
+            params={"model_repo_folder": model_repo_folder, "model_folder": model_folder},
             dag=dag,
         )
+
+        # create_training_folder_tree = PythonOperator(
+        #     task_id="create_training_folder_tree_" + video_source + "_" + base_model,
+        #     python_callable=prepare_model_and_data_for_training.create_training_folder,
+        #     provide_context=True,
+        #     op_kwargs={
+        #         "base_training_folder": AIRFLOW_TRAINING_FOLDER,
+        #         "tf_record_folder": AIRFLOW_TF_RECORD_FOLDER,
+        #         "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
+        #         "video_source": video_source,
+        #         "execution_date": "{{ts_nodash}}",
+        #         "base_model": base_model,
+        #     },
+        #     dag=dag,
+        # )
+
+        # copy_images_to_training_from_labelbox_output = PythonOperator(
+        #     task_id="copy_images_to_training_from_labelbox_output_"
+        #     + video_source
+        #     + "_"
+        #     + base_model,
+        #     python_callable=prepare_model_and_data_for_training.copy_images_from_labelbox_output,
+        #     provide_context=True,
+        #     op_kwargs={
+        #         "labelbox_output_folder": AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER,
+        #         "video_source": video_source,
+        #         "base_model": base_model,
+        #     },
+        #     dag=dag,
+        # )
+
+        # add_images_to_repo_through_dvc = BashOperator(
+        #     task_id=f"add_images_to_repo_through_dvc_{video_source}_{base_model}",
+        #     bash_command="cd {{params.model_repo_folder}}/{{params.video_source}}_{{params.base_model}} && dvc add data/images/* && git add data/images/.gitignore data/images/*.dvc && git commit -m 'Added images to {{params.base_model}}'",
+        #     provide_context=True,
+        #     params={
+        #         "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
+        #         "video_source": video_source,
+        #         "base_model": base_model,
+        #     },
+        #     dag=dag,
+        # )
 
         # copy_labelbox_output_data_to_training_folder = PythonOperator(
         #     task_id="copy_labelbox_output_data_to_training_folder_"
