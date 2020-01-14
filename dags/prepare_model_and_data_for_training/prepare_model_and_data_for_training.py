@@ -149,51 +149,87 @@ def validate_requested_model_exist_in_model_zoo_list(base_models_csv, required_b
     logging.info("All required model exist in the official tensorflow model zoo reference list")
 
 
-def validate_model_presence_in_model_repo_or_create(model_repo_folder, video_source, base_model):
+def validate_model_presence_in_model_repo_or_create(model_repo_folder):
 
-    model_folder = os.path.join(model_repo_folder, f"{video_source}_{base_model}")
+    file_ops.folder_exist_or_create(model_repo_folder)
 
-    file_ops.folder_exist_or_create(model_folder)
+    logging.info("Model directory present in model repository")
 
 
-def __create_training_folder_subtree(training_data_folder, **kwargs):
-    # TODO: Refactor
-    data_folder = os.path.join(training_data_folder, "data")
-    model_folder = os.path.join(training_data_folder, "model")
+def create_training_folder(training_folder):
 
-    images_folder = os.path.join(data_folder, "images")
-    annotations_folder = os.path.join(data_folder, "annotations")
-    xmls_folder = os.path.join(data_folder, "annotations", "xmls")
-    tf_record_folder = os.path.join(data_folder, "tf_records")
-    tf_record_train_folder = os.path.join(tf_record_folder, "train")
-    tf_record_val_folder = os.path.join(tf_record_folder, "val")
-    base_model_folder = os.path.join(model_folder, "base")
+    file_ops.folder_exist_or_create(training_folder)
 
-    training_folders = {
-        "base_folder": training_data_folder,
-        "data_folder": data_folder,
-        "model_folder": model_folder,
-        "images_folder": images_folder,
-        "annotations_folder": annotations_folder,
-        "xmls_folder": xmls_folder,
-        "tf_record_folder": tf_record_folder,
-        "tf_record_train_folder": tf_record_train_folder,
-        "tf_record_val_folder": tf_record_val_folder,
-        "base_model_folder": base_model_folder,
-    }
-    data_folders = [
-        training_folders["images_folder"],
-        training_folders["xmls_folder"],
-        training_folders["tf_record_train_folder"],
-        training_folders["tf_record_val_folder"],
-        training_folders["base_model_folder"],
-    ]
-    for folder in data_folders:
-        os.makedirs(folder)
+    logging.info("Temporary training folder created")
 
-    ti = kwargs["ti"]
-    ti.xcom_push(key="training_folders", value=training_folders)
-    logging.info("Training folder subtree has been created successfully")
+
+def copy_labelbox_output_images_to_training_folder(
+    labelbox_output_folder, training_image_folder, video_source, model_name
+):
+    file_ops.folder_exist_or_create(training_image_folder)
+    logging.info("Data and images directory have been created")
+
+    # TODO:Extract to method
+    filtered_subfolders = file_ops.get_directory_subfolders_subset(
+        labelbox_output_folder, video_source
+    )
+
+    for subfolder in filtered_subfolders:
+        subfolders = file_ops.get_subfolders_in_directory(subfolder)
+
+        subfolders = [
+            image_subfolder for image_subfolder in subfolders if image_subfolder.endswith("images")
+        ]
+
+        images_folder = subfolders[0]
+        # TODO: till here
+        file_ops.copy_files_from_folder(images_folder, training_image_folder)
+
+        logging.info("Images copied to temporary image folder")
+
+
+def copy_images_to_model_repo_folder(model_repo_folder, video_source, model_name):
+    pass
+
+
+# def __create_training_folder_subtree(training_data_folder, **kwargs):
+#     # TODO: Refactor
+#     data_folder = os.path.join(training_data_folder, "data")
+#     model_folder = os.path.join(training_data_folder, "model")
+
+#     images_folder = os.path.join(data_folder, "images")
+#     annotations_folder = os.path.join(data_folder, "annotations")
+#     xmls_folder = os.path.join(data_folder, "annotations", "xmls")
+#     tf_record_folder = os.path.join(data_folder, "tf_records")
+#     tf_record_train_folder = os.path.join(tf_record_folder, "train")
+#     tf_record_val_folder = os.path.join(tf_record_folder, "val")
+#     base_model_folder = os.path.join(model_folder, "base")
+
+#     training_folders = {
+#         "base_folder": training_data_folder,
+#         "data_folder": data_folder,
+#         "model_folder": model_folder,
+#         "images_folder": images_folder,
+#         "annotations_folder": annotations_folder,
+#         "xmls_folder": xmls_folder,
+#         "tf_record_folder": tf_record_folder,
+#         "tf_record_train_folder": tf_record_train_folder,
+#         "tf_record_val_folder": tf_record_val_folder,
+#         "base_model_folder": base_model_folder,
+#     }
+#     data_folders = [
+#         training_folders["images_folder"],
+#         training_folders["xmls_folder"],
+#         training_folders["tf_record_train_folder"],
+#         training_folders["tf_record_val_folder"],
+#         training_folders["base_model_folder"],
+#     ]
+#     for folder in data_folders:
+#         os.makedirs(folder)
+
+#     ti = kwargs["ti"]
+#     ti.xcom_push(key="training_folders", value=training_folders)
+#     logging.info("Training folder subtree has been created successfully")
 
 
 def __create_model_repo_folder_subtree(model_repo_folder, video_source, base_model):

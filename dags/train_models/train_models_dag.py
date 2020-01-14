@@ -140,6 +140,7 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
     # TODO: Handle tpu training ---
     # TODO: Extract model name from training_name
     # TODO: Compare tpu_supported_models list content with model_name
+    # TODO: Change checkpoint save frequency
 
     # TODO: Handle distributed training ---
     # TODO: Define model config.yaml
