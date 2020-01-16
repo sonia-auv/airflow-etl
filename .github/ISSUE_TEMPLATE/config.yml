@@ -1,5 +1,6 @@
 blank_issues_enabled: false
 # TODO: enter appropriate contacts
+"""
 contact_links:
   - name: GitHub Community Forum
     url: https://github.community/
@@ -7,3 +8,4 @@ contact_links:
   - name: GitHub Security Bug Bounty
     url: https://bounty.github.com/
     about: Please report security vulnerabilities here.
+"""
