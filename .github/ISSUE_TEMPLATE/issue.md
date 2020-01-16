@@ -1,3 +1,12 @@
+---
+name: issue
+about: Create a report to help us improve
+title: ''
+labels: ''
+assignees: ''
+
+---
+
 **Warning :** Before creating an issue or task, make sure that it does not already exists in the [issue tracker](../). Thank you.
 
 ## Priority
