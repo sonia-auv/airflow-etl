@@ -162,15 +162,8 @@ def create_training_folder(training_folder):
 
     logging.info("Temporary training folder created")
 
-
-def copy_labelbox_output_images_to_training_folder(
-    labelbox_output_folder, training_image_folder, video_source, model_name
-):
-    file_ops.folder_exist_or_create(training_image_folder)
-    logging.info("Data and images directory have been created")
-
-    # TODO:Extract to method
-    filtered_subfolders = file_ops.get_directory_subfolders_subset(
+def copy_images_to_output(labelbox_output_folder, output_folder, video_source):
+     filtered_subfolders = file_ops.get_directory_subfolders_subset(
         labelbox_output_folder, video_source
     )
 
@@ -185,7 +178,22 @@ def copy_labelbox_output_images_to_training_folder(
         # TODO: till here
         file_ops.copy_files_from_folder(images_folder, training_image_folder)
 
-        logging.info("Images copied to temporary image folder")
+def copy_labelbox_output_images_to_training_folder(
+    labelbox_output_folder, training_image_folder, video_source, base_model
+):
+    file_ops.folder_exist_or_create(training_image_folder)
+
+    copy_images_to_output(labelbox_output_folder, training_image_folder, video_source)
+
+    logging.info("Images copied to temporary image folder")
+
+
+def copy_labelbox_output_images_to_model_repo_folder(
+    labelbox_output_folder, model_repo_image_folder, video_source
+):
+    file_ops.folder_exist_or_create(model_repo_image_folder)
+
+    copy_images_to_output(labelbox_output_folder, model_repo_image_folder, video_source)
 
 
 def copy_images_to_model_repo_folder(model_repo_folder, video_source, model_name):
