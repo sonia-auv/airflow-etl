@@ -156,14 +156,15 @@ def validate_model_presence_in_model_repo_or_create(model_repo_folder):
     logging.info("Model directory present in model repository")
 
 
-def create_training_folder(training_folder):
+def create_training_folder(model_training_folder, **kwargs):
 
-    file_ops.folder_exist_or_create(training_folder)
+    file_ops.folder_exist_or_create(model_training_folder)
 
     logging.info("Temporary training folder created")
 
+
 def copy_images_to_output(labelbox_output_folder, output_folder, video_source):
-     filtered_subfolders = file_ops.get_directory_subfolders_subset(
+    filtered_subfolders = file_ops.get_directory_subfolders_subset(
         labelbox_output_folder, video_source
     )
 
@@ -174,248 +175,124 @@ def copy_images_to_output(labelbox_output_folder, output_folder, video_source):
             image_subfolder for image_subfolder in subfolders if image_subfolder.endswith("images")
         ]
 
-        images_folder = subfolders[0]
-        # TODO: till here
-        file_ops.copy_files_from_folder(images_folder, training_image_folder)
+        folder = subfolders[0]
+        file_ops.copy_files_from_folder(folder, output_folder)
+
 
 def copy_labelbox_output_images_to_training_folder(
-    labelbox_output_folder, training_image_folder, video_source, base_model
+    labelbox_output_folder, model_training_images_folder, video_source
 ):
-    file_ops.folder_exist_or_create(training_image_folder)
+    file_ops.folder_exist_or_create(model_training_images_folder)
 
-    copy_images_to_output(labelbox_output_folder, training_image_folder, video_source)
+    copy_images_to_output(labelbox_output_folder, model_training_images_folder, video_source)
 
     logging.info("Images copied to temporary image folder")
 
 
 def copy_labelbox_output_images_to_model_repo_folder(
-    labelbox_output_folder, model_repo_image_folder, video_source
+    labelbox_output_folder, model_repo_images_folder, video_source
 ):
-    file_ops.folder_exist_or_create(model_repo_image_folder)
+    file_ops.folder_exist_or_create(model_repo_images_folder)
 
-    copy_images_to_output(labelbox_output_folder, model_repo_image_folder, video_source)
+    copy_images_to_output(labelbox_output_folder, model_repo_images_folder, video_source)
 
-
-def copy_images_to_model_repo_folder(model_repo_folder, video_source, model_name):
-    pass
+    logging.info("Images copied to model repo image folder")
 
 
-# def __create_training_folder_subtree(training_data_folder, **kwargs):
-#     # TODO: Refactor
-#     data_folder = os.path.join(training_data_folder, "data")
-#     model_folder = os.path.join(training_data_folder, "model")
-
-#     images_folder = os.path.join(data_folder, "images")
-#     annotations_folder = os.path.join(data_folder, "annotations")
-#     xmls_folder = os.path.join(data_folder, "annotations", "xmls")
-#     tf_record_folder = os.path.join(data_folder, "tf_records")
-#     tf_record_train_folder = os.path.join(tf_record_folder, "train")
-#     tf_record_val_folder = os.path.join(tf_record_folder, "val")
-#     base_model_folder = os.path.join(model_folder, "base")
-
-#     training_folders = {
-#         "base_folder": training_data_folder,
-#         "data_folder": data_folder,
-#         "model_folder": model_folder,
-#         "images_folder": images_folder,
-#         "annotations_folder": annotations_folder,
-#         "xmls_folder": xmls_folder,
-#         "tf_record_folder": tf_record_folder,
-#         "tf_record_train_folder": tf_record_train_folder,
-#         "tf_record_val_folder": tf_record_val_folder,
-#         "base_model_folder": base_model_folder,
-#     }
-#     data_folders = [
-#         training_folders["images_folder"],
-#         training_folders["xmls_folder"],
-#         training_folders["tf_record_train_folder"],
-#         training_folders["tf_record_val_folder"],
-#         training_folders["base_model_folder"],
-#     ]
-#     for folder in data_folders:
-#         os.makedirs(folder)
-
-#     ti = kwargs["ti"]
-#     ti.xcom_push(key="training_folders", value=training_folders)
-#     logging.info("Training folder subtree has been created successfully")
-
-
-def __create_model_repo_folder_subtree(model_repo_folder, video_source, base_model):
-    # TODO: Refactor
-    model_folder = os.path.join(model_repo_folder, f"{video_source}_{base_model}")
-    data_folder = os.path.join(model_folder, "data")
-    model_folder = os.path.join(model_folder, "model")
-
-    images_folder = os.path.join(data_folder, "images")
-    annotations_folder = os.path.join(data_folder, "annotations")
-    xmls_folder = os.path.join(data_folder, "annotations", "xmls")
-    tf_record_folder = os.path.join(data_folder, "tf_records")
-    tf_record_train_folder = os.path.join(tf_record_folder, "train")
-    tf_record_val_folder = os.path.join(tf_record_folder, "val")
-    base_model_folder = os.path.join(model_folder, "base")
-
-    model_repo_folders = {
-        "base_folder": model_folder,
-        "data_folder": data_folder,
-        "model_folder": model_folder,
-        "images_folder": images_folder,
-        "annotations_folder": annotations_folder,
-        "xmls_folder": xmls_folder,
-        "tf_record_folder": tf_record_folder,
-        "tf_record_train_folder": tf_record_train_folder,
-        "tf_record_val_folder": tf_record_val_folder,
-        "base_model_folder": base_model_folder,
-    }
-
-    data_folders = [
-        model_repo_folders["images_folder"],
-        model_repo_folders["xmls_folder"],
-        model_repo_folders["tf_record_train_folder"],
-        model_repo_folders["tf_record_val_folder"],
-        model_repo_folders["base_model_folder"],
-    ]
-    for folder in data_folders:
-        os.makedirs(folder)
-
-    ti = kwargs["ti"]
-    ti.xcom_push(key="model_repo_folders", value=model_repo_folders)
-    logging.info("Training folder subtree has been created successfully")
-
-
-def create_training_folder(
-    base_training_folder,
-    model_repo_folder,
-    tf_record_folder,
-    video_source,
-    execution_date,
-    base_model,
-    **kwargs,
+def copy_labelbox_output_annotations_to_model_repo_folder(
+    labelbox_output_folder, model_repo_annotations_folder, video_source
 ):
-    subfolders = file_ops.get_directory_subfolders_subset(tf_record_folder, video_source)
+    file_ops.folder_exist_or_create(model_repo_annotations_folder)
 
-    object_names_set = set()
-    for subfolder in subfolders:
-        folder_name = os.path.basename(os.path.normpath(subfolder))
-        if folder_name.startswith(video_source):
+    copy_images_to_output(labelbox_output_folder, model_repo_annotations_folder, video_source)
 
-            object_names = subfolder.split("_")[1]
-            object_names_set.update(object_names.split("-"))
-
-    object_names = "-".join(list(object_names_set))
-
-    training_folder = os.path.join(
-        base_training_folder, f"{video_source}_{object_names}_{base_model}_{execution_date}"
-    )
-
-    __create_training_folder_subtree(training_folder, model_repo_folder, **kwargs)
-
-    ti = kwargs["ti"]
-    ti.xcom_push(key="training_folder", value=training_folder)
+    logging.info("Annotations copied to model repo annotations folder")
 
 
-def copy_images_from_labelbox_output(labelbox_output_folder, video_source, base_model, **kwargs):
-    pass
-
-
-def copy_labelbox_output_data_to_training_folder(
-    labelbox_output_data_folder,
-    tf_record_folder,
-    video_source,
-    base_model,
-    airflow_base_folder,
-    gcp_base_bucket_url,
-    **kwargs,
+def copy_tf_records_to_training_folder(
+    tf_records_folder, model_training_tf_records_folder, video_source,
 ):
-    ti = kwargs["ti"]
-    training_folders = ti.xcom_pull(
-        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
-    )
+    training_tf_records_train_folder = f"{model_training_tf_records_folder}/train"
+    training_tf_records_val_folder = f"{model_training_tf_records_folder}/val"
 
-    filtered_subfolders = file_ops.get_directory_subfolders_subset(
-        labelbox_output_data_folder, video_source
-    )
+    file_ops.folder_exist_or_create(training_tf_records_train_folder)
+    file_ops.folder_exist_or_create(training_tf_records_val_folder)
 
-    for subfolder in filtered_subfolders:
-        subfolders = file_ops.get_subfolders_in_directory(subfolder)
-
-        subfolders = [
-            image_subfolder for image_subfolder in subfolders if image_subfolder.endswith("images")
-        ]
-
-        images_folder = subfolders[0]
-
-        file_ops.copy_files_from_folder(images_folder, training_folders["images_folder"])
-
-        logging.info("Image files copy completed")
-
-        file_ops.copy_xml_files_from_folder(subfolder, training_folders["xmls_folder"])
-
-        logging.info("XML files copy completed")
-
-    subfolders = file_ops.get_directory_subfolders_subset(tf_record_folder, video_source)
+    subfolders = file_ops.get_directory_subfolders_subset(tf_records_folder, video_source)
 
     labelmap_files = []
-    trainval_files = []
-    tf_record_files = []
+    tf_record_train_files = []
+    tf_record_val_files = []
     for subfolder in subfolders:
         labelmap_files.extend(glob.glob(subfolder + "/*.pbtxt"))
-        trainval_files.extend(glob.glob(subfolder + "/*.txt"))
-        tf_record_files.extend(glob.glob(subfolder + "/*.record"))
+        tf_record_train_files.extend(glob.glob(subfolder + "/*_train.record"))
+        tf_record_val_files.extend(glob.glob(subfolder + "/*_val.record"))
 
-    labelmap_file = f"{training_folders['annotations_folder']}/labelmap.pbtxt"
-    trainval_file = f"{training_folders['annotations_folder']}/trainval.txt"
+    for tf_record in tf_record_train_files:
+        shutil.copy2(tf_record, training_tf_records_train_folder)
+        logging.info(f"Copied {tf_record} to {training_tf_records_train_folder}")
 
+    for tf_record in tf_record_val_files:
+        shutil.copy2(tf_record, training_tf_records_val_folder)
+        logging.info(f"Copied {tf_record} to {training_tf_records_val_folder}")
+
+    labelmap_file = f"{model_training_tf_records_folder}/labelmap.pbtxt"
     with open(labelmap_file, "w") as outfile:
         with open(labelmap_files[0]) as infile:
             for line in infile:
                 outfile.write(line)
+        logging.info(f"Copied {labelmap_file} to {model_training_tf_records_folder}")
 
+    logging.info("Completed copy of all tf records file to temporary training tf records folder")
+
+
+def copy_tf_records_to_model_repo(tf_records_folder, model_repo_tf_records_folder, video_source):
+    model_repo_tf_record_train_folder = f"{model_repo_tf_records_folder}/train"
+    model_repo_tf_records_val_folder = f"{model_repo_tf_records_folder}/val"
+
+    file_ops.folder_exist_or_create(model_repo_tf_record_train_folder)
+    file_ops.folder_exist_or_create(model_repo_tf_records_val_folder)
+
+    subfolders = file_ops.get_directory_subfolders_subset(tf_records_folder, video_source)
+
+    labelmap_files = []
+    trainval_files = []
+    tf_record_train_files = []
+    tf_record_val_files = []
+    for subfolder in subfolders:
+        labelmap_files.extend(glob.glob(subfolder + "/*.pbtxt"))
+        trainval_files.extend(glob.glob(subfolder + "/*.txt"))
+        tf_record_train_files.extend(glob.glob(subfolder + "/*_train.record"))
+        tf_record_val_files.extend(glob.glob(subfolder + "/*_val.record"))
+
+    for tf_record in tf_record_train_files:
+        shutil.copy2(tf_record, model_repo_tf_record_train_folder)
+        logging.info(f"Copied {tf_record} to {model_repo_tf_record_train_folder}")
+
+    for tf_record in tf_record_val_files:
+        shutil.copy2(tf_record, model_repo_tf_records_val_folder)
+        logging.info(f"Copied {tf_record} to {model_repo_tf_records_val_folder}")
+
+    labelmap_file = f"{model_repo_tf_records_folder}/labelmap.pbtxt"
+    with open(labelmap_file, "w") as outfile:
+        with open(labelmap_files[0]) as infile:
+            for line in infile:
+                outfile.write(line)
+        logging.info(f"Copied {labelmap_file} to {model_repo_tf_records_folder}")
+
+    trainval_file = f"{model_repo_tf_records_folder}/trainval.txt"
     with open(trainval_file, "w") as outfile:
         for trainval_file in trainval_files:
             with open(trainval_file, "r") as infile:
                 shutil.copyfileobj(infile, outfile)
+        logging.info(f"trainval file created in {model_repo_tf_records_folder}")
 
-    for tf_record_file in tf_record_files:
-
-        if (tf_record_file).endswith("train.record"):
-            shutil.copy2(tf_record_file, training_folders["tf_record_train_folder"])
-        else:
-            shutil.copy2(tf_record_file, training_folders["tf_record_val_folder"])
-
-    project_name = training_folders["base_folder"].replace(airflow_base_folder + "/training/", "")
-    gcp_project_folder = f"{gcp_base_bucket_url}{project_name}/"
-
-    gcp_training_files = {
-        "label_map_file": labelmap_file.replace(
-            airflow_base_folder + "/training/", gcp_base_bucket_url
-        ),
-        "train_tf_records": f"{gcp_project_folder}data/tf_record/train/*.record",
-        "val_tf_records": f"{gcp_project_folder}data/tf_record/val/*.record",
-    }
-
-    ti = kwargs["ti"]
-    ti.xcom_push(key="gcp_training_files", value=gcp_training_files)
+    logging.info("Completed copy of all tf records file to temporary training tf records folder")
 
 
 def copy_base_model_to_training_folder(
-    base_model_folder,
-    base_model_csv,
-    base_model,
-    video_source,
-    airflow_base_folder,
-    gcp_base_bucket_url,
-    **kwargs,
+    base_model, base_model_csv, base_model_folder, model_training_base_model_folder
 ):
-    ti = kwargs["ti"]
-    training_folders = ti.xcom_pull(
-        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
-    )
-
-    gcp_training_files = ti.xcom_pull(
-        key="gcp_training_files",
-        task_ids=f"copy_labelbox_output_data_to_training_folder_{video_source}_{base_model}",
-    )
-
     base_models_df = pd.read_csv(base_model_csv)
 
     model_df = base_models_df.loc[base_models_df["model_name"] == base_model]
@@ -424,66 +301,94 @@ def copy_base_model_to_training_folder(
 
     model_folder = os.path.join(base_model_folder, base_model_folder_name)
 
-    file_ops.copy_files_from_folder(model_folder, training_folders["base_model_folder"])
+    file_ops.folder_exist_or_create(model_training_base_model_folder)
 
-    logging.info("Successfully copied all base model file to training folder")
+    file_ops.copy_files_from_folder(model_folder, model_training_base_model_folder)
 
-    pipeline_file = os.path.join(training_folders["base_model_folder"], "pipeline.config")
+    pipeline_file = os.path.join(model_training_base_model_folder, "pipeline.config")
 
     os.remove(pipeline_file)
 
-    model_checkpoint = os.path.join(training_folders["base_model_folder"], "model.ckpt")
-
-    logging.info("Successfully removed pipeline.config file")
-
-    gcp_training_files["model_checkpoint"] = model_checkpoint.replace(
-        airflow_base_folder + "/training/", gcp_base_bucket_url
+    logging.info(
+        f"Base model {base_model} has been copied to temporary training folder {model_training_base_model_folder}"
     )
 
-    ti = kwargs["ti"]
-    ti.xcom_push(key="gcp_training_files", value=gcp_training_files)
+
+def copy_base_model_to_model_repo_folder(
+    base_model, base_model_csv, base_model_folder, model_repo_base_model_folder
+):
+    base_models_df = pd.read_csv(base_model_csv)
+
+    model_df = base_models_df.loc[base_models_df["model_name"] == base_model]
+
+    base_model_folder_name = model_df.iloc[0]["model_folder_name"]
+
+    model_folder = os.path.join(base_model_folder, base_model_folder_name)
+
+    file_ops.folder_exist_or_create(model_repo_base_model_folder)
+
+    file_ops.copy_files_from_folder(model_folder, model_repo_base_model_folder)
+
+    pipeline_file = os.path.join(model_repo_base_model_folder, "pipeline.config")
+
+    os.remove(pipeline_file)
+
+    logging.info(
+        f"Base model {base_model} has been copied to model repo folder {model_repo_base_model_folder}"
+    )
 
 
 def generate_model_config(
-    video_source, base_model, model_config_template, num_classes, **kwargs,
+    model_training_folder,
+    model_repo_folder,
+    model_folder_ts,
+    model_config_template,
+    num_classes,
+    bucket_url,
+    training_batch_size,
+    training_epoch_count,
 ):
 
-    ti = kwargs["ti"]
-    training_folders = ti.xcom_pull(
-        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
-    )
-    gcp_training_files = ti.xcom_pull(
-        key="gcp_training_files",
-        task_ids=f"copy_base_model_to_training_folder_{video_source}_{base_model}",
-    )
+    pre_trained_model_checkpoint_path = f"{bucket_url}/{model_folder_ts}/model/base/model.ckpt"
+    label_map_path = f"{bucket_url}/{model_folder_ts}/data/tf_records/labelmap.pbtxt"
+    train_tf_record_path = f"{bucket_url}/{model_folder_ts}/data/tf_records/train/*.record"
+    val_tf_record_path = f"{bucket_url}/{model_folder_ts}/data/tf_records/val/*.record"
 
-    # Replacing placeholders in airflow variables for values
+    pipeline_config_files = [
+        f"{model_training_folder}/pipeline.config",
+        f"{model_repo_folder}/pipeline.config",
+    ]
+
     model_config_template = re.sub("NUM_CLASSES", str(num_classes), model_config_template)
     model_config_template = re.sub(
         "PRE_TRAINED_MODEL_CHECKPOINT_PATH",
-        gcp_training_files["model_checkpoint"],
+        pre_trained_model_checkpoint_path,
         model_config_template,
     )
+    model_config_template = re.sub("LABEL_MAP_PATH", label_map_path, model_config_template)
     model_config_template = re.sub(
-        "LABEL_MAP_PATH", gcp_training_files["label_map_file"], model_config_template
+        "TRAIN_TF_RECORD_PATH", train_tf_record_path, model_config_template
+    )
+    model_config_template = re.sub("VAL_TF_RECORD_PATH", val_tf_record_path, model_config_template)
+    model_config_template = re.sub(
+        "TRAINING_BATCH_SIZE", training_batch_size, model_config_template
     )
     model_config_template = re.sub(
-        "TRAIN_TF_RECORD_PATH", str(gcp_training_files["train_tf_records"]), model_config_template
-    )
-    model_config_template = re.sub(
-        "VAL_TF_RECORD_PATH", str(gcp_training_files["val_tf_records"]), model_config_template
+        "TRAINING_EPOCH_COUNT", training_epoch_count, model_config_template
     )
 
-    try:
-        config_file = os.path.join(training_folders["base_folder"], "pipeline.config")
-        with open(config_file, "w") as outfile:
-            outfile.write(model_config_template)
-        logging.info("Model config file has been created succesfully")
-    except IOError as e:
-        logging.error(
-            "An error has been raised while trying to save the model config to a file on disk"
-        )
-        raise e
+    for config_file in pipeline_config_files:
+        try:
+            with open(config_file, "w") as outfile:
+                outfile.write(model_config_template)
+            logging.info(f"Model config file has been created successfully at {config_file}")
+        except IOError as e:
+            logging.error(
+                "An error has been raised while trying to save the model config to a file on disk"
+            )
+            raise e
+
+    logging.info("Generated training pipeline config file")
 
 
 def archiving_training_folder(training_archiving_path, video_source, base_model, **kwargs):
