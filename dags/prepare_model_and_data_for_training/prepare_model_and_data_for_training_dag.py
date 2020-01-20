@@ -43,15 +43,16 @@ default_args = {
 
 # Connections
 dvc_remote_name = BaseHook.get_connection("dvc").schema
-dvc_remote_url = BaseHook.get_connection("dvc").host
-dvc_remote_client_id = BaseHook.get_connection("dvc").login
-dvc_remote_client_secret = BaseHook.get_connection("dvc").password
+# dvc_remote_url = #BaseHook.get_connection("dvc").host
+# dvc_remote_client_id = BaseHook.get_connection("dvc").login
+# dvc_remote_client_secret = BaseHook.get_connection("dvc").password
 
 # Variables
 tensorflow_model_zoo_markdown_url = Variable.get("tensorflow_model_zoo_markdown_url")
 required_base_models = Variable.get("tensorflow_model_zoo_models").split(",")
 video_feed_sources = Variable.get("video_feed_sources").split(",")
 gcp_base_bucket_url = f"gs://{Variable.get('bucket_name')}-training"
+dvc_remote_url = f"gs://robosub-dvc/"
 upload_tasks = []
 dvc_tasks = []
 
@@ -139,15 +140,13 @@ validate_deep_detector_dvc_remote_credential_present_or_add = BashOperator(
         [ -s '{{params.model_repo_folder}}/.dvc/config' ] || cd {{params.model_repo_folder}} && \
         dvc init && \
         dvc remote add {{params.dvc_remote_name}} {{params.dvc_remote_url}} --default && \
-        dvc remote modify {{params.dvc_remote_name}} gdrive_client_id {{params.dvc_remote_client_id}} && \
-        dvc remote modify {{params.dvc_remote_name}} gdrive_client_secret {{params.dvc_remote_client_secret}} && \
         cat {{params.model_repo_folder}}/.dvc/config",
     params={
         "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
         "dvc_remote_name": dvc_remote_name,
         "dvc_remote_url": dvc_remote_url,
-        "dvc_remote_client_id": dvc_remote_client_id,
-        "dvc_remote_client_secret": dvc_remote_client_secret,
+        # "dvc_remote_client_id": dvc_remote_client_id,
+        # "dvc_remote_client_secret": dvc_remote_client_secret,
     },
     dag=dag,
 )
