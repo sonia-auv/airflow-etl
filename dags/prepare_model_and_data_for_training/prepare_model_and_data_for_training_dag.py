@@ -53,6 +53,7 @@ required_base_models = Variable.get("tensorflow_model_zoo_models").split(",")
 video_feed_sources = Variable.get("video_feed_sources").split(",")
 gcp_base_bucket_url = f"gs://{Variable.get('bucket_name')}-training"
 upload_tasks = []
+dvc_tasks = []
 
 # DAG Specific Methods
 def get_proper_model_config(video_source, model_name):
@@ -76,6 +77,9 @@ dag = DAG(
 start_task = DummyOperator(task_id="start_task", dag=dag)
 join_task_1 = DummyOperator(task_id="join_task_1", dag=dag)
 join_task_2 = DummyOperator(task_id="join_task_2", dag=dag)
+join_task_3 = DummyOperator(task_id="join_task_3", dag=dag)
+join_task_4 = DummyOperator(task_id="join_task_4", dag=dag)
+join_task_5 = DummyOperator(task_id="join_task_5", dag=dag)
 
 validate_reference_model_list_exist_or_create = BranchPythonOperator(
     task_id="validate_reference_model_list_exist",
@@ -132,10 +136,12 @@ validate_deep_detector_model_repo_exist_or_clone = BashOperator(
 validate_deep_detector_dvc_remote_credential_present_or_add = BashOperator(
     task_id="validate_deep_detector_dvc_remote_credential_present_or_add",
     bash_command="\
-        [ -f '{{params.model_repo_folder}}/.dvc/config' ] || cd {{params.model_repo_folder}} && \
+        [ -s '{{params.model_repo_folder}}/.dvc/config' ] || cd {{params.model_repo_folder}} && \
+        dvc init && \
         dvc remote add {{params.dvc_remote_name}} {{params.dvc_remote_url}} --default && \
         dvc remote modify {{params.dvc_remote_name}} gdrive_client_id {{params.dvc_remote_client_id}} && \
-        dvc remote modify {{params.dvc_remote_name}} gdrive_client_secret {{params.dvc_remote_client_secret}}",
+        dvc remote modify {{params.dvc_remote_name}} gdrive_client_secret {{params.dvc_remote_client_secret}} && \
+        cat {{params.model_repo_folder}}/.dvc/config",
     params={
         "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
         "dvc_remote_name": dvc_remote_name,
@@ -146,14 +152,18 @@ validate_deep_detector_dvc_remote_credential_present_or_add = BashOperator(
     dag=dag,
 )
 
-for video_source in video_feed_sources:
+sleeps = [item * 10 for item in range(1, len(video_feed_sources) * len(required_base_models))]
+
+for i, video_source in enumerate(video_feed_sources):
     validate_labelmap_file_content_are_the_same = PythonOperator(
         task_id=f"check_labelmap_file_content_are_the_same_" + video_source,
         python_callable=prepare_model_and_data_for_training.compare_label_map_file,
         op_kwargs={"base_tf_record_folder": AIRFLOW_TF_RECORD_FOLDER, "video_source": video_source},
         dag=dag,
     )
-    for base_model in required_base_models:
+    for j, base_model in enumerate(required_base_models):
+
+        sleep_duration = sleeps[i + j]
         execution_date = "{{ts_nodash}}"
 
         model_folder = f"{video_source}_{base_model}"
@@ -215,12 +225,17 @@ for video_source in video_feed_sources:
 
         add_images_to_repo_through_dvc = BashOperator(
             task_id=f"add_images_to_repo_through_dvc_{video_source}_{base_model}",
-            bash_command="cd {{params.model_repo_folder}} && \
+            bash_command="sleep {{params.sleep_duration}} && \
+                          cd {{params.model_repo_folder}} && \
                           dvc add data/images/* && \
                           git add data/images/.gitignore data/images/*.dvc && \
                           git commit -m 'Add images to {{params.model_folder}}'",
             provide_context=True,
-            params={"model_repo_folder": model_repo_folder, "model_folder": model_folder},
+            params={
+                "model_repo_folder": model_repo_folder,
+                "model_folder": model_folder,
+                "sleep_duration": sleep_duration,
+            },
             dag=dag,
         )
 
@@ -237,12 +252,17 @@ for video_source in video_feed_sources:
 
         add_annotations_to_repo_through_dvc = BashOperator(
             task_id=f"add_annotations_to_repo_through_dvc_{video_source}_{base_model}",
-            bash_command="cd {{params.model_repo_folder}} && \
+            bash_command="sleep {{params.sleep_duration}} && \
+                          cd {{params.model_repo_folder}} && \
                           dvc add data/annotations/xmls/* && \
                           git add data/annotations/xmls/.gitignore data/annotations/xmls/*.dvc && \
                           git commit -m 'Add annotations to {{params.model_folder}}'",
             provide_context=True,
-            params={"model_repo_folder": model_repo_folder, "model_folder": model_folder},
+            params={
+                "model_repo_folder": model_repo_folder,
+                "model_folder": model_folder,
+                "sleep_duration": sleep_duration,
+            },
             dag=dag,
         )
 
@@ -270,7 +290,8 @@ for video_source in video_feed_sources:
 
         add_tf_records_to_repo_through_dvc = BashOperator(
             task_id=f"add_tf_records_to_repo_through_dvc_{video_source}_{base_model}",
-            bash_command="cd {{params.model_repo_folder}} && \
+            bash_command="sleep {{params.sleep_duration}} && \
+                          cd {{params.model_repo_folder}} && \
                           dvc add data/tf_records/train/* && \
                           dvc add data/tf_records/val/* && \
                           git add data/tf_records/train/.gitignore data/tf_records/train/*.dvc && \
@@ -278,7 +299,11 @@ for video_source in video_feed_sources:
                           git add data/tf_records/trainval.txt data/tf_records/labelmap.pbtxt &&\
                           git commit -m 'Add tf-records to {{params.model_folder}}'",
             provide_context=True,
-            params={"model_repo_folder": model_repo_folder, "model_folder": model_folder},
+            params={
+                "model_repo_folder": model_repo_folder,
+                "model_folder": model_folder,
+                "sleep_duration": sleep_duration,
+            },
             dag=dag,
         )
 
@@ -308,12 +333,17 @@ for video_source in video_feed_sources:
 
         add_base_model_to_repo_through_dvc = BashOperator(
             task_id=f"add_base_model_to_repo_through_dvc_{video_source}_{base_model}",
-            bash_command="cd {{params.model_repo_folder}} && \
+            bash_command="sleep {{params.sleep_duration}} && \
+                          cd {{params.model_repo_folder}} && \
                           dvc add model/base/* && \
                           git add model/base/.gitignore model/base/*.dvc && \
                           git commit -m 'Add base model file to {{params.model_folder}}'",
             provide_context=True,
-            params={"model_repo_folder": model_repo_folder, "model_folder": model_folder},
+            params={
+                "model_repo_folder": model_repo_folder,
+                "model_folder": model_folder,
+                "sleep_duration": sleep_duration,
+            },
             dag=dag,
         )
 
@@ -335,21 +365,26 @@ for video_source in video_feed_sources:
 
         add_model_config_to_repo_through_git = BashOperator(
             task_id=f"add_model_config_to_repo_through_git_{video_source}_{base_model}",
-            bash_command="cd {{params.model_repo_folder}} && \
+            bash_command="sleep {{params.sleep_duration}} && \
+                          cd {{params.model_repo_folder}} && \
                           git add pipeline.config  && \
                           git commit -m 'Add model config to {{params.model_folder}}'",
             provide_context=True,
-            params={"model_repo_folder": model_repo_folder, "model_folder": model_folder},
+            params={
+                "model_repo_folder": model_repo_folder,
+                "model_folder": model_folder,
+                "sleep_duration": sleep_duration,
+            },
             dag=dag,
         )
 
         upload_training_folder_to_gcp_bucket = BashOperator(
             task_id=f"upload_training_folder_to_gcp_bucket_{video_source}_{base_model}",
-            bash_command="gsutil -m cp -r {{params.model_training_folder}} {{params.bucket_url}}",
+            bash_command="gsutil -m cp -r {{params.model_training_folder}}_{{ts_nodash}}  {{params.bucket_url}}_{{ts_nodash}}",
             provide_context=True,
             params={
-                "model_training_folder": model_training_folder,
-                "bucket_url": f"{gcp_base_bucket_url}/{model_folder_with_ts}",
+                "model_training_folder": f"{AIRFLOW_TRAINING_FOLDER}/{model_folder}",
+                "bucket_url": f"{gcp_base_bucket_url}/{model_folder}",
             },
             dag=dag,
         )
@@ -361,73 +396,35 @@ for video_source in video_feed_sources:
         download_reference_model_list_as_csv >> validate_base_model_exist_or_download >> validate_requested_model_exist_in_model_zoo_list
         validate_requested_model_exist_in_model_zoo_list >> validate_deep_detector_model_repo_exist_or_clone >> validate_deep_detector_dvc_remote_credential_present_or_add >> validate_labelmap_file_content_are_the_same
 
-        validate_labelmap_file_content_are_the_same >> validate_model_presence_in_model_repo_or_create >> create_training_folder >> copy_labelbox_output_images_to_training_folder >> copy_labelbox_output_images_to_model_repo_folder >> add_images_to_repo_through_dvc >> copy_labelbox_output_annotations_to_model_repo_folder >> add_annotations_to_repo_through_dvc >> copy_tf_records_to_training_folder >> copy_tf_records_to_model_repo_folder >> add_tf_records_to_repo_through_dvc >> copy_base_model_to_training_folder >> copy_base_model_to_model_repo_folder >> add_base_model_to_repo_through_dvc >> genereate_model_config_file_to_training_and_model_repo >> add_model_config_to_repo_through_git >> upload_training_folder_to_gcp_bucket
+        validate_labelmap_file_content_are_the_same >> validate_model_presence_in_model_repo_or_create >> create_training_folder >> copy_labelbox_output_images_to_training_folder >> copy_labelbox_output_images_to_model_repo_folder >> add_images_to_repo_through_dvc >> join_task_1 >> copy_labelbox_output_annotations_to_model_repo_folder >> add_annotations_to_repo_through_dvc >> join_task_2 >> copy_tf_records_to_training_folder >> copy_tf_records_to_model_repo_folder >> add_tf_records_to_repo_through_dvc >> join_task_3 >> copy_base_model_to_training_folder >> copy_base_model_to_model_repo_folder >> add_base_model_to_repo_through_dvc >> join_task_4 >> genereate_model_config_file_to_training_and_model_repo >> add_model_config_to_repo_through_git >> join_task_5
 
-        # genereate_model_config_to_model_repo = PythonOperator(
-        #     task_id="genereate_model_config_to_training_{video_source}_{base_model}",
-        #     python_callable=prepare_model_and_data_for_training.generate_model_config_to_training,
-        #     provide_context=True,
-        #     op_kwargs={
-        #         "video_source": video_source,
-        #         "base_model": base_model,
-        #         "model_config_template": get_proper_model_config(video_source, base_model),
-        #         "num_classes": get_object_class_count(video_source),
-        #     },
-        #     dag=dag,
-        # )
+        upload_tasks.append(upload_training_folder_to_gcp_bucket)
 
-        # add_pipeline_config_to_repo_through_dvc = BashOperator(
-        #     task_id=f"add_pipeline_config_to_repo_through_dvc_{video_source}_{base_model}",
-        #     bash_command="cd {{params.model_repo_folder}} && \
-        #          dvc add data/images/* && \
-        #          git add data/images/.gitignore data/images/*.dvc && \
-        #          git commit -m 'Added images to {{params.model_folder}}'",
-        #     provide_context=True,
-        #     params={"model_repo_folder": model_repo_folder, "model_folder": model_folder},
-        #     dag=dag,
-        # )
+create_data_bucket = BashOperator(
+    task_id="create_data_bucket",
+    bash_command="gsutil ls -b {{gcp_base_bucket_url}} || gsutil mb {{gcp_base_bucket_url}}",
+    provide_context=True,
+    params={"gcp_base_bucket_url": gcp_base_bucket_url},
+    dag=dag,
+)
 
-        # remove_raw_images_and_annotations_from_training_folder = PythonOperator(
-        #     task_id=f"remove_raw_images_and_annotations_from_training_folder_{video_source}_{base_model}",
-        #     python_callable=prepare_model_and_data_for_training.remove_raw_images_and_annotations_from_training_folder,
-        #     provide_context=True,
-        #     op_kwargs={
-        #         "video_source": video_source,
-        #         "base_model": base_model,
-        #         "gcp_base_bucket_url": gcp_base_bucket_url,
-        #         "airflow_trainable_folder": AIRFLOW_TRAINABLE_FOLDER,
-        #     },
-        #     dag=dag,
-        # )
-
-        # upload_training_folder_to_gcp_bucket = BashOperator(
-        #     task_id="upload_training_folder_to_gcp_bucket_" + video_source + "_" + base_model,
-        #     bash_command="{{{{ ti.xcom_pull(key='gcp_copy_cmd',task_ids='remove_raw_images_and_annotations_from_training_folder_{}_{}')}}}}".format(
-        #         video_source, base_model
-        #     ),
-        #     provide_context=True,
-        #     dag=dag,
-        # )
-        # upload_tasks.append(upload_training_folder_to_gcp_bucket)
-
-        # start_task >> validate_reference_model_list_exist_or_create >> [
-        #     validate_base_model_exist_or_download,
-        #     download_reference_model_list_as_csv,
-        # ]
-        # download_reference_model_list_as_csv >> validate_base_model_exist_or_download >> validate_requested_model_exist_in_model_zoo_list
-        # validate_requested_model_exist_in_model_zoo_list >> validate_deep_detector_model_repo_exist_or_clone >> validate_deep_detector_dvc_remote_credential_present_or_add >> validate_labelmap_file_content_are_the_same
-
-        # validate_labelmap_file_content_are_the_same >> validate_model_presence_in_model_repo_or_create >> create_training_folder_tree >> copy_images_to_training_from_labelbox_output >> add_images_to_repo_through_dvc
-        # # >> copy_labelbox_output_data_to_training_folder >> copy_base_model_to_training_folder >> genereate_model_config >> copy_training_folder_content_to_model_repo >> versioning_data
-
-# archiving_training_folder >> remove_raw_images_and_annotations_from_training_folder >> join_task
-
+upload_data_to_dvc_repo_and_git = BashOperator(
+    task_id=f"upload_data_to_dvc_repo_and_git",
+    bash_command="cd {{params.model_repo_folder}} && \
+                          git push && \
+                          dvc push",
+    params={"model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER},
+    dag=dag,
+)
 # To fix parallelism error with gsutil
-# for index, task in enumerate(upload_tasks):
-#     if index == 0:
-#         join_task >> create_data_bucket
-#         create_data_bucket >> task
-#     else:
-#         upload_tasks[index - 1] >> task
+if len(set(upload_tasks)) == len(required_base_models) * 2:
+    for index, task in enumerate(upload_tasks):
+        if index == 0:
+            join_task_5 >> create_data_bucket
+            create_data_bucket >> task
+        else:
+            upload_tasks[index - 1] >> task
 
-# upload_tasks[-1] >> clean_up_post_training_prep
+    upload_tasks[-1] >> upload_data_to_dvc_repo_and_git
+else:
+    raise ValueError("There is a duplicate entry in the tensorflow_model_zoo_models variable")
