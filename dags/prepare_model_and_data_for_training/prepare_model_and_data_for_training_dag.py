@@ -394,7 +394,7 @@ for i, video_source in enumerate(video_feed_sources):
             },
             dag=dag,
         )
-
+        # TODO: Find out why credential file seems to disappear
         upload_training_folder_to_gcp_bucket = BashOperator(
             task_id=f"upload_training_folder_to_gcp_bucket_{video_source}_{base_model}",
             bash_command="gsutil -m cp -r {{params.model_training_folder}}_{{ts_nodash}}  {{params.bucket_url}}_{{ts_nodash}}",
