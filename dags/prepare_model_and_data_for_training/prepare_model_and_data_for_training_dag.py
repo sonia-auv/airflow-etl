@@ -152,6 +152,23 @@ validate_deep_detector_dvc_remote_credential_present_or_add = BashOperator(
     dag=dag,
 )
 
+create_data_bucket = BashOperator(
+    task_id="create_data_bucket",
+    bash_command="gsutil ls -b {{gcp_base_bucket_url}} || gsutil mb {{gcp_base_bucket_url}}",
+    provide_context=True,
+    params={"gcp_base_bucket_url": gcp_base_bucket_url},
+    dag=dag,
+)
+
+upload_data_to_dvc_repo_and_git = BashOperator(
+    task_id=f"upload_data_to_dvc_repo_and_git",
+    bash_command="cd {{params.model_repo_folder}} && \
+                          git push && \
+                          dvc push",
+    params={"model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER},
+    dag=dag,
+)
+
 sleeps = [item * 10 for item in range(1, len(video_feed_sources) * len(required_base_models))]
 
 for i, video_source in enumerate(video_feed_sources):
@@ -400,22 +417,7 @@ for i, video_source in enumerate(video_feed_sources):
 
         upload_tasks.append(upload_training_folder_to_gcp_bucket)
 
-create_data_bucket = BashOperator(
-    task_id="create_data_bucket",
-    bash_command="gsutil ls -b {{gcp_base_bucket_url}} || gsutil mb {{gcp_base_bucket_url}}",
-    provide_context=True,
-    params={"gcp_base_bucket_url": gcp_base_bucket_url},
-    dag=dag,
-)
 
-upload_data_to_dvc_repo_and_git = BashOperator(
-    task_id=f"upload_data_to_dvc_repo_and_git",
-    bash_command="cd {{params.model_repo_folder}} && \
-                          git push && \
-                          dvc push",
-    params={"model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER},
-    dag=dag,
-)
 # To fix parallelism error with gsutil
 if len(set(upload_tasks)) == len(required_base_models) * 2:
     for index, task in enumerate(upload_tasks):
