@@ -169,7 +169,7 @@ upload_data_to_dvc_repo_and_git = BashOperator(
     dag=dag,
 )
 
-sleeps = [item * 10 for item in range(1, len(video_feed_sources) * len(required_base_models))]
+sleeps = [item * 20 for item in range(1, len(video_feed_sources) * len(required_base_models))]
 
 for i, video_source in enumerate(video_feed_sources):
     validate_labelmap_file_content_are_the_same = PythonOperator(
