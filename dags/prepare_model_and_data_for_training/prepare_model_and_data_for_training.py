@@ -371,10 +371,10 @@ def generate_model_config(
     )
     model_config_template = re.sub("VAL_TF_RECORD_PATH", val_tf_record_path, model_config_template)
     model_config_template = re.sub(
-        "TRAINING_BATCH_SIZE", training_batch_size, model_config_template
+        "TRAINING_BATCH_SIZE", str(training_batch_size), model_config_template
     )
     model_config_template = re.sub(
-        "TRAINING_EPOCH_COUNT", training_epoch_count, model_config_template
+        "TRAINING_EPOCH_COUNT", str(training_epoch_count), model_config_template
     )
 
     for config_file in pipeline_config_files:
