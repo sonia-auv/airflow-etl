@@ -18,6 +18,16 @@ logging.getLogger().setLevel(logging.INFO)
 
 
 def __parse_downloaded_model_file_list_response(response):
+    """__parse_downloaded_model_file_list_response
+
+    Utility function which parse model csv file and download
+    model from tensorflow model zoo
+
+    :param response: A request response
+    :type response: request.Response
+    :return: A dataframe that contains model release information
+    :rtype: pandas.Dataframe
+    """
     html = mistune.markdown(response.text)
     soup = BeautifulSoup(html)
     link_nodes = soup.find_all("a")
@@ -59,6 +69,20 @@ def __parse_downloaded_model_file_list_response(response):
 def validate_reference_model_list_exist_or_create(
     base_model_csv, positive_downstream, negative_downstream
 ):
+    """validate_reference_model_list_exist_or_create
+
+    A simple function to handle airflow BranchyPythonOperator downstream
+
+    :param base_model_csv: A CSV file which contains models informations
+    :type base_model_csv: CSV file path
+    :param positive_downstream: Positive Downstream task name
+    :type positive_downstream: Str
+    :param negative_downstream: Negative Downstream task name
+    :type negative_downstream: Str
+    :return: Downstream task name
+    :rtype: Str
+    """
+
     if file_ops.file_exist(base_model_csv):
         return positive_downstream
     else:
@@ -66,6 +90,16 @@ def validate_reference_model_list_exist_or_create(
 
 
 def download_reference_model_list_as_csv(url, base_model_csv):
+    """download_reference_model_list_as_csv
+
+    A utility function to download all the requested model
+    from tensorflow model zoo
+
+    :param url: Url of the model list
+    :type url: Str
+    :param base_model_csv: CSV file path
+    :type base_model_csv: Str
+    """
     try:
         response = requests.get(url, allow_redirects=True)
         new_models_reference_df = __parse_downloaded_model_file_list_response(response)
@@ -76,6 +110,17 @@ def download_reference_model_list_as_csv(url, base_model_csv):
 
 
 def download_and_extract_base_model(base_model_csv, base_model_folder, required_base_models=None):
+    """download_and_extract_base_model
+
+     Utility function which handle model tar file download and extraction
+
+    :param base_model_csv: CSV file path
+    :type base_model_csv: Str
+    :param base_model_folder: Base model folder directory
+    :type base_model_folder: Str
+    :param required_base_models: A list of required base model, defaults to None
+    :type required_base_models: list, optional
+    """
 
     models_df = pd.read_csv(base_model_csv)
     models_subset = models_df[["model_folder_name", "model_file_name", "model_url", "model_name"]]
@@ -108,6 +153,18 @@ def download_and_extract_base_model(base_model_csv, base_model_folder, required_
 
 
 def compare_label_map_file(base_tf_record_folder, video_source):
+    """compare_label_map_file
+
+    A utility funcction to compare content of base model csv file
+    and current parsed content from tensorflow model zoo url
+
+    :param base_tf_record_folder: TF record directory
+    :type base_tf_record_folder: Str
+    :param video_source: Current video source
+    :type video_source: Str
+    :return: Does match or not
+    :rtype: Boolean
+    """
 
     subfolders = file_ops.get_directory_subfolders_subset(base_tf_record_folder, video_source)
 
@@ -132,6 +189,18 @@ def compare_label_map_file(base_tf_record_folder, video_source):
 
 
 def validate_requested_model_exist_in_model_zoo_list(base_models_csv, required_base_models):
+    """validate_requested_model_exist_in_model_zoo_list
+
+    A utility function to validate if a requested model is currently
+    available from tensorflow model zoo
+
+    :param base_models_csv: Model CSV file path
+    :type base_models_csv: Str
+    :param required_base_models: A list of required models
+    :type required_base_models: list
+    :raises ValueError: Required model list is empty error
+    :raises ValueError: Required model does not exist in tensorflow model zoo list
+    """
 
     df = pd.read_csv(base_models_csv)
     available_models = df["model_name"].unique()
@@ -150,13 +219,28 @@ def validate_requested_model_exist_in_model_zoo_list(base_models_csv, required_b
 
 
 def validate_model_presence_in_model_repo_or_create(model_repo_folder):
+    """validate_model_presence_in_model_repo_or_create
+
+    A utility function to validate model repo exist otherwise create it
+
+    :param model_repo_folder: Model repo folder path
+    :type model_repo_folder: Str
+    """
 
     file_ops.folder_exist_or_create(model_repo_folder)
 
     logging.info("Model directory present in model repository")
 
 
-def create_training_folder(model_training_folder, **kwargs):
+def create_training_folder(model_training_folder):
+    """
+    create_training_folder
+
+    A utility function to create training folder
+
+    :param model_training_folder: Training folder directory
+    :type model_training_folder: Str
+    """
 
     file_ops.folder_exist_or_create(model_training_folder)
 
@@ -164,6 +248,18 @@ def create_training_folder(model_training_folder, **kwargs):
 
 
 def copy_images_to_output(labelbox_output_folder, output_folder, video_source):
+    """copy_images_to_output
+
+    A utility function to copy images from multiple labelbox output project
+    to one training project
+
+    :param labelbox_output_folder: Labelbox output directory
+    :type labelbox_output_folder: Str
+    :param output_folder: Output directory
+    :type output_folder: Str
+    :param video_source: Current video source
+    :type video_source: Str
+    """
     filtered_subfolders = file_ops.get_directory_subfolders_subset(
         labelbox_output_folder, video_source
     )
@@ -182,6 +278,15 @@ def copy_images_to_output(labelbox_output_folder, output_folder, video_source):
 def copy_labelbox_output_images_to_training_folder(
     labelbox_output_folder, model_training_images_folder, video_source
 ):
+    """copy_labelbox_output_images_to_training_folder
+
+    :param labelbox_output_folder: [description]
+    :type labelbox_output_folder: [type]
+    :param model_training_images_folder: [description]
+    :type model_training_images_folder: [type]
+    :param video_source: [description]
+    :type video_source: [type]
+    """
     file_ops.folder_exist_or_create(model_training_images_folder)
 
     copy_images_to_output(labelbox_output_folder, model_training_images_folder, video_source)
@@ -192,6 +297,15 @@ def copy_labelbox_output_images_to_training_folder(
 def copy_labelbox_output_images_to_model_repo_folder(
     labelbox_output_folder, model_repo_images_folder, video_source
 ):
+    """copy_labelbox_output_images_to_model_repo_folder
+
+    :param labelbox_output_folder: [description]
+    :type labelbox_output_folder: [type]
+    :param model_repo_images_folder: [description]
+    :type model_repo_images_folder: [type]
+    :param video_source: [description]
+    :type video_source: [type]
+    """
     file_ops.folder_exist_or_create(model_repo_images_folder)
 
     copy_images_to_output(labelbox_output_folder, model_repo_images_folder, video_source)
@@ -202,6 +316,16 @@ def copy_labelbox_output_images_to_model_repo_folder(
 def copy_labelbox_output_annotations_to_model_repo_folder(
     labelbox_output_folder, model_repo_annotations_folder, video_source
 ):
+    """copy_labelbox_output_annotations_to_model_repo_folder [summary]
+
+    :param labelbox_output_folder: [description]
+    :type labelbox_output_folder: [type]
+    :param model_repo_annotations_folder: [description]
+    :type model_repo_annotations_folder: [type]
+    :param video_source: [description]
+    :type video_source: [type]
+    :raises e: [description]
+    """
     file_ops.folder_exist_or_create(model_repo_annotations_folder)
 
     copy_images_to_output(labelbox_output_folder, model_repo_annotations_folder, video_source)
@@ -212,6 +336,16 @@ def copy_labelbox_output_annotations_to_model_repo_folder(
 def copy_tf_records_to_training_folder(
     tf_records_folder, model_training_tf_records_folder, video_source,
 ):
+    """copy_tf_records_to_training_folder [summary]
+
+    :param tf_records_folder: [description]
+    :type tf_records_folder: [type]
+    :param model_training_tf_records_folder: [description]
+    :type model_training_tf_records_folder: [type]
+    :param video_source: [description]
+    :type video_source: [type]
+    :raises e: [description]
+    """
     training_tf_records_train_folder = f"{model_training_tf_records_folder}/train"
     training_tf_records_val_folder = f"{model_training_tf_records_folder}/val"
 
@@ -247,6 +381,15 @@ def copy_tf_records_to_training_folder(
 
 
 def copy_tf_records_to_model_repo(tf_records_folder, model_repo_tf_records_folder, video_source):
+    """copy_tf_records_to_model_repo [summary]
+
+    :param tf_records_folder: [description]
+    :type tf_records_folder: [type]
+    :param model_repo_tf_records_folder: [description]
+    :type model_repo_tf_records_folder: [type]
+    :param video_source: [description]
+    :type video_source: [type]
+    """
     model_repo_tf_record_train_folder = f"{model_repo_tf_records_folder}/train"
     model_repo_tf_records_val_folder = f"{model_repo_tf_records_folder}/val"
 
@@ -293,6 +436,17 @@ def copy_tf_records_to_model_repo(tf_records_folder, model_repo_tf_records_folde
 def copy_base_model_to_training_folder(
     base_model, base_model_csv, base_model_folder, model_training_base_model_folder
 ):
+    """copy_base_model_to_training_folder [summary]
+
+    :param base_model: [description]
+    :type base_model: [type]
+    :param base_model_csv: [description]
+    :type base_model_csv: [type]
+    :param base_model_folder: [description]
+    :type base_model_folder: [type]
+    :param model_training_base_model_folder: [description]
+    :type model_training_base_model_folder: [type]
+    """
     base_models_df = pd.read_csv(base_model_csv)
 
     model_df = base_models_df.loc[base_models_df["model_name"] == base_model]
@@ -317,6 +471,18 @@ def copy_base_model_to_training_folder(
 def copy_base_model_to_model_repo_folder(
     base_model, base_model_csv, base_model_folder, model_repo_base_model_folder
 ):
+    """copy_base_model_to_model_repo_folder [summary]
+
+    :param base_model: [description]
+    :type base_model: [type]
+    :param base_model_csv: [description]
+    :type base_model_csv: [type]
+    :param base_model_folder: [description]
+    :type base_model_folder: [type]
+    :param model_repo_base_model_folder: [description]
+    :type model_repo_base_model_folder: [type]
+    :raises e: [description]
+    """
     base_models_df = pd.read_csv(base_model_csv)
 
     model_df = base_models_df.loc[base_models_df["model_name"] == base_model]
@@ -348,6 +514,27 @@ def generate_model_config(
     training_batch_size,
     training_epoch_count,
 ):
+    """generate_model_config
+
+
+    :param model_training_folder: [description]
+    :type model_training_folder: [type]
+    :param model_repo_folder: [description]
+    :type model_repo_folder: [type]
+    :param model_folder_ts: [description]
+    :type model_folder_ts: [type]
+    :param model_config_template: [description]
+    :type model_config_template: [type]
+    :param num_classes: [description]
+    :type num_classes: [type]
+    :param bucket_url: [description]
+    :type bucket_url: [type]
+    :param training_batch_size: [description]
+    :type training_batch_size: [type]
+    :param training_epoch_count: [description]
+    :type training_epoch_count: [type]
+    :raises e: [description]
+    """
 
     pre_trained_model_checkpoint_path = f"{bucket_url}/{model_folder_ts}/model/base/model.ckpt"
     label_map_path = f"{bucket_url}/{model_folder_ts}/data/tf_records/labelmap.pbtxt"
@@ -389,67 +576,3 @@ def generate_model_config(
             raise e
 
     logging.info("Generated training pipeline config file")
-
-
-def archiving_training_folder(training_archiving_path, video_source, base_model, **kwargs):
-    ti = kwargs["ti"]
-    training_folders = ti.xcom_pull(
-        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
-    )
-    print(training_archiving_path)
-    print(training_folders)
-    folder_name = file_ops.get_folder_name(training_folders["base_folder"])
-    archive_file = os.path.join(training_archiving_path, f"{folder_name}.tar")
-
-    with tarfile.open(archive_file, "w:gz") as tar:
-        tar.add(training_folders["base_folder"], arcname=folder_name)
-
-    logging.info(
-        f"Successfully created archive of training folder : {training_folders['base_folder']}"
-    )
-
-
-def remove_raw_images_and_annotations_from_training_folder(
-    video_source, base_model, gcp_base_bucket_url, airflow_trainable_folder, **kwargs
-):
-    ti = kwargs["ti"]
-    training_folders = ti.xcom_pull(
-        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
-    )
-    shutil.rmtree(training_folders["xmls_folder"])
-    shutil.rmtree(training_folders["images_folder"])
-    os.remove(os.path.join(training_folders["annotations_folder"], "trainval.txt"))
-
-    training_folder = training_folders["base_folder"]
-
-    prepared_cmd = f"gsutil -m cp -r {training_folder} {gcp_base_bucket_url}"
-
-    training_folder_name = file_ops.get_folder_name(training_folder)
-
-    json_data = {}
-    json_data["gcp_url"] = f"{gcp_base_bucket_url}{training_folder_name}"
-
-    json_file = os.path.join(airflow_trainable_folder, f"{training_folder_name}.json")
-    with open(json_file, "w") as outfile:
-        json.dump(json_data, outfile, indent=4)
-
-    ti.xcom_push(key="gcp_copy_cmd", value=prepared_cmd)
-
-    logging.info("Successfully deleted useless files for training")
-
-
-def clean_up_post_training_prep(folders, **kwargs):
-
-    print(folders)
-    for folder in folders:
-        folder_content = glob.glob(f"{folder}/*")
-        print(folder_content)
-
-        for content in folder_content:
-            if os.path.isdir(content):
-                logging.info(f"Deleting Folder:{content}")
-                shutil.rmtree(content)
-            else:
-                if not content.endswith(".gitignore"):
-                    logging.info(f"Deleting File:{content}")
-                    os.remove(content)
