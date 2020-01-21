@@ -153,7 +153,7 @@ validate_deep_detector_dvc_remote_credential_present_or_add = BashOperator(
 
 create_data_bucket = BashOperator(
     task_id="create_data_bucket",
-    bash_command="gsutil ls -b {{gcp_base_bucket_url}} || gsutil mb {{gcp_base_bucket_url}}",
+    bash_command="gsutil ls -b {{params.gcp_base_bucket_url}} || gsutil mb {{params.gcp_base_bucket_url}}",
     provide_context=True,
     params={"gcp_base_bucket_url": gcp_base_bucket_url},
     dag=dag,
@@ -381,7 +381,7 @@ for i, video_source in enumerate(video_feed_sources):
 
         add_model_config_to_repo_through_git = BashOperator(
             task_id=f"add_model_config_to_repo_through_git_{video_source}_{base_model}",
-            bash_command="sleep {{params.sleep_duration}} && \
+            bash_command="sleep {{params.sleep_duration }} && \
                           cd {{params.model_repo_folder}} && \
                           git add pipeline.config  && \
                           git commit -m 'Add model config to {{params.model_folder}}'",
@@ -389,11 +389,10 @@ for i, video_source in enumerate(video_feed_sources):
             params={
                 "model_repo_folder": model_repo_folder,
                 "model_folder": model_folder,
-                "sleep_duration": sleep_duration,
+                "sleep_duration": sleep_duration * 1.5,
             },
             dag=dag,
         )
-        # TODO: Find out why credential file seems to disappear
         upload_training_folder_to_gcp_bucket = BashOperator(
             task_id=f"upload_training_folder_to_gcp_bucket_{video_source}_{base_model}",
             bash_command="gsutil -m cp -r {{params.model_training_folder}}_{{ts_nodash}}  {{params.bucket_url}}_{{ts_nodash}}",
