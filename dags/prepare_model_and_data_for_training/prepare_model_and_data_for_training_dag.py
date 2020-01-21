@@ -11,24 +11,16 @@ from airflow.operators.python_operator import BranchPythonOperator, PythonOperat
 from prepare_model_and_data_for_training import prepare_model_and_data_for_training
 from utils import file_ops, slack
 
-# TODO: Refactor remove AIRFLOW NAME
-AIRFLOW_BASE_FOLDER = "/usr/local/airflow/"
-AIRFLOW_DATA_FOLDER = os.path.join(AIRFLOW_BASE_FOLDER, "data")
-AIRFLOW_JSON_FOLDER = os.path.join(AIRFLOW_BASE_FOLDER, "json")
-AIRFLOW_MODELS_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "models", "base")
-AIRFLOW_MODELS_CSV_FILE = os.path.join(AIRFLOW_DATA_FOLDER, "models", "model_list.csv")
-AIRFLOW_TRAINING_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "training")
-AIRFLOW_TRAINABLE_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "trainable")
-AIRFLOW_LABELBOX_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "labelbox")
-AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER = os.path.join(AIRFLOW_LABELBOX_FOLDER, "output")
-AIRFLOW_TF_RECORD_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "tfrecord")
-AIRFLOW_VCS_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "vcs")
-AIRFLOW_MODEL_REPO_FOLDER = os.path.join(AIRFLOW_VCS_FOLDER, "deep-detector-model")
-
-DEEP_DETECTOR_MODEL_REPO_URL = "git@github.com:sonia-auv/deep-detector-model.git"
-
-# TODO: Remove after updating
-TRAINING_ARCHIVING_PATH = os.path.join(AIRFLOW_DATA_FOLDER, "archive")
+AIRFLOW_ROOT_FOLDER = "/usr/local/airflow/"
+DATA_FOLDER = os.path.join(AIRFLOW_ROOT_FOLDER, "data")
+MODELS_FOLDER = os.path.join(DATA_FOLDER, "models", "base")
+MODELS_CSV_FILE = os.path.join(DATA_FOLDER, "models", "model_list.csv")
+TRAINING_FOLDER = os.path.join(DATA_FOLDER, "training")
+LABELBOX_FOLDER = os.path.join(DATA_FOLDER, "labelbox")
+LABELBOX_OUTPUT_FOLDER = os.path.join(LABELBOX_FOLDER, "output")
+TF_RECORD_FOLDER = os.path.join(DATA_FOLDER, "tfrecord")
+DVC_FOLDER = os.path.join(DATA_FOLDER, "dvc")
+MODEL_REPO_FOLDER = os.path.join(DVC_FOLDER, "deep-detector-model")
 
 default_args = {
     "owner": "airflow",
@@ -41,20 +33,21 @@ default_args = {
     "retries": 0,
 }
 
-# Connections
-dvc_remote_name = BaseHook.get_connection("dvc").schema
-# dvc_remote_url = #BaseHook.get_connection("dvc").host
-# dvc_remote_client_id = BaseHook.get_connection("dvc").login
-# dvc_remote_client_secret = BaseHook.get_connection("dvc").password
 
 # Variables
 tensorflow_model_zoo_markdown_url = Variable.get("tensorflow_model_zoo_markdown_url")
 required_base_models = Variable.get("tensorflow_model_zoo_models").split(",")
 video_feed_sources = Variable.get("video_feed_sources").split(",")
+
 gcp_base_bucket_url = f"gs://{Variable.get('bucket_name')}-training"
-dvc_remote_url = f"gs://robosub-dvc/"
+gcp_base_dvc_bucket_url = f"gs://{Variable.get('bucket_name')}-dvc/"
+
+model_repo_dvc_remote_name = BaseHook.get_connection("model_repo_dvc").host
+model_repo_git_remote_url = BaseHook.get_connection("model_repo_git").host
+
+
 upload_tasks = []
-dvc_tasks = []
+
 
 # DAG Specific Methods
 def get_proper_model_config(video_source, model_name):
@@ -86,7 +79,7 @@ validate_reference_model_list_exist_or_create = BranchPythonOperator(
     task_id="validate_reference_model_list_exist",
     python_callable=prepare_model_and_data_for_training.validate_reference_model_list_exist_or_create,
     op_kwargs={
-        "base_model_csv": AIRFLOW_MODELS_CSV_FILE,
+        "base_model_csv": MODELS_CSV_FILE,
         "positive_downstream": "validate_base_model_exist_or_download",
         "negative_downstream": "download_reference_model_list_as_csv",
     },
@@ -96,7 +89,7 @@ validate_reference_model_list_exist_or_create = BranchPythonOperator(
 download_reference_model_list_as_csv = PythonOperator(
     task_id="download_reference_model_list_as_csv",
     python_callable=prepare_model_and_data_for_training.download_reference_model_list_as_csv,
-    op_kwargs={"url": tensorflow_model_zoo_markdown_url, "base_model_csv": AIRFLOW_MODELS_CSV_FILE},
+    op_kwargs={"url": tensorflow_model_zoo_markdown_url, "base_model_csv": MODELS_CSV_FILE},
     dag=dag,
 )
 
@@ -105,8 +98,8 @@ validate_base_model_exist_or_download = PythonOperator(
     task_id="validate_base_model_exist_or_download",
     python_callable=prepare_model_and_data_for_training.download_and_extract_base_model,
     op_kwargs={
-        "base_model_csv": AIRFLOW_MODELS_CSV_FILE,
-        "base_model_folder": AIRFLOW_MODELS_FOLDER,
+        "base_model_csv": MODELS_CSV_FILE,
+        "base_model_folder": MODELS_FOLDER,
         "required_base_models": required_base_models,
     },
     trigger_rule="none_failed",
@@ -116,20 +109,14 @@ validate_base_model_exist_or_download = PythonOperator(
 validate_requested_model_exist_in_model_zoo_list = PythonOperator(
     task_id="validate_requested_model_exist_in_model_zoo_list",
     python_callable=prepare_model_and_data_for_training.validate_requested_model_exist_in_model_zoo_list,
-    op_kwargs={
-        "base_models_csv": AIRFLOW_MODELS_CSV_FILE,
-        "required_base_models": required_base_models,
-    },
+    op_kwargs={"base_models_csv": MODELS_CSV_FILE, "required_base_models": required_base_models,},
     dag=dag,
 )
 
 validate_deep_detector_model_repo_exist_or_clone = BashOperator(
     task_id="validate_deep_detector_model_repo_exist_or_clone",
     bash_command="[ -d '{{params.model_repo_folder}}' ] || git clone -v {{params.model_repo_url}} {{params.model_repo_folder}}",
-    params={
-        "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
-        "model_repo_url": DEEP_DETECTOR_MODEL_REPO_URL,
-    },
+    params={"model_repo_folder": MODEL_REPO_FOLDER, "model_repo_url": model_repo_git_remote_url,},
     provide_context=True,
     dag=dag,
 )
@@ -139,32 +126,39 @@ validate_deep_detector_dvc_remote_credential_present_or_add = BashOperator(
     bash_command="\
         [ -s '{{params.model_repo_folder}}/.dvc/config' ] || cd {{params.model_repo_folder}} && \
         dvc init && \
-        dvc remote add {{params.dvc_remote_name}} {{params.dvc_remote_url}} --default && \
+        dvc remote add {{params.model_repo_dvc_remote_name}} {{params.dvc_remote_url}} --default && \
         cat {{params.model_repo_folder}}/.dvc/config",
     params={
-        "model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER,
-        "dvc_remote_name": dvc_remote_name,
-        "dvc_remote_url": dvc_remote_url,
-        # "dvc_remote_client_id": dvc_remote_client_id,
-        # "dvc_remote_client_secret": dvc_remote_client_secret,
+        "model_repo_folder": MODEL_REPO_FOLDER,
+        "model_repo_dvc_remote_name": model_repo_dvc_remote_name,
+        "dvc_remote_url": gcp_base_dvc_bucket_url,
     },
     dag=dag,
 )
 
-create_data_bucket = BashOperator(
-    task_id="create_data_bucket",
+create_training_data_bucket = BashOperator(
+    task_id="create_training_data_bucket",
     bash_command="gsutil ls -b {{params.gcp_base_bucket_url}} || gsutil mb {{params.gcp_base_bucket_url}}",
     provide_context=True,
     params={"gcp_base_bucket_url": gcp_base_bucket_url},
     dag=dag,
 )
 
+create_dvc_data_bucket = BashOperator(
+    task_id="create_dvc_data_bucket",
+    bash_command="gsutil ls -b {{params.gcp_base_dvc_bucket_url}} || gsutil mb {{params.gcp_base_dvc_bucket_url}}",
+    provide_context=True,
+    params={"gcp_base_dvc_bucket_url": gcp_base_dvc_bucket_url},
+    dag=dag,
+)
+
+
 upload_data_to_dvc_repo_and_git = BashOperator(
     task_id=f"upload_data_to_dvc_repo_and_git",
     bash_command="cd {{params.model_repo_folder}} && \
                           git push && \
                           dvc push",
-    params={"model_repo_folder": AIRFLOW_MODEL_REPO_FOLDER},
+    params={"model_repo_folder": MODEL_REPO_FOLDER},
     dag=dag,
 )
 
@@ -174,7 +168,7 @@ for i, video_source in enumerate(video_feed_sources):
     validate_labelmap_file_content_are_the_same = PythonOperator(
         task_id=f"check_labelmap_file_content_are_the_same_" + video_source,
         python_callable=prepare_model_and_data_for_training.compare_label_map_file,
-        op_kwargs={"base_tf_record_folder": AIRFLOW_TF_RECORD_FOLDER, "video_source": video_source},
+        op_kwargs={"base_tf_record_folder": TF_RECORD_FOLDER, "video_source": video_source},
         dag=dag,
     )
     for j, base_model in enumerate(required_base_models):
@@ -185,12 +179,12 @@ for i, video_source in enumerate(video_feed_sources):
         model_folder = f"{video_source}_{base_model}"
         model_folder_with_ts = f"{model_folder}_{execution_date}"
 
-        model_training_folder = f"{AIRFLOW_TRAINING_FOLDER}/{model_folder_with_ts}"
+        model_training_folder = f"{TRAINING_FOLDER}/{model_folder_with_ts}"
         model_training_images_folder = f"{model_training_folder}/data/images"
         model_training_tf_records_folder = f"{model_training_folder}/data/tf_records"
         model_training_base_model_folder = f"{model_training_folder}/model/base"
 
-        model_repo_folder = f"{AIRFLOW_MODEL_REPO_FOLDER}/{model_folder}"
+        model_repo_folder = f"{MODEL_REPO_FOLDER}/{model_folder}"
         model_repo_images_folder = f"{model_repo_folder}/data/images"
         model_repo_annotations_folder = f"{model_repo_folder}/data/annotations/xmls"
         model_repo_tf_records_folder = f"{model_repo_folder}/data/tf_records"
@@ -221,7 +215,7 @@ for i, video_source in enumerate(video_feed_sources):
             task_id=f"copy_labelbox_output_images_to_training_folder_{video_source}_{base_model}",
             python_callable=prepare_model_and_data_for_training.copy_labelbox_output_images_to_training_folder,
             op_kwargs={
-                "labelbox_output_folder": AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER,
+                "labelbox_output_folder": LABELBOX_OUTPUT_FOLDER,
                 "model_training_images_folder": model_training_images_folder,
                 "video_source": video_source,
             },
@@ -232,7 +226,7 @@ for i, video_source in enumerate(video_feed_sources):
             task_id=f"copy_labelbox_output_images_to_model_repo_folder_{video_source}_{base_model}",
             python_callable=prepare_model_and_data_for_training.copy_labelbox_output_images_to_model_repo_folder,
             op_kwargs={
-                "labelbox_output_folder": AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER,
+                "labelbox_output_folder": LABELBOX_OUTPUT_FOLDER,
                 "model_repo_images_folder": model_repo_images_folder,
                 "video_source": video_source,
             },
@@ -259,7 +253,7 @@ for i, video_source in enumerate(video_feed_sources):
             task_id=f"copy_labelbox_output_annotations_to_model_repo_folder_{video_source}_{base_model}",
             python_callable=prepare_model_and_data_for_training.copy_labelbox_output_annotations_to_model_repo_folder,
             op_kwargs={
-                "labelbox_output_folder": AIRFLOW_LABEBOX_OUTPUT_DATA_FOLDER,
+                "labelbox_output_folder": LABELBOX_OUTPUT_FOLDER,
                 "model_repo_annotations_folder": model_repo_annotations_folder,
                 "video_source": video_source,
             },
@@ -286,7 +280,7 @@ for i, video_source in enumerate(video_feed_sources):
             task_id=f"copy_tf_records_to_training_folder_{video_source}_{base_model}",
             python_callable=prepare_model_and_data_for_training.copy_tf_records_to_training_folder,
             op_kwargs={
-                "tf_records_folder": AIRFLOW_TF_RECORD_FOLDER,
+                "tf_records_folder": TF_RECORD_FOLDER,
                 "model_training_tf_records_folder": model_training_tf_records_folder,
                 "video_source": video_source,
             },
@@ -297,7 +291,7 @@ for i, video_source in enumerate(video_feed_sources):
             task_id=f"copy_tf_records_to_model_repo_folder_{video_source}_{base_model}",
             python_callable=prepare_model_and_data_for_training.copy_tf_records_to_model_repo,
             op_kwargs={
-                "tf_records_folder": AIRFLOW_TF_RECORD_FOLDER,
+                "tf_records_folder": TF_RECORD_FOLDER,
                 "model_repo_tf_records_folder": model_repo_tf_records_folder,
                 "video_source": video_source,
             },
@@ -328,8 +322,8 @@ for i, video_source in enumerate(video_feed_sources):
             python_callable=prepare_model_and_data_for_training.copy_base_model_to_training_folder,
             op_kwargs={
                 "base_model": base_model,
-                "base_model_csv": AIRFLOW_MODELS_CSV_FILE,
-                "base_model_folder": AIRFLOW_MODELS_FOLDER,
+                "base_model_csv": MODELS_CSV_FILE,
+                "base_model_folder": MODELS_FOLDER,
                 "model_training_base_model_folder": model_training_base_model_folder,
             },
             dag=dag,
@@ -340,8 +334,8 @@ for i, video_source in enumerate(video_feed_sources):
             python_callable=prepare_model_and_data_for_training.copy_base_model_to_model_repo_folder,
             op_kwargs={
                 "base_model": base_model,
-                "base_model_csv": AIRFLOW_MODELS_CSV_FILE,
-                "base_model_folder": AIRFLOW_MODELS_FOLDER,
+                "base_model_csv": MODELS_CSV_FILE,
+                "base_model_folder": MODELS_FOLDER,
                 "model_repo_base_model_folder": model_repo_base_model_folder,
             },
             dag=dag,
@@ -398,7 +392,7 @@ for i, video_source in enumerate(video_feed_sources):
             bash_command="gsutil -m cp -r {{params.model_training_folder}}_{{ts_nodash}}  {{params.bucket_url}}_{{ts_nodash}}",
             provide_context=True,
             params={
-                "model_training_folder": f"{AIRFLOW_TRAINING_FOLDER}/{model_folder}",
+                "model_training_folder": f"{TRAINING_FOLDER}/{model_folder}",
                 "bucket_url": f"{gcp_base_bucket_url}/{model_folder}",
             },
             dag=dag,
@@ -420,8 +414,7 @@ for i, video_source in enumerate(video_feed_sources):
 if len(set(upload_tasks)) == len(required_base_models) * 2:
     for index, task in enumerate(upload_tasks):
         if index == 0:
-            join_task_5 >> create_data_bucket
-            create_data_bucket >> task
+            join_task_5 >> create_training_data_bucket >> create_dvc_data_bucket >> task
         else:
             upload_tasks[index - 1] >> task
 

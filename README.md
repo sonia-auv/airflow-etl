@@ -47,7 +47,7 @@ To complete this step you must ask for access either to the captain or software 
 You must execute the following commands to init you gcloud config:
 
 ```bash
-docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud init
+docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud beta auth application-default login
 ```
 
 You will the be asked to select your google account using a link that will displayed in the terminal.
@@ -56,20 +56,19 @@ Afterward you will need to input the verification code into the terminal.
 
 Once it's done you should be prompted to input the project name which should be *deep-learning-detection*
 
-And you must set you default region to *us-east-1-c*
+And you must set you default region to *us-central1*
 
 Then run the following command :
 
-```bash
-docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud auth login
-```
 You will the be asked to select your google account using a link that will displayed in the terminal.
 
 Afterward you will need to input the verification code into the terminal.
 
 
 ```bash
-$ docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud config set compute/region us-central1
+docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud config set compute/region us-central1
+docker exec -it sonia-auv-airflow_airflow-webserver_1 gcloud config set compute/zone us-central1
+```
 
 
 #### Airflow UI User
