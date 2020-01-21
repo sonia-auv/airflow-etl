@@ -76,11 +76,11 @@ def validate_reference_model_list_exist_or_create(
     :param base_model_csv: A CSV file which contains models informations
     :type base_model_csv: CSV file path
     :param positive_downstream: Positive Downstream task name
-    :type positive_downstream: Str
+    :type positive_downstream: str
     :param negative_downstream: Negative Downstream task name
-    :type negative_downstream: Str
+    :type negative_downstream: str
     :return: Downstream task name
-    :rtype: Str
+    :rtype: str
     """
 
     if file_ops.file_exist(base_model_csv):
@@ -96,9 +96,9 @@ def download_reference_model_list_as_csv(url, base_model_csv):
     from tensorflow model zoo
 
     :param url: Url of the model list
-    :type url: Str
+    :type url: str
     :param base_model_csv: CSV file path
-    :type base_model_csv: Str
+    :type base_model_csv: str
     """
     try:
         response = requests.get(url, allow_redirects=True)
@@ -115,9 +115,9 @@ def download_and_extract_base_model(base_model_csv, base_model_folder, required_
      Utility function which handle model tar file download and extraction
 
     :param base_model_csv: CSV file path
-    :type base_model_csv: Str
+    :type base_model_csv: str
     :param base_model_folder: Base model folder directory
-    :type base_model_folder: Str
+    :type base_model_folder: str
     :param required_base_models: A list of required base model, defaults to None
     :type required_base_models: list, optional
     """
@@ -159,9 +159,9 @@ def compare_label_map_file(base_tf_record_folder, video_source):
     and current parsed content from tensorflow model zoo url
 
     :param base_tf_record_folder: TF record directory
-    :type base_tf_record_folder: Str
+    :type base_tf_record_folder: str
     :param video_source: Current video source
-    :type video_source: Str
+    :type video_source: str
     :return: Does match or not
     :rtype: Boolean
     """
@@ -195,7 +195,7 @@ def validate_requested_model_exist_in_model_zoo_list(base_models_csv, required_b
     available from tensorflow model zoo
 
     :param base_models_csv: Model CSV file path
-    :type base_models_csv: Str
+    :type base_models_csv: str
     :param required_base_models: A list of required models
     :type required_base_models: list
     :raises ValueError: Required model list is empty error
@@ -224,7 +224,7 @@ def validate_model_presence_in_model_repo_or_create(model_repo_folder):
     A utility function to validate model repo exist otherwise create it
 
     :param model_repo_folder: Model repo folder path
-    :type model_repo_folder: Str
+    :type model_repo_folder: str
     """
 
     file_ops.folder_exist_or_create(model_repo_folder)
@@ -239,7 +239,7 @@ def create_training_folder(model_training_folder):
     A utility function to create training folder
 
     :param model_training_folder: Training folder directory
-    :type model_training_folder: Str
+    :type model_training_folder: str
     """
 
     file_ops.folder_exist_or_create(model_training_folder)
@@ -254,11 +254,11 @@ def copy_images_to_output(labelbox_output_folder, output_folder, video_source):
     to one training project
 
     :param labelbox_output_folder: Labelbox output directory
-    :type labelbox_output_folder: Str
+    :type labelbox_output_folder: str
     :param output_folder: Output directory
-    :type output_folder: Str
+    :type output_folder: str
     :param video_source: Current video source
-    :type video_source: Str
+    :type video_source: str
     """
     filtered_subfolders = file_ops.get_directory_subfolders_subset(
         labelbox_output_folder, video_source
@@ -280,12 +280,14 @@ def copy_labelbox_output_images_to_training_folder(
 ):
     """copy_labelbox_output_images_to_training_folder
 
-    :param labelbox_output_folder: [description]
-    :type labelbox_output_folder: [type]
-    :param model_training_images_folder: [description]
-    :type model_training_images_folder: [type]
-    :param video_source: [description]
-    :type video_source: [type]
+    A utility function to copy labelbox output images to training images folder
+
+    :param labelbox_output_folder: Labelbox output directory
+    :type labelbox_output_folder: str
+    :param model_training_images_folder: Model training images directory
+    :type model_training_images_folder: str
+    :param video_source: Current video source
+    :type video_source: str
     """
     file_ops.folder_exist_or_create(model_training_images_folder)
 
@@ -299,12 +301,14 @@ def copy_labelbox_output_images_to_model_repo_folder(
 ):
     """copy_labelbox_output_images_to_model_repo_folder
 
-    :param labelbox_output_folder: [description]
-    :type labelbox_output_folder: [type]
-    :param model_repo_images_folder: [description]
-    :type model_repo_images_folder: [type]
-    :param video_source: [description]
-    :type video_source: [type]
+     A utility function to copy labelbox output images to model repo images folder
+
+    :param labelbox_output_folder: Labelbox output directory
+    :type labelbox_output_folder: str
+    :param model_repo_images_folder: Model repo images directory
+    :type model_repo_images_folder: str
+    :param video_source: Current video source
+    :type video_source: str
     """
     file_ops.folder_exist_or_create(model_repo_images_folder)
 
@@ -316,15 +320,16 @@ def copy_labelbox_output_images_to_model_repo_folder(
 def copy_labelbox_output_annotations_to_model_repo_folder(
     labelbox_output_folder, model_repo_annotations_folder, video_source
 ):
-    """copy_labelbox_output_annotations_to_model_repo_folder [summary]
+    """copy_labelbox_output_annotations_to_model_repo_folder
 
-    :param labelbox_output_folder: [description]
-    :type labelbox_output_folder: [type]
-    :param model_repo_annotations_folder: [description]
-    :type model_repo_annotations_folder: [type]
-    :param video_source: [description]
-    :type video_source: [type]
-    :raises e: [description]
+    A utility function to copy annotations files to model repo
+
+    :param labelbox_output_folder: Labelbox output directory
+    :type labelbox_output_folder: str
+    :param model_repo_annotations_folder: Model repo annotations folder
+    :type model_repo_annotations_folder: str
+    :param video_source: Current video source
+    :type video_source: str
     """
     file_ops.folder_exist_or_create(model_repo_annotations_folder)
 
@@ -336,15 +341,16 @@ def copy_labelbox_output_annotations_to_model_repo_folder(
 def copy_tf_records_to_training_folder(
     tf_records_folder, model_training_tf_records_folder, video_source,
 ):
-    """copy_tf_records_to_training_folder [summary]
+    """copy_tf_records_to_training_folder
 
-    :param tf_records_folder: [description]
-    :type tf_records_folder: [type]
-    :param model_training_tf_records_folder: [description]
-    :type model_training_tf_records_folder: [type]
-    :param video_source: [description]
-    :type video_source: [type]
-    :raises e: [description]
+    A utility function to copy tf records to training folder
+
+    :param tf_records_folder: TF record directory path
+    :type tf_records_folder: str
+    :param model_training_tf_records_folder: Model training tf record directory
+    :type model_training_tf_records_folder: str
+    :param video_source: Current Video Source
+    :type video_source: str
     """
     training_tf_records_train_folder = f"{model_training_tf_records_folder}/train"
     training_tf_records_val_folder = f"{model_training_tf_records_folder}/val"
@@ -381,14 +387,16 @@ def copy_tf_records_to_training_folder(
 
 
 def copy_tf_records_to_model_repo(tf_records_folder, model_repo_tf_records_folder, video_source):
-    """copy_tf_records_to_model_repo [summary]
+    """copy_tf_records_to_model_repo
 
-    :param tf_records_folder: [description]
-    :type tf_records_folder: [type]
-    :param model_repo_tf_records_folder: [description]
-    :type model_repo_tf_records_folder: [type]
-    :param video_source: [description]
-    :type video_source: [type]
+    A utility function to copy tf records to training folder
+
+    :param tf_records_folder: TF record directory path
+    :type tf_records_folder: str
+    :param model_repo_tf_records_folder: Model repo tf record directory path
+    :type model_repo_tf_records_folder: str
+    :param video_source: Current video source
+    :type video_source: str
     """
     model_repo_tf_record_train_folder = f"{model_repo_tf_records_folder}/train"
     model_repo_tf_records_val_folder = f"{model_repo_tf_records_folder}/val"
@@ -436,16 +444,18 @@ def copy_tf_records_to_model_repo(tf_records_folder, model_repo_tf_records_folde
 def copy_base_model_to_training_folder(
     base_model, base_model_csv, base_model_folder, model_training_base_model_folder
 ):
-    """copy_base_model_to_training_folder [summary]
+    """copy_base_model_to_training_folder
 
-    :param base_model: [description]
-    :type base_model: [type]
-    :param base_model_csv: [description]
-    :type base_model_csv: [type]
-    :param base_model_folder: [description]
-    :type base_model_folder: [type]
-    :param model_training_base_model_folder: [description]
-    :type model_training_base_model_folder: [type]
+    A utility function to copy base model to training folder
+
+    :param base_model: Base model name
+    :type base_model: str
+    :param base_model_csv: Base model CSV file path
+    :type base_model_csv: str
+    :param base_model_folder: Base model download directory
+    :type base_model_folder: str
+    :param model_training_base_model_folder: Base model training directory
+    :type model_training_base_model_folder: str
     """
     base_models_df = pd.read_csv(base_model_csv)
 
@@ -471,17 +481,18 @@ def copy_base_model_to_training_folder(
 def copy_base_model_to_model_repo_folder(
     base_model, base_model_csv, base_model_folder, model_repo_base_model_folder
 ):
-    """copy_base_model_to_model_repo_folder [summary]
+    """copy_base_model_to_model_repo_folder
 
-    :param base_model: [description]
-    :type base_model: [type]
-    :param base_model_csv: [description]
-    :type base_model_csv: [type]
-    :param base_model_folder: [description]
-    :type base_model_folder: [type]
-    :param model_repo_base_model_folder: [description]
-    :type model_repo_base_model_folder: [type]
-    :raises e: [description]
+    A utility function to copy base model to model repo model directory
+
+    :param base_model: Base model name
+    :type base_model: str
+    :param base_model_csv: Base model CSV file path
+    :type base_model_csv: str
+    :param base_model_folder: Base model download directory
+    :type base_model_folder: str
+    :param model_repo_base_model_folder: Model repo base model directory
+    :type model_repo_base_model_folder: str
     """
     base_models_df = pd.read_csv(base_model_csv)
 
@@ -516,24 +527,27 @@ def generate_model_config(
 ):
     """generate_model_config
 
+    A utility function to fill in value of the template model config file
+    saved into airflow variables
 
-    :param model_training_folder: [description]
-    :type model_training_folder: [type]
-    :param model_repo_folder: [description]
-    :type model_repo_folder: [type]
-    :param model_folder_ts: [description]
-    :type model_folder_ts: [type]
-    :param model_config_template: [description]
-    :type model_config_template: [type]
-    :param num_classes: [description]
-    :type num_classes: [type]
-    :param bucket_url: [description]
-    :type bucket_url: [type]
-    :param training_batch_size: [description]
-    :type training_batch_size: [type]
-    :param training_epoch_count: [description]
-    :type training_epoch_count: [type]
-    :raises e: [description]
+
+    :param model_training_folder: Model training folder directory
+    :type model_training_folder: str
+    :param model_repo_folder: Model repo directory
+    :type model_repo_folder: str
+    :param model_folder_ts: Model folder name with timestamp
+    :type model_folder_ts: str
+    :param model_config_template: Model config template
+    :type model_config_template: str
+    :param num_classes: Number of class in the current model
+    :type num_classes: str
+    :param bucket_url: GCP bucket url
+    :type bucket_url: str
+    :param training_batch_size: Training batch size
+    :type training_batch_size: str
+    :param training_epoch_count: Training epoch count
+    :type training_epoch_count: str
+    :raises error: IOError on writing file on disk
     """
 
     pre_trained_model_checkpoint_path = f"{bucket_url}/{model_folder_ts}/model/base/model.ckpt"
@@ -569,7 +583,7 @@ def generate_model_config(
             with open(config_file, "w") as outfile:
                 outfile.write(model_config_template)
             logging.info(f"Model config file has been created successfully at {config_file}")
-        except IOError as e:
+        except IOError as error:
             logging.error(
                 "An error has been raised while trying to save the model config to a file on disk"
             )
