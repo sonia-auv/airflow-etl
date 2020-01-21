@@ -136,6 +136,7 @@ validate_deep_detector_dvc_remote_credential_present_or_add = BashOperator(
     dag=dag,
 )
 
+# This task is declared before since it will be added after dynamic tasks
 create_training_data_bucket = BashOperator(
     task_id="create_training_data_bucket",
     bash_command="gsutil ls -b {{params.gcp_base_bucket_url}} || gsutil mb {{params.gcp_base_bucket_url}}",
@@ -144,6 +145,7 @@ create_training_data_bucket = BashOperator(
     dag=dag,
 )
 
+# This task is declared before since it will be added after dynamic tasks
 create_dvc_data_bucket = BashOperator(
     task_id="create_dvc_data_bucket",
     bash_command="gsutil ls -b {{params.gcp_base_dvc_bucket_url}} || gsutil mb {{params.gcp_base_dvc_bucket_url}}",
@@ -153,6 +155,7 @@ create_dvc_data_bucket = BashOperator(
 )
 
 
+# This task is declared before since it will be added after dynamic tasks
 upload_data_to_dvc_repo_and_git = BashOperator(
     task_id=f"upload_data_to_dvc_repo_and_git",
     bash_command="cd {{params.model_repo_folder}} && \
@@ -162,18 +165,20 @@ upload_data_to_dvc_repo_and_git = BashOperator(
     dag=dag,
 )
 
+
+# Add sleep duration list to delay task (dvc lock file)
 sleeps = [item * 20 for item in range(1, len(video_feed_sources) * len(required_base_models))]
 
-for i, video_source in enumerate(video_feed_sources):
+for idx1, video_source in enumerate(video_feed_sources):
     validate_labelmap_file_content_are_the_same = PythonOperator(
         task_id=f"check_labelmap_file_content_are_the_same_" + video_source,
         python_callable=prepare_model_and_data_for_training.compare_label_map_file,
         op_kwargs={"base_tf_record_folder": TF_RECORD_FOLDER, "video_source": video_source},
         dag=dag,
     )
-    for j, base_model in enumerate(required_base_models):
+    for idx2, base_model in enumerate(required_base_models):
 
-        sleep_duration = sleeps[i + j]
+        sleep_duration = sleeps[idx1 + idx2]
         execution_date = "{{ts_nodash}}"
 
         model_folder = f"{video_source}_{base_model}"
