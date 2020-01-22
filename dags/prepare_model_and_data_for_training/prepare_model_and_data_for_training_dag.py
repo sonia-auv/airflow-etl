@@ -30,7 +30,7 @@ default_args = {
     "email_on_failure": False,
     "email_on_retry": False,
     "on_failure_callback": slack.task_fail_slack_alert,
-    "retries": 0,
+    "retries": 2,
 }
 
 
