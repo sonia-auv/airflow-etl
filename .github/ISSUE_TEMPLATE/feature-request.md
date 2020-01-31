@@ -1,3 +1,12 @@
+---
+name: Feature Request
+about: Suggest an idea for this project
+title: ''
+labels: ''
+assignees: ''
+
+---
+
 **Warning :** Before creating an issue or task, make sure that it does not already exists in the [issue tracker](../). Thank you.
 
 ## Priority
