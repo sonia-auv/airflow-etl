@@ -52,7 +52,7 @@ def get_proper_ontology(json_file):
 
 
 dag = DAG(
-    "create_project_into_labelbox", default_args=default_args, catchup=False, schedule_interval=None
+    "3-create_project_into_labelbox", default_args=default_args, catchup=False, schedule_interval=None
 )
 
 

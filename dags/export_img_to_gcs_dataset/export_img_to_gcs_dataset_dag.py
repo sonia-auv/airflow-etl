@@ -44,7 +44,7 @@ bucket_image_storage_url = f"{GCP_STORAGE_BASE}{bucket_name}/images/"
 
 
 dag = DAG(
-    "export_images_to_gcs_dataset", default_args=default_args, catchup=False, schedule_interval=None
+    "2-export_images_to_gcs_dataset", default_args=default_args, catchup=False, schedule_interval=None
 )
 
 
