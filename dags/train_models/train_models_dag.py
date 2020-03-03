@@ -38,7 +38,7 @@ default_args = {
 tpu_supported_models = Variable.get("tpu_training_supported_models").split(",")
 # distributed_training = Variable.get("distributed_training")
 
-dag = DAG("train_model", default_args=default_args, catchup=False, schedule_interval=None)
+dag = DAG("6-train_model", default_args=default_args, catchup=False, schedule_interval=None)
 
 start_task = DummyOperator(task_id="start_task", dag=dag)
 end_task = DummyOperator(task_id="end_task", dag=dag)

@@ -46,7 +46,7 @@ default_args = {
 }
 
 with DAG(
-    "extract_image_from_ros_bag", default_args=default_args, catchup=False, schedule_interval=None,
+    "1-extract_image_from_ros_bag", default_args=default_args, catchup=False, schedule_interval=None,
 ) as dag:
 
     formated_topics = " ".join(TOPICS)

@@ -62,7 +62,7 @@ def get_object_class_count(video_source):
 
 
 dag = DAG(
-    "prepare_model_and_data_for_training",
+    "5-prepare_model_and_data_for_training",
     default_args=default_args,
     catchup=False,
     schedule_interval=None,
