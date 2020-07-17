@@ -15,24 +15,33 @@ services:
 
   airflow-webserver:
     image: ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG}
+    build:
+      args:
+        - DVC_REMOTE_GDRIVE_NAME=${DVC_REMOTE_GDRIVE_NAME}
+        - DVC_REMOTE_GDRIVE_URL=${DVC_REMOTE_GDRIVE_URL}
+        - DVC_REMOTE_GDRIVE_CLIENT_ID=${DVC_REMOTE_GDRIVE_CLIENT_ID}
+        - DVC_REMOTE_GDRIVE_CLIENT_SECRET=${DVC_REMOTE_GDRIVE_CLIENT_SECRET}
+        - GIT_USER_NAME=${GIT_USER_NAME}
+        - GIT_USER_EMAIL=${GIT_USER_EMAIL}
     hostname: airflow-webserver
     restart: always
     depends_on:
       - airflow-postgres
     environment:
+      - AIRFLOW_FERNET_KEY
+      - HOST_ROOT_FOLDER=${HOST_ROOT_FOLDER}
       - POSTGRES_USER
       - POSTGRES_PASSWORD
       - POSTGRES_DB
       - POSTGRES_HOST
       - POSTGRES_PORT
-      - AIRFLOW_FERNET_KEY
-      - HOST_ROOT_FOLDER=${HOST_ROOT_FOLDER}
+      - SSH_AUTH_SOCK=$SSH_AUTH_SOCK
     volumes:
       - ${AIRFLOW_DAG_DIR}:/usr/local/airflow/dags
       - $PWD/data:/usr/local/airflow/data
       - $PWD/logs:/usr/local/airflow/logs
       - /var/run/docker.sock:/var/run/docker.sock
-
+      - $SSH_AUTH_SOCK:$SSH_AUTH_SOCK
     ports:
       - "4080:8080"
     command: webserver
@@ -44,5 +53,3 @@ services:
 volumes:
   pg-data: {}
   pg-log: {}
-  gcloud-config: {}
-  ssh-keys: {} # TODO: Useless ??

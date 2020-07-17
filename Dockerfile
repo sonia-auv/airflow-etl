@@ -1,39 +1,22 @@
 # AUTHOR: Martin Gauthier
-# DESCRIPTION: Airflow and ROS container
+# DESCRIPTION: Airflow container image
 # HIGHLY INSPIRED BY: https://github.com/puckel/docker-airflow
-
 FROM python:3.7-slim-stretch
 LABEL maintainer="gauthiermartin86@gmail.com"
 LABEL description="A docker image of Airflow an ETL orchestration plateform"
 
 # *********************************************
 # Declaring arguments variables
+
+ARG AIRFLOW_HOME=/usr/local/airflow
+ARG BUILD_ENV="local"
 ARG DOCKER_GROUP_ID=999
 ARG GCLOUD_SERVICE_ACCOUNT_EMAIL
-ARG BUILD_ENV="local"
 # *********************************************
 # Declaring environements variables
-
 # Never prompts the user for choices on installation/configuration of packages
 ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
-
-# Airflow
-ENV AIRFLOW_HOME=/usr/local/airflow
-
-# Google cloud
-ENV GCLOUD_SERVICE_ACCOUNT_EMAIL=${GCLOUD_SERVICE_ACCOUNT_EMAIL}
-
-# Tensorflow
-ARG PROTOC_VERSION=3.10.1
-ARG PROTOC_ZIP=protoc-${PROTOC_VERSION}-linux-x86_64.zip
-ARG TENSORFLOW_OBJ_DETECTION_VERSION=1.12.0
-ARG TENSORFLOW_OBJECT_DETECTION_LIB_PATH=${AIRFLOW_HOME}/models-${TENSORFLOW_OBJ_DETECTION_VERSION}/research/
-ARG TENSORFLOW_OBJECT_DETECTION_SLIM_PATH=${AIRFLOW_HOME}/models-${TENSORFLOW_OBJ_DETECTION_VERSION}/research/slim
-
-ENV PROTOC_VERSION=${PROTOC_VERSION}
-ENV TENSORFLOW_OBJECT_DETECTION_VERSION=${TENSORFLOW_OBJ_DETECTION_VERSION}
-
 
 # Define en_US.
 ENV LANGUAGE en_US.UTF-8
@@ -41,6 +24,21 @@ ENV LANG en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 ENV LC_CTYPE en_US.UTF-8
 ENV LC_MESSAGES en_US.UTF-8
+
+ENV AIRFLOW_HOME=${AIRFLOW_HOME}
+ENV GCLOUD_SERVICE_ACCOUNT_EMAIL=${GCLOUD_SERVICE_ACCOUNT_EMAIL}
+
+# Tensorflow
+ARG PROTOC_VERSION=3.10.1
+ARG PROTOC_ZIP=protoc-${PROTOC_VERSION}-linux-x86_64.zip
+ARG TENSORFLOW_OBJ_DETECTION_VERSION=1.13.0
+ARG TENSORFLOW_OBJECT_DETECTION_LIB_PATH=${AIRFLOW_HOME}/models-${TENSORFLOW_OBJ_DETECTION_VERSION}/research/
+ARG TENSORFLOW_OBJECT_DETECTION_SLIM_PATH=${AIRFLOW_HOME}/models-${TENSORFLOW_OBJ_DETECTION_VERSION}/research/slim
+
+ENV PROTOC_VERSION=${PROTOC_VERSION}
+ENV TENSORFLOW_OBJECT_DETECTION_VERSION=${TENSORFLOW_OBJ_DETECTION_VERSION}
+ENV TENSORFLOW_OBJECT_DETECTION_BASE_FOLDER=${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}
+ENV TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER=${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}/research/
 
 # *********************************************
 RUN set -ex \
@@ -51,7 +49,6 @@ RUN set -ex \
     libssl-dev \
     libffi-dev \
     libpq-dev \
-    git \
     unzip \
     wget \
     lsb-release \
@@ -70,6 +67,8 @@ RUN set -ex \
     rsync \
     netcat \
     locales \
+    git \
+    ssh-client\
     ca-certificates \
     apt-transport-https \
     libglib2.0-0 \
@@ -135,6 +134,7 @@ RUN set -ex \
     $buildDeps \
     && wget -q -c https://github.com/tensorflow/models/archive/v${TENSORFLOW_OBJECT_DETECTION_VERSION}.tar.gz -O - | tar -xz -C ${AIRFLOW_HOME} \
     && cd ${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}/research/ \
+    && chmod +x object_detection/dataset_tools/create_pycocotools_package.sh \
     && protoc object_detection/protos/*.proto --python_out=. \
     && apt-get purge --auto-remove -yqq $buildDeps\
     && rm -rf \
@@ -145,16 +145,26 @@ RUN set -ex \
     /usr/share/doc \
     /usr/share/doc-base
 
+
 ENV PYTHONPATH=${PYTHONPATH}:${TENSORFLOW_OBJECT_DETECTION_LIB_PATH}:${TENSORFLOW_OBJECT_DETECTION_SLIM_PATH}
 # Testing installation of the API
 RUN cd ${AIRFLOW_HOME}/models-${TENSORFLOW_OBJECT_DETECTION_VERSION}/research/ \
     && python object_detection/builders/model_builder_test.py
+
+
 # *********************************************
 # Creating airflow logs folder
 RUN mkdir -p ${AIRFLOW_HOME}/logs
 RUN mkdir -p ${AIRFLOW_HOME}/.config/gcloud/
 
-# *********************************************
+# Creating SSH folder and adding github to know host
+RUN mkdir ${AIRFLOW_HOME}/.ssh/ \
+    && ssh-keyscan -H github.com >> ${AIRFLOW_HOME}/.ssh/known_hosts
+
+# ********************************************
+# Setting Git
+COPY config/.gitconfig ${AIRFLOW_HOME}/.gitconfig
+
 #Copying our airflow config and setting ownership
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
 COPY config/variables.json ${AIRFLOW_HOME}/variables.json

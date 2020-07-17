@@ -193,8 +193,11 @@ def concat_json(json_files, output_path):
 
 def folder_exist_or_create(folder_path):
     # TODO: Add docstring
-    if not os.path.exists(folder_path):
+    if not os.path.isdir(folder_path):
         os.makedirs(folder_path)
+        logging.info("Directory has been created")
+    else:
+        logging.info("Directory already exist")
 
 
 def file_exist(file_path):

@@ -20,6 +20,6 @@ if [ "$1" = "webserver" ] || [ "$1" = "worker" ] || [ "$1" = "scheduler" ] ; the
 fi
 
 echo "Initialize database..."
-airflow initdb
+airflow upgradedb
 exec airflow webserver &
 exec airflow scheduler
