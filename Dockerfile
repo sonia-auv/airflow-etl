@@ -7,7 +7,7 @@ ARG VERSION
 ARG SONIA_USER=sonia
 ARG SONIA_UID=1000
 ARG BASE_LIB_NAME=apache-airflow
-ARG DOCKER_GROUP_ID=1000
+ARG DOCKER_GROUP_ID=999
 
 LABEL maintainer="club.sonia@etsmtl.net"
 LABEL description="A docker image of Apache-Airflow an ETL orchestration plateform with additional GPU Support"
@@ -18,21 +18,18 @@ LABEL net.etsmtl.sonia-auv.base_lib.name=${BASE_LIB_NAME}
 
 # Never prompts the user for choices on installation/configuration of packages
 ENV DEBIAN_FRONTEND noninteractive
-ENV TERM linux
 
-# Define en_US.
-ENV LANGUAGE en_US.UTF-8
-ENV LANG en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
-ENV LC_CTYPE en_US.UTF-8
-ENV LC_MESSAGES en_US.UTF-8
+# Making sure language variable are set
+ENV LANGUAGE=C.UTF-8 LANG=C.UTF-8 LC_ALL=C.UTF-8 \
+    LC_CTYPE=C.UTF-8 LC_MESSAGES=C.UTF-8
 
-ENV AIRFLOW_HOME=/usr/local/airflow
-ENV TENSORFLOW_OBJECT_DETECTION_HOME=/usr/local/tensorflow/models
+ENV AIRFLOW_HOME=/home/airflow
+ENV TENSORFLOW_OBJECT_DETECTION_HOME=/home/airflow/tensorflow/models
 ENV TENSORFLOW_OBJECT_DETECTION_RESEARCH=${TENSORFLOW_OBJECT_DETECTION_HOME}/research/
 ENV TENSORFLOW_OBJECT_DETECTION_SLIM=${TENSORFLOW_OBJECT_DETECTION_RESEARCH}/slim/
-ENV PYTHONPATH=${PYTHONPATH}:${TENSORFLOW_OBJECT_DETECTION_RESEARCH}:${TENSORFLOW_OBJECT_DETECTION_SLIM}
+#ENV PYTHONPATH=${PYTHONPATH}:${TENSORFLOW_OBJECT_DETECTION_RESEARCH}:${TENSORFLOW_OBJECT_DETECTION_SLIM}
 ENV TF_CPP_MIN_LOG_LEVEL 3
+
 
 
 RUN set -ex \
@@ -70,12 +67,9 @@ RUN set -ex \
     libfontconfig1 \
     libxrender1 \
     libxext6 \
-    && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
-    && locale-gen \
-    && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && addgroup --gid ${DOCKER_GROUP_ID} docker \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} -G docker airflow \
-    && pip install -U pip setuptools wheel \
+    && pip install -U  pip setuptools wheel \
     && apt-get purge --auto-remove -yqq $buildDeps \
     && apt-get autoremove -yqq --purge \
     && apt-get clean \
@@ -105,8 +99,8 @@ RUN apt-get update -yqq \
     && chown -R airflow: ${TENSORFLOW_OBJECT_DETECTION_HOME} \
     && git clone https://github.com/tensorflow/models.git ${TENSORFLOW_OBJECT_DETECTION_HOME} \
     && (cd ${TENSORFLOW_OBJECT_DETECTION_RESEARCH} && protoc object_detection/protos/*.proto --python_out=.) \
-    && cp ${TENSORFLOW_OBJECT_DETECTION_RESEARCH}/object_detection/packages/tf1/setup.py ${TENSORFLOW_OBJECT_DETECTION_RESEARCH} \
-    && python ${TENSORFLOW_OBJECT_DETECTION_RESEARCH}/setup.py install \
+    && (cd ${TENSORFLOW_OBJECT_DETECTION_RESEARCH} && cp object_detection/packages/tf1/setup.py ./) \
+    && (cd ${TENSORFLOW_OBJECT_DETECTION_RESEARCH} && python -m pip install .) \
     && python ${TENSORFLOW_OBJECT_DETECTION_RESEARCH}/object_detection/builders/model_builder_tf1_test.py \
     && rm -rf \
     /var/lib/apt/lists/* \
@@ -116,6 +110,8 @@ RUN apt-get update -yqq \
     /usr/share/doc \
     /usr/share/doc-base
 
+
+RUN python object_detection/builders/model_builder_tf1_test.py
 # Creating airflow logs folder
 # Creating SSH folder and adding github to know host
 RUN mkdir -p ${AIRFLOW_HOME}/logs \
@@ -135,6 +131,6 @@ COPY scripts/entrypoint.sh /entrypoint.sh
 
 EXPOSE 8080
 
-USER airflow
+# USER airflow
 WORKDIR ${AIRFLOW_HOME}
 ENTRYPOINT ["/entrypoint.sh"]
