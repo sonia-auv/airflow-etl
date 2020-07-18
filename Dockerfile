@@ -4,7 +4,7 @@ FROM tensorflow/tensorflow:1.15.2-gpu-py3
 ARG BUILD_DATE
 ARG BUILD_ENV
 ARG VERSION
-ARG SONIA_USER=sonia
+ARG SONIA_USER=airflow
 ARG SONIA_UID=1000
 ARG BASE_LIB_NAME=apache-airflow
 ARG DOCKER_GROUP_ID=999
@@ -23,8 +23,8 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV LANGUAGE=C.UTF-8 LANG=C.UTF-8 LC_ALL=C.UTF-8 \
     LC_CTYPE=C.UTF-8 LC_MESSAGES=C.UTF-8
 
-ENV AIRFLOW_HOME=/home/airflow
-ENV TENSORFLOW_OBJECT_DETECTION_HOME=/home/airflow/tensorflow/models
+ENV AIRFLOW_HOME=/home/${SONIA_USER}/airflow
+ENV TENSORFLOW_OBJECT_DETECTION_HOME=/home/${SONIA_USER}/tensorflow/models
 ENV TENSORFLOW_OBJECT_DETECTION_RESEARCH=${TENSORFLOW_OBJECT_DETECTION_HOME}/research/
 ENV TENSORFLOW_OBJECT_DETECTION_SLIM=${TENSORFLOW_OBJECT_DETECTION_RESEARCH}/slim/
 #ENV PYTHONPATH=${PYTHONPATH}:${TENSORFLOW_OBJECT_DETECTION_RESEARCH}:${TENSORFLOW_OBJECT_DETECTION_SLIM}
@@ -68,8 +68,12 @@ RUN set -ex \
     libxrender1 \
     libxext6 \
     && addgroup --gid ${DOCKER_GROUP_ID} docker \
-    && useradd -ms /bin/bash -d ${AIRFLOW_HOME} -G docker airflow \
+    && useradd -ms /bin/bash -G docker ${SONIA_USER} \
     && pip install -U  pip setuptools wheel \
+    && export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
+    && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list \
+    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
+    && apt-get update -y && apt-get install google-cloud-sdk   -y \
     && apt-get purge --auto-remove -yqq $buildDeps \
     && apt-get autoremove -yqq --purge \
     && apt-get clean \
@@ -84,6 +88,8 @@ RUN set -ex \
 # Installing Airflow and other pythons requirements
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
+
+
 
 # Intalling tensorflow object detection framework
 RUN apt-get update -yqq \
@@ -110,8 +116,6 @@ RUN apt-get update -yqq \
     /usr/share/doc \
     /usr/share/doc-base
 
-
-RUN python object_detection/builders/model_builder_tf1_test.py
 # Creating airflow logs folder
 # Creating SSH folder and adding github to know host
 RUN mkdir -p ${AIRFLOW_HOME}/logs \
@@ -131,6 +135,6 @@ COPY scripts/entrypoint.sh /entrypoint.sh
 
 EXPOSE 8080
 
-# USER airflow
+USER ${SONIA_USER}
 WORKDIR ${AIRFLOW_HOME}
 ENTRYPOINT ["/entrypoint.sh"]
