@@ -66,7 +66,7 @@
             }
         ]
     },
-    "tensorflow_model_zoo_markdown_url": "https://raw.githubusercontent.com/tensorflow/models/master/research/object_detection/g3doc/detection_model_zoo.md",
+    "tensorflow_model_zoo_markdown_url": "https://raw.githubusercontent.com/tensorflow/models/master/research/object_detection/g3doc/tf1_detection_zoo.md",
     "tensorflow_model_zoo_models": "ssd_mobilenet_v1_coco,ssd_mobilenet_v1_fpn_coco,ssd_mobilenet_v2_coco",
     "tpu_training_supported_models": "ssd_mobilenet_v1_0.75_depth_coco,ssd_mobilenet_v1_quantized_coco,ssd_mobilenet_v1_0.75_depth_quantized_coco,ssd_mobilenet_v1_ppn_coco,ssd_mobilenet_v1_ppn_coco,ssd_resnet_50_fpn_coco",
     "video_feed_sources": "front,bottom"

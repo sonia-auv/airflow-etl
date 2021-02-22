@@ -16,7 +16,7 @@ from export_img_to_gcs_dataset import export_img_to_gcs_dataset
 from utils import slack
 
 
-BASE_AIRFLOW_FOLDER = "/usr/local/airflow/"
+BASE_AIRFLOW_FOLDER = "/home/airflow/"
 AIRFLOW_DATA_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, "data")
 AIRFLOW_IMAGE_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "images")
 AIRFLOW_CSV_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "csv")

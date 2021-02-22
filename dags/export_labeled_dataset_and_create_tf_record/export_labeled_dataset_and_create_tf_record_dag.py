@@ -21,7 +21,7 @@ HOST_LABELBOX_INPUT_FOLDER = HOST_LABELBOX_FOLDER + "input/"
 HOST_LABELBOX_OUTPUT_FOLDER = HOST_LABELBOX_FOLDER + "/output/"
 
 
-BASE_AIRFLOW_FOLDER = "/usr/local/airflow/"
+BASE_AIRFLOW_FOLDER = "/home/airflow/"
 AIRFLOW_DATA_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, "data")
 
 AIRFLOW_CURRENT_DAG_FOLDER = os.path.dirname(os.path.realpath(__file__))
