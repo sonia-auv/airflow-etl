@@ -11,9 +11,9 @@ from airflow.operators.python_operator import BranchPythonOperator, PythonOperat
 from prepare_model_and_data_for_training import prepare_model_and_data_for_training
 from utils import file_ops, slack
 
-BASE_AIRFLOW_FOLDER = "/home/airflow/"
+BASE_AIRFLOW_FOLDER = "/home/airflow"
 AIRFLOW_DATA_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, "data")
-AIRFLOW_JSON_FOLDER = os.path.join(BASE_DATA_FOLDER, "json")
+AIRFLOW_JSON_FOLDER = os.path.join(BASE_AIRFLOW_FOLDER, "json")
 AIRFLOW_MODELS_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "models", "base")
 AIRFLOW_MODELS_CSV_FILE = os.path.join(AIRFLOW_DATA_FOLDER, "models", "model_list.csv")
 AIRFLOW_TRAINING_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "training")
@@ -53,7 +53,7 @@ def get_object_class_count(video_source):
 
 
 dag = DAG(
-    "prepare_model_and_data_for_training",
+    "5-prepare_model_and_data_for_training",
     default_args=default_args,
     catchup=False,
     schedule_interval=None,
