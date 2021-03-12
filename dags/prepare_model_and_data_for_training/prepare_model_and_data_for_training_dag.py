@@ -38,7 +38,7 @@ default_args = {
 tensorflow_model_zoo_markdown_url = Variable.get("tensorflow_model_zoo_markdown_url")
 base_models = Variable.get("tensorflow_model_zoo_models").split(",")
 video_feed_sources = Variable.get("video_feed_sources").split(",")
-gcp_base_bucket_url = f"gs://{Variable.get('bucket_name')}-training/"
+gcp_base_bucket_url = f"gs://{Variable.get('bucket_name')}-training"
 
 
 def get_proper_model_config(video_source, model_name):

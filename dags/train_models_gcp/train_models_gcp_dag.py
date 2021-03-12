@@ -10,7 +10,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 
-from train_models import train_models
+from train_models_gcp import train_models
 from utils import file_ops, slack
 
 AIRFLOW_BASE_FOLDER = "/home/airflow/"
@@ -21,7 +21,7 @@ TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER = os.environ[
     "TENSORFLOW_OBJECT_DETECTION_RESEARCH"
 ]
 
-#GCP_ZONE = Variable.get("gcp_zone")
+GCP_ZONE = Variable.get("gcp_zone")
 
 default_args = {
     "owner": "airflow",
@@ -38,7 +38,7 @@ default_args = {
 tpu_supported_models = Variable.get("tpu_training_supported_models").split(",")
 # distributed_training = Variable.get("distributed_training")
 
-dag = DAG("6-train_model", default_args=default_args, catchup=False, schedule_interval=None)
+dag = DAG("6-train_models_gcp", default_args=default_args, catchup=False, schedule_interval=None)
 
 start_task = DummyOperator(task_id="start_task", dag=dag)
 end_task = DummyOperator(task_id="end_task", dag=dag)
@@ -63,8 +63,9 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
     job_dir = gcp_url + "/"
     packages = "dist/object_detection-0.1.tar.gz,slim/dist/slim-0.1.tar.gz,/tmp/pycocotools/pycocotools-2.0.tar.gz"
     module_name = "object_detection.model_main"
-    #runtime_version = "1.13"
-    #region = GCP_ZONE
+    runtime_version = "1.13"
+    scale_tier = "BASIC_GPU"
+    region = GCP_ZONE
     model_dir = gcp_url + "/train_data/"
     pipeline_config_path = f"{gcp_url}/pipeline.config"
     checkpoint_dir = gcp_url + "/eval_data/"
@@ -72,11 +73,11 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
     training_task_name = f"train_{training_name}_{now}"
     eval_task_name = f"eval_{training_name}_{now}"
 
-    train_model_on_local_gpu_cmd = f"{cd_obj_detect_api_cmd} && gcloud ai-platform local train {training_task_name} --job-dir={job_dir} --packages {packages} --module-name {module_name} --model_dir={model_dir} --pipeline_config_path={pipeline_config_path}"
+    train_model_on_basic_gpu_cmd = f"{cd_obj_detect_api_cmd} && gcloud ai-platform jobs submit training {training_task_name} --job-dir={job_dir} --packages {packages} --module-name {module_name} --runtime-version {runtime_version} --scale-tier {scale_tier} --region {region} -- --model_dir={model_dir} --pipeline_config_path={pipeline_config_path}"
 
-    train_model_on_local_gpu = BashOperator(
-        task_id="train_model_" + training_name + "_on_local_gpu",
-        bash_command=train_model_on_local_gpu_cmd,
+    train_model_on_basic_gpu = BashOperator(
+        task_id="train_model_" + training_name + "_on_basic_gpu",
+        bash_command=train_model_on_basic_gpu_cmd,
         dag=dag,
     )
 
@@ -84,23 +85,21 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
         task_id="delay_train_log_" + training_name, bash_command="sleep 30s", dag=dag
     )
 
-    """
     display_train_model_logs_cmd = "gcloud ai-platform jobs stream-logs {training_task_name}"
     display_train_model_logs = BashOperator(
         task_id="display_train_model_logs_" + training_task_name,
         bash_command=display_train_model_logs_cmd,
         dag=dag,
     )
-    """
 
     delay_eval_task = BashOperator(
         task_id="delay_eval_" + training_name, bash_command="sleep 6m", dag=dag
     )
 
-    eval_model_on_local_gpu_cmd = f"{cd_obj_detect_api_cmd} && gcloud ai-platform local train {eval_task_name} --job-dir={job_dir} --packages {packages} --module-name {module_name} --model_dir={model_dir} --pipeline_config_path={pipeline_config_path} --checkpoint_dir={checkpoint_dir}"
+    eval_model_on_basic_gpu_cmd = f"{cd_obj_detect_api_cmd} && gcloud ai-platform jobs submit training {eval_task_name} --job-dir={job_dir} --packages {packages} --module-name {module_name} --runtime-version {runtime_version} --scale-tier {scale_tier} --region {region} -- --model_dir={model_dir} --pipeline_config_path={pipeline_config_path} --checkpoint_dir={checkpoint_dir}"
 
-    eval_model_on_local_gpu = BashOperator(
-        task_id="eval_model_" + training_name + "_on_local_gpu",
+    eval_model_on_basic_gpu = BashOperator(
+        task_id="eval_model_" + training_name + "_on_basic_gpu",
         bash_command=eval_model_on_basic_gpu_cmd,
         dag=dag,
     )
@@ -109,14 +108,12 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
         task_id="delay_eval_log_" + training_name, bash_command="sleep 30s", dag=dag
     )
 
-    """
     display_eval_model_logs_cmd = "gcloud ai-platform jobs stream-logs {training_task_name}"
     display_eval_model_logs = BashOperator(
         task_id="display_eval_model_logs_" + eval_task_name,
         bash_command=display_eval_model_logs_cmd,
         dag=dag,
     )
-    """
 
     download_trained_model_cmd = ""
     download_trained_model = BashOperator(
@@ -149,8 +146,8 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
     # TODO: Define model config.yaml
     # TODO: Export model to git or docker image for deploy ?
     start_task >> package_tensorflow_libs_with_dependencies
-    package_tensorflow_libs_with_dependencies >> train_model_on_local_gpu
-    train_model_on_local_gpu >> [delay_train_log_task, delay_eval_task]
-    delay_train_log_task >> notify_slack_channel_with_tensorboard_cmd
-    delay_eval_task >> eval_model_on_local_gpu >> delay_eval_log_task >> notify_slack_channel_with_tensorboard_cmd
+    package_tensorflow_libs_with_dependencies >> train_model_on_basic_gpu
+    train_model_on_basic_gpu >> [delay_train_log_task, delay_eval_task]
+    delay_train_log_task >> display_train_model_logs >> notify_slack_channel_with_tensorboard_cmd
+    delay_eval_task >> eval_model_on_basic_gpu >> delay_eval_log_task >> display_eval_model_logs >> notify_slack_channel_with_tensorboard_cmd
     notify_slack_channel_with_tensorboard_cmd >> end_task

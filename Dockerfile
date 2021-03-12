@@ -27,7 +27,7 @@ ENV AIRFLOW_HOME=/home/${SONIA_USER}
 ENV TENSORFLOW_OBJECT_DETECTION_HOME=/home/${SONIA_USER}/tensorflow/models
 ENV TENSORFLOW_OBJECT_DETECTION_RESEARCH=${TENSORFLOW_OBJECT_DETECTION_HOME}/research/
 ENV TENSORFLOW_OBJECT_DETECTION_SLIM=${TENSORFLOW_OBJECT_DETECTION_RESEARCH}/slim/
-#ENV PYTHONPATH=${PYTHONPATH}:${TENSORFLOW_OBJECT_DETECTION_RESEARCH}:${TENSORFLOW_OBJECT_DETECTION_SLIM}
+ENV PYTHONPATH=${PYTHONPATH}:${TENSORFLOW_OBJECT_DETECTION_RESEARCH}:${TENSORFLOW_OBJECT_DETECTION_SLIM}
 ENV TF_CPP_MIN_LOG_LEVEL 3
 
 
@@ -50,6 +50,7 @@ RUN set -ex \
     && apt-get upgrade -yqq \
     && apt-get install -yqq --no-install-recommends \
     $buildDeps \
+    python-minimal \
     freetds-bin \
     build-essential \
     default-libmysqlclient-dev \
@@ -90,7 +91,7 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
 
-
+# TODO docker exec bcc6fb73e518 bash -c 'cd /home/airflow/tensorflow/models/research && chmod +x object_detection/dataset_tools/create_pycocotools_package.sh'
 # Intalling tensorflow object detection framework
 RUN apt-get update -yqq \
     && apt-get upgrade -yqq \
@@ -101,6 +102,8 @@ RUN apt-get update -yqq \
     python3-pil \
     python3-lxml \
     python3-tk \
+    python3-opencv \
+    && pip install opencv-python \
     && mkdir -p ${TENSORFLOW_OBJECT_DETECTION_HOME} \
     && chown -R airflow: ${TENSORFLOW_OBJECT_DETECTION_HOME} \
     && git clone https://github.com/tensorflow/models.git ${TENSORFLOW_OBJECT_DETECTION_HOME} \
@@ -108,13 +111,14 @@ RUN apt-get update -yqq \
     && (cd ${TENSORFLOW_OBJECT_DETECTION_RESEARCH} && cp object_detection/packages/tf1/setup.py ./) \
     && (cd ${TENSORFLOW_OBJECT_DETECTION_RESEARCH} && python -m pip install .) \
     && python ${TENSORFLOW_OBJECT_DETECTION_RESEARCH}/object_detection/builders/model_builder_tf1_test.py \
+    && chmod +x ${TENSORFLOW_OBJECT_DETECTION_RESEARCH}/object_detection/dataset_tools/create_pycocotools_package.sh \
     && rm -rf \
     /var/lib/apt/lists/* \
     /tmp/* \
     /var/tmp/* \
     /usr/share/man \
     /usr/share/doc \
-    /usr/share/doc-base
+    /usr/share/doc-base 
 
 # Creating airflow logs folder
 # Creating SSH folder and adding github to know host
