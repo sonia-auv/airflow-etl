@@ -1,4 +1,5 @@
 {
+    "local_training": "True",
     "bucket_name": "robosub-2020",
     "distributed_training": "False",
     "gcp_zone": "us-central1",

@@ -52,8 +52,7 @@ package_tensorflow_libs_with_dependencies = BashOperator(
     dag=dag,
 )
 
-
-
+"""
 for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
 
     training_name = file_ops.get_filename(json_file, with_extension=False)
@@ -64,6 +63,22 @@ for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
     pull_data_bucket_cmd = f"gsutil cp -r {gcp_url} {AIRFLOW_LOCAL_TRAINING_FOLDER}"
     pull_data_bucket = BashOperator(
         task_id="pull_data_bucket",
+        bash_command=pull_data_bucket_cmd,
+        dag=dag,
+    )
+"""
+
+
+for json_file in glob(f"{AIRFLOW_TRAINABLE_FOLDER}/*.json"):
+
+    training_name = file_ops.get_filename(json_file, with_extension=False)
+    now = datetime.now().strftime("%Y%m%dT%H%M")
+    training_name_with_date = f"{training_name}_{now}"
+    gcp_url = train_models_eGPU.get_gcp_training_data_url(json_file)
+
+    pull_data_bucket_cmd = f"gsutil cp -r {gcp_url} {AIRFLOW_LOCAL_TRAINING_FOLDER}"
+    pull_data_bucket = BashOperator(
+        task_id="pull_data_bucket_" + training_name,
         bash_command=pull_data_bucket_cmd,
         dag=dag,
     )
