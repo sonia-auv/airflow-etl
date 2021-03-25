@@ -20,12 +20,19 @@ services:
         - GIT_USER_NAME=${GIT_USER_NAME}
         - GIT_USER_EMAIL=${GIT_USER_EMAIL}
     hostname: airflow-webserver
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['0']
+            capabilities: [gpu]
     restart: always
     depends_on:
       - airflow-postgres
     environment:
       - AIRFLOW_FERNET_KEY
-      - HOST_ROOT_FOLDER=${HOST_ROOT_FOLDER}
+      - HOST_ROOT_FOLDER
       - POSTGRES_USER
       - POSTGRES_PASSWORD
       - POSTGRES_DB

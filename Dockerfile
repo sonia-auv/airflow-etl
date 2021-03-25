@@ -90,7 +90,6 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
 
-# TODO docker exec bcc6fb73e518 bash -c 'cd /home/airflow/tensorflow/models/research && chmod +x object_detection/dataset_tools/create_pycocotools_package.sh'
 # Intalling tensorflow object detection framework
 RUN apt-get update -yqq \
     && apt-get upgrade -yqq \
