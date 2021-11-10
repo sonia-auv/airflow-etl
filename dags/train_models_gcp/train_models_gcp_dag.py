@@ -10,15 +10,15 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 
-from train_models import train_models
+from train_models_gcp import train_models
 from utils import file_ops, slack
 
-AIRFLOW_BASE_FOLDER = "/usr/local/airflow/"
+AIRFLOW_BASE_FOLDER = "/home/airflow/"
 AIRFLOW_DATA_FOLDER = os.path.join(AIRFLOW_BASE_FOLDER, "data")
 AIRFLOW_TRAINABLE_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "trainable")
 
 TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER = os.environ[
-    "TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER"
+    "TENSORFLOW_OBJECT_DETECTION_RESEARCH"
 ]
 
 GCP_ZONE = Variable.get("gcp_zone")
@@ -38,7 +38,7 @@ default_args = {
 tpu_supported_models = Variable.get("tpu_training_supported_models").split(",")
 # distributed_training = Variable.get("distributed_training")
 
-dag = DAG("6-train_model", default_args=default_args, catchup=False, schedule_interval=None)
+dag = DAG("6-train_models_gcp", default_args=default_args, catchup=False, schedule_interval=None)
 
 start_task = DummyOperator(task_id="start_task", dag=dag)
 end_task = DummyOperator(task_id="end_task", dag=dag)

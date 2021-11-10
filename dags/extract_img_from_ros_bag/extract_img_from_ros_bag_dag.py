@@ -14,6 +14,7 @@ from airflow.contrib.sensors.file_sensor import FileSensor
 from airflow.operators.slack_operator import SlackAPIPostOperator
 from airflow.models import Variable
 from airflow.hooks.base_hook import BaseHook
+from docker.types import Mount
 
 from extract_img_from_ros_bag import extract_img_from_ros_bag
 from utils import file_ops
@@ -22,13 +23,13 @@ from utils import slack
 
 HOST_ROOT_FOLDER = os.environ["HOST_ROOT_FOLDER"]
 BASE_DATA_FOLDER = "/data/"
-BASE_AIRFLOW_FOLDER = "/usr/local/airflow"
+BASE_AIRFLOW_FOLDER = "/home/airflow"
 BAG_FOLDER = BASE_AIRFLOW_FOLDER + BASE_DATA_FOLDER + "bags"
 HOST_DIR_BAG_FOLDER = HOST_ROOT_FOLDER + BASE_DATA_FOLDER + "bags"
 HOST_DIR_IMAGE_FOLDER = HOST_ROOT_FOLDER + BASE_DATA_FOLDER + "images"
 
 BAG_EXTENSION = ".bag"
-TOPICS = ["/provider_vision/Front_GigE/compressed", "/provider_vision/Bottom_GigE/compressed"]
+TOPICS = ["/camera_array/front/image_raw/compressed", "/camera_array/bottom/image_raw/compressed"]
 
 slack_webhook_token = BaseHook.get_connection("slack").password
 
@@ -59,14 +60,6 @@ with DAG(
         dag=dag,
     )
 
-    bag_filename_syntax_matches_format = PythonOperator(
-        task_id="bag_filename_syntax_matches_format",
-        python_callable=extract_img_from_ros_bag.bag_filename_syntax_valid,
-        op_kwargs={"bag_path": BAG_FOLDER},
-        trigger_rule="all_success",
-        dag=dag,
-    )
-
     extract_image_command = f"python cli.py --media image --topics {formated_topics}"
 
     extract_images_from_bag = DockerOperator(
@@ -77,12 +70,11 @@ with DAG(
         command=extract_image_command,
         api_version="1.37",
         docker_url="unix://var/run/docker.sock",
-        volumes=[
-            f"{HOST_DIR_BAG_FOLDER}:/home/sonia/bags",
-            f"{HOST_DIR_IMAGE_FOLDER}:/home/sonia/images",
+        mounts=[
+            Mount(source=HOST_DIR_BAG_FOLDER, target="/home/sonia/bags", type="bind"),
+            Mount(source=HOST_DIR_IMAGE_FOLDER, target="/home/sonia/images", type="bind"),
         ],
         network_mode="bridge",
-        provide_context=True,
         trigger_rule="all_success",
         dag=dag,
     )
@@ -94,4 +86,4 @@ with DAG(
         dag=dag,
     )
 
-    detect_bag >> bag_filename_syntax_matches_format >> extract_images_from_bag >> remove_bag_after_extract
+    detect_bag >> extract_images_from_bag >> remove_bag_after_extract

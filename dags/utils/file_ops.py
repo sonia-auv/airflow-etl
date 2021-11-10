@@ -205,16 +205,18 @@ def file_exist(file_path):
     return os.path.isfile(file_path)
 
 
-def get_directory_subfolders_subset(dir_path, filter):
+def get_directory_subfolders_subset(dir_path, filter_list):
     # TODO: Add docstring
     subfolders = get_sub_folders_list(dir_path)
 
+    print(filter_list)
     parsed_subfolder = []
     for subfolder in subfolders:
         folder_name = os.path.basename(os.path.normpath(subfolder))
-
-        if folder_name.startswith(filter):
-            parsed_subfolder.append(subfolder)
+        for filter in filter_list:
+            if filter in folder_name:
+                print(subfolder)
+                parsed_subfolder.append(subfolder)
 
     return parsed_subfolder
 

@@ -25,13 +25,17 @@ def __get_projects(client):
       projects {
         id
         name
+        deleted
       }
     }
     """
     )
-
     res = json.loads(res_str)
-    return res["data"]["projects"]
+    new_res = []
+    for project in res["data"]["projects"]:
+        if not project["deleted"]:
+            new_res.append(project)
+    return new_res
 
 
 def __get_specific_project_id(client, project_name):
@@ -45,6 +49,7 @@ def __get_specific_project_id(client, project_name):
 
 
 def __get_export_url(client, project_id):
+    print(project_id)
     res_str = client.execute(
         """
     mutation GetExportUrl($project_id: ID!){
@@ -59,12 +64,14 @@ def __get_export_url(client, project_id):
     """,
         {"project_id": project_id},
     )
+    print(res_str)
     res = json.loads(res_str)
     return res["data"]["exportLabels"]
 
 
 def generate_project_labels(api_url, api_key, project_name):
     client = __get_client(api_url, api_key)
+    print("generate labels: " + project_name)
     project_id = __get_specific_project_id(client, project_name)
     export_job = __get_export_url(client, project_id)
     if export_job["shouldPoll"]:

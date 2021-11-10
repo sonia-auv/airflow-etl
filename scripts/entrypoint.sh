@@ -19,7 +19,9 @@ if [ "$1" = "webserver" ] || [ "$1" = "worker" ] || [ "$1" = "scheduler" ] ; the
   done
 fi
 
-echo "Initialize database..."
+echo "Initialize / Upgrade Airflow database..."
 airflow upgradedb
+echo "Launching Airflow Webserver and Scheduler"
 exec airflow webserver &
 exec airflow scheduler
+#exec /bin/bash -c "trap : TERM INT; sleep infinity & wait"

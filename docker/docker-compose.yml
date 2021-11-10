@@ -17,29 +17,32 @@ services:
     image: ${AIRFLOW_DOCKER_IMAGE_NAME}:${AIRFLOW_DOCKER_IMAGE_TAG}
     build:
       args:
-        - DVC_REMOTE_GDRIVE_NAME=${DVC_REMOTE_GDRIVE_NAME}
-        - DVC_REMOTE_GDRIVE_URL=${DVC_REMOTE_GDRIVE_URL}
-        - DVC_REMOTE_GDRIVE_CLIENT_ID=${DVC_REMOTE_GDRIVE_CLIENT_ID}
-        - DVC_REMOTE_GDRIVE_CLIENT_SECRET=${DVC_REMOTE_GDRIVE_CLIENT_SECRET}
         - GIT_USER_NAME=${GIT_USER_NAME}
         - GIT_USER_EMAIL=${GIT_USER_EMAIL}
     hostname: airflow-webserver
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['0']
+            capabilities: [gpu]
     restart: always
     depends_on:
       - airflow-postgres
     environment:
       - AIRFLOW_FERNET_KEY
-      - HOST_ROOT_FOLDER=${HOST_ROOT_FOLDER}
+      - HOST_ROOT_FOLDER
       - POSTGRES_USER
       - POSTGRES_PASSWORD
       - POSTGRES_DB
       - POSTGRES_HOST
       - POSTGRES_PORT
-      - SSH_AUTH_SOCK=$SSH_AUTH_SOCK
+      - SSH_AUTH_SOCK
     volumes:
-      - ${AIRFLOW_DAG_DIR}:/usr/local/airflow/dags
-      - $PWD/data:/usr/local/airflow/data
-      - $PWD/logs:/usr/local/airflow/logs
+      - ${AIRFLOW_DAG_DIR}:/home/airflow/dags
+      - $PWD/data:/home/airflow/data
+      - $PWD/logs:/home//airflow/logs
       - /var/run/docker.sock:/var/run/docker.sock
       - $SSH_AUTH_SOCK:$SSH_AUTH_SOCK
     ports:

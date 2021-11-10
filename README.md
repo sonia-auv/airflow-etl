@@ -41,7 +41,7 @@ cp .env.template .env
 ```
 
 #### Google Cloud SDK
-When you have successfully launched the containers you must set your credential too google cloud.
+When you have successfully launched the containers you must set your credential to google cloud.
 To complete this step you must ask for access either to the captain or software rep to the required access.
 
 You must execute the following commands to init you gcloud config:
