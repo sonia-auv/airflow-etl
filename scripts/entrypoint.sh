@@ -24,3 +24,4 @@ airflow upgradedb
 echo "Launching Airflow Webserver and Scheduler"
 exec airflow webserver &
 exec airflow scheduler
+#exec /bin/bash -c "trap : TERM INT; sleep infinity & wait"

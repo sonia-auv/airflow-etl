@@ -10,6 +10,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.docker_operator import DockerOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
+from docker.types import Mount
 
 from export_labeled_dataset_and_create_tf_record import export_labeled_dataset_and_create_tf_record
 from utils import file_ops, slack
@@ -34,15 +35,12 @@ labelbox_api_url = BaseHook.get_connection("labelbox").host
 labelbox_api_key = BaseHook.get_connection("labelbox").password
 slack_webhook_token = BaseHook.get_connection("slack").password
 
-ontology_front = json.loads(Variable.get("ontology_front"))
-ontology_bottom = json.loads(Variable.get("ontology_bottom"))
+ontology = json.loads(Variable.get("ontology"))
 
 # TODO: Document this since it could be an issues
-export_project_name = Variable.get("labelbox_export_project_list").split(",")
+project_structure = Variable.get("project_structure", deserialize_json=True)
 
-front_cam_object_list = [tool["name"] for tool in ontology_front["tools"]]
-
-bottom_cam_object_list = [tool["name"] for tool in ontology_bottom["tools"]]
+cam_object_list = [tool["name"] for tool in ontology["tools"]]
 
 default_args = {
     "owner": "airflow",
@@ -62,103 +60,91 @@ dag = DAG(
     schedule_interval=None,
 )
 
+for project in project_structure:
+    for project_name in project_structure[project]:
 
-def get_proper_label_list(project_name):
-    project_name_split = project_name.split("_")[0]
+        generate_project_label_extract_from_task = PythonOperator(
+            task_id="generate_project_label_extract_from_" + project_name,
+            python_callable=export_labeled_dataset_and_create_tf_record.generate_project_labels,
+            op_kwargs={
+                "api_url": labelbox_api_url,
+                "api_key": labelbox_api_key,
+                "project_name": project_name,
+            },
+            trigger_rule="all_success",
+            dag=dag,
+        )
 
-    if project_name_split == "front":
-        return front_cam_object_list
-    elif project_name_split == "bottom":
-        return bottom_cam_object_list
-    else:
-        raise ValueError("Possible values are front or bottom")
+        fetch_labels_from_project_task = PythonOperator(
+            task_id="fetch_labels_from_project_" + project_name,
+            python_callable=export_labeled_dataset_and_create_tf_record.fetch_project_labels,
+            op_kwargs={
+                "api_url": labelbox_api_url,
+                "api_key": labelbox_api_key,
+                "project_name": project_name,
+                "output_folder": AIRFLOW_LABELBOX_FOLDER,
+            },
+            trigger_rule="all_success",
+            dag=dag,
+        )
 
+        input_folder = HOST_LABELBOX_INPUT_FOLDER + project_name
+        output_folder = HOST_LABELBOX_OUTPUT_FOLDER + project_name
 
-for index, project_name in enumerate(export_project_name):
+        # TODO : Rename input since it is ambiguous
+        extract_labeled_data_from_labelbox = DockerOperator(
+            task_id="extract_labeled_data_from_labelbox_" + project_name,
+            image="soniaauvets/labelbox-exporter:1.1.0",
+            force_pull=True,
+            auto_remove=True,
+            command=f"python main.py /input/{project_name}.json /output",
+            api_version="1.37",
+            docker_url="unix://var/run/docker.sock",
+            mounts=[Mount(source=input_folder, target="/input",type="bind"), Mount(source=output_folder, target="/output",type="bind")],
+            network_mode="bridge",
+            trigger_rule="all_success",
+            dag=dag,
+        )
 
-    generate_project_label_extract_from_task = PythonOperator(
-        task_id="generate_project_label_extract_from_" + project_name,
-        python_callable=export_labeled_dataset_and_create_tf_record.generate_project_labels,
-        op_kwargs={
-            "api_url": labelbox_api_url,
-            "api_key": labelbox_api_key,
-            "project_name": project_name,
-        },
-        trigger_rule="all_success",
-        dag=dag,
-    )
+        voc_annotation_extract_dir = os.path.join(AIRFLOW_LABELBOX_OUTPUT_FOLDER, project_name)
+        voc_image_extract_dir = os.path.join(AIRFLOW_LABELBOX_OUTPUT_FOLDER, project_name, "images")
 
-    fetch_labels_from_project_task = PythonOperator(
-        task_id="fetch_labels_from_project_" + project_name,
-        python_callable=export_labeled_dataset_and_create_tf_record.fetch_project_labels,
-        op_kwargs={
-            "api_url": labelbox_api_url,
-            "api_key": labelbox_api_key,
-            "project_name": project_name,
-            "output_folder": AIRFLOW_LABELBOX_FOLDER,
-        },
-        trigger_rule="all_success",
-        dag=dag,
-    )
+        # TODO:Validate voc data (Image + draw bbox)
+        trainval_dir = os.path.join(AIRFLOW_TF_RECORD_FOLDER, project_name)
+        labelmap_dir = os.path.join(AIRFLOW_TF_RECORD_FOLDER, project_name)
 
-    input_folder = HOST_LABELBOX_INPUT_FOLDER + project_name
-    output_folder = HOST_LABELBOX_OUTPUT_FOLDER + project_name
+        create_trainval_file = PythonOperator(
+            task_id="create_trainval_" + project_name,
+            python_callable=export_labeled_dataset_and_create_tf_record.generate_trainval_file,
+            op_kwargs={
+                "annotation_dir": voc_annotation_extract_dir,
+                "output_dir": trainval_dir,
+                "output_file": f"trainval_{project_name}",
+            },
+            trigger_rule="all_success",
+            dag=dag,
+        )
 
-    # TODO : Rename input since it is ambiguous
-    extract_labeled_data_from_labelbox = DockerOperator(
-        task_id="extract_labeled_data_from_labelbox_" + project_name,
-        image="soniaauvets/labelbox-exporter:1.1.0",
-        force_pull=True,
-        auto_remove=True,
-        command=f"python main.py /input/{project_name}.json /output",
-        api_version="1.37",
-        docker_url="unix://var/run/docker.sock",
-        volumes=[f"{input_folder}:/input", f"{output_folder}:/output"],
-        network_mode="bridge",
-        provide_context=True,
-        trigger_rule="all_success",
-        dag=dag,
-    )
+        create_labelmap_file = PythonOperator(
+            task_id="create_labelmap_" + project_name,
+            python_callable=export_labeled_dataset_and_create_tf_record.generate_labelmap_file,
+            op_kwargs={
+                "labels": cam_object_list,
+                "output_dir": trainval_dir,
+                "output_file": f"label_map_{project_name}",
+            },
+            trigger_rule="all_success",
+            dag=dag,
+        )
 
-    voc_annotation_extract_dir = os.path.join(AIRFLOW_LABELBOX_OUTPUT_FOLDER, project_name)
-    voc_image_extract_dir = os.path.join(AIRFLOW_LABELBOX_OUTPUT_FOLDER, project_name, "images")
+        trainval_file = os.path.join(trainval_dir, f"trainval_{project_name}")
+        labelmap_file = os.path.join(trainval_dir, f"label_map_{project_name}")
+        tfrecord_output_dir = os.path.join(AIRFLOW_TF_RECORD_FOLDER, project_name)
 
-    # TODO:Validate voc data (Image + draw bbox)
-    trainval_dir = os.path.join(AIRFLOW_TF_RECORD_FOLDER, project_name)
-    labelmap_dir = os.path.join(AIRFLOW_TF_RECORD_FOLDER, project_name)
+        create_tf_record_command = f"python {AIRFLOW_CURRENT_DAG_FOLDER}/create_tf_record.py --annotation_dir={voc_annotation_extract_dir} --image_dir={voc_image_extract_dir} --label_map_file={labelmap_file}.pbtxt --trainval_file={trainval_file}.txt --output_dir={tfrecord_output_dir} --dataset_name={project_name}"
 
-    create_trainval_file = PythonOperator(
-        task_id="create_trainval_" + project_name,
-        python_callable=export_labeled_dataset_and_create_tf_record.generate_trainval_file,
-        op_kwargs={
-            "annotation_dir": voc_annotation_extract_dir,
-            "output_dir": trainval_dir,
-            "output_file": f"trainval_{project_name}",
-        },
-        trigger_rule="all_success",
-        dag=dag,
-    )
+        create_tf_record = BashOperator(
+            task_id="create_tf_record_" + project_name, bash_command=create_tf_record_command, dag=dag
+        )
 
-    create_labelmap_file = PythonOperator(
-        task_id="create_labelmap_" + project_name,
-        python_callable=export_labeled_dataset_and_create_tf_record.generate_labelmap_file,
-        op_kwargs={
-            "labels": get_proper_label_list(project_name),
-            "output_dir": trainval_dir,
-            "output_file": f"label_map_{project_name}",
-        },
-        trigger_rule="all_success",
-        dag=dag,
-    )
-
-    trainval_file = os.path.join(trainval_dir, f"trainval_{project_name}")
-    labelmap_file = os.path.join(trainval_dir, f"label_map_{project_name}")
-    tfrecord_output_dir = os.path.join(AIRFLOW_TF_RECORD_FOLDER, project_name)
-
-    create_tf_record_command = f"python {AIRFLOW_CURRENT_DAG_FOLDER}/create_tf_record.py --annotation_dir={voc_annotation_extract_dir} --image_dir={voc_image_extract_dir} --label_map_file={labelmap_file}.pbtxt --trainval_file={trainval_file}.txt --output_dir={tfrecord_output_dir} --dataset_name={project_name}"
-
-    create_tf_record = BashOperator(
-        task_id="create_tf_record_" + project_name, bash_command=create_tf_record_command, dag=dag
-    )
-
-    generate_project_label_extract_from_task >> fetch_labels_from_project_task >> extract_labeled_data_from_labelbox >> create_trainval_file >> create_labelmap_file >> create_tf_record
+        generate_project_label_extract_from_task >> fetch_labels_from_project_task >> extract_labeled_data_from_labelbox >> create_trainval_file >> create_labelmap_file >> create_tf_record

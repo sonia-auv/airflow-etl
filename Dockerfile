@@ -87,18 +87,17 @@ RUN set -ex \
 
 # Installing Airflow and other pythons requirements
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
-
+RUN pip install -r /tmp/requirements.txt 
 
 # Intalling tensorflow object detection framework
 RUN apt-get update -yqq \
     && apt-get upgrade -yqq \
     && apt-get install -yqq --no-install-recommends \
     gpg-agent \
+    python3-sqlalchemy \
     python3-cairocffi \
     protobuf-compiler \
     python3-pil \
-    python3-lxml \
     python3-tk \
     python3-opencv \
     && pip install opencv-python \

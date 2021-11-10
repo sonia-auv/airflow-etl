@@ -107,9 +107,9 @@ def download_and_extract_base_model(base_model_csv, base_model_folder, base_mode
             logging.info("All base models are already present")
 
 
-def compare_label_map_file(base_tf_record_folder, video_source):
+def compare_label_map_file(base_tf_record_folder, datasets):
 
-    subfolders = file_ops.get_directory_subfolders_subset(base_tf_record_folder, video_source)
+    subfolders = file_ops.get_directory_subfolders_subset(base_tf_record_folder, datasets)
 
     if len(subfolders) > 1:
         label_maps = []
@@ -132,7 +132,7 @@ def compare_label_map_file(base_tf_record_folder, video_source):
 
 
 def __create_training_folder_subtree(
-    training_data_folder, video_source, object_names, execution_date, **kwargs
+    training_data_folder, **kwargs
 ):
 
     # Base Folder
@@ -180,18 +180,20 @@ def __create_training_folder_subtree(
 
     ti = kwargs["ti"]
     ti.xcom_push(key="training_folders", value=training_folders)
+    print("pushed: " + str(training_folders))
     logging.info("Training folder subtree has been created successfully")
 
 
 def create_training_folder(
-    base_training_folder, tf_record_folder, video_source, execution_date, base_model, **kwargs,
+    base_training_folder, tf_record_folder, project_name, datasets, execution_date, base_model, **kwargs,
 ):
-    subfolders = file_ops.get_directory_subfolders_subset(tf_record_folder, video_source)
+    subfolders = file_ops.get_directory_subfolders_subset(tf_record_folder, project_name)
+    print(subfolders)
 
     object_names_set = set()
     for subfolder in subfolders:
         folder_name = os.path.basename(os.path.normpath(subfolder))
-        if folder_name.startswith(video_source):
+        if folder_name in datasets:
 
             object_names = subfolder.split("_")[1]
             object_names_set.update(object_names.split("-"))
@@ -199,11 +201,11 @@ def create_training_folder(
     object_names = "-".join(list(object_names_set))
 
     training_folder = os.path.join(
-        base_training_folder, f"{video_source}_{object_names}_{base_model}_{execution_date}"
+        base_training_folder, f"{project_name}_{object_names}_{base_model}_{execution_date}"
     )
 
     __create_training_folder_subtree(
-        training_folder, video_source, object_names, execution_date, **kwargs
+        training_folder, **kwargs
     )
 
     ti = kwargs["ti"]
@@ -213,19 +215,25 @@ def create_training_folder(
 def copy_labelbox_output_data_to_training(
     labelbox_output_data_folder,
     tf_record_folder,
-    video_source,
+    project_name,
+    datasets,
     base_model,
     airflow_base_folder,
+    airflow_training_folder,
     gcp_base_bucket_url,
+    local_training_path,
+    local_training, 
     **kwargs,
 ):
+    print(project_name)
     ti = kwargs["ti"]
     training_folders = ti.xcom_pull(
-        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
+        key="training_folders", task_ids=f"create_training_folder_tree_{project_name}_{base_model}"
     )
+    print(training_folders)
 
     filtered_subfolders = file_ops.get_directory_subfolders_subset(
-        labelbox_output_data_folder, video_source
+        labelbox_output_data_folder, datasets
     )
 
     for subfolder in filtered_subfolders:
@@ -245,7 +253,7 @@ def copy_labelbox_output_data_to_training(
 
         logging.info("XML files copy completed")
 
-    subfolders = file_ops.get_directory_subfolders_subset(tf_record_folder, video_source)
+    subfolders = file_ops.get_directory_subfolders_subset(tf_record_folder, datasets)
 
     labelmap_files = []
     trainval_files = []
@@ -279,50 +287,68 @@ def copy_labelbox_output_data_to_training(
             val_tf_records.append(tf_record_file)
 
         shutil.copy2(tf_record_file, training_folders["tf_record_folder"])
+    
+    train_tf_records_split = train_tf_records[0].split("/")
+    val_tf_records_split = val_tf_records[0].split("/")
+    
+    val_tf_record = training_folders["tf_record_folder"] + "/" + val_tf_records_split[-1]
+    train_tf_record = training_folders["tf_record_folder"] + "/" + train_tf_records_split[-1]
 
-    local_training_files = {
-        "label_map_file": labelmap_file,
-        "trainval_file": trainval_file,
-        "train_tf_records": train_tf_records,
-        "val_tf_records": val_tf_records,
-    }
+    if local_training == False:
+        gcp_training_files = {
+            "label_map_file": labelmap_file.replace(airflow_base_folder, gcp_base_bucket_url),
+            "trainval_file": trainval_file.replace(airflow_base_folder, gcp_base_bucket_url),
+            "train_tf_records": [
+                tf_record.replace(airflow_base_folder, gcp_base_bucket_url)
+                for tf_record in train_tf_records
+            ],
+            "val_tf_records": [
+                tf_record.replace(airflow_base_folder, gcp_base_bucket_url)
+                for tf_record in val_tf_records
+            ],
+        }
 
-    gcp_training_files = {
-        "label_map_file": labelmap_file.replace(airflow_base_folder, gcp_base_bucket_url),
-        "trainval_file": trainval_file.replace(airflow_base_folder, gcp_base_bucket_url),
-        "train_tf_records": [
-            tf_record.replace(airflow_base_folder, gcp_base_bucket_url)
-            for tf_record in train_tf_records
-        ],
-        "val_tf_records": [
-            tf_record.replace(airflow_base_folder, gcp_base_bucket_url)
-            for tf_record in val_tf_records
-        ],
-    }
+        ti = kwargs["ti"]
+        ti.xcom_push(key="gcp_training_files", value=gcp_training_files)
 
-    ti = kwargs["ti"]
-    ti.xcom_push(key="local_training_files", value=local_training_files)
-    ti.xcom_push(key="gcp_training_files", value=gcp_training_files)
+    else:
+        local_training_files = {
+            "label_map_file": labelmap_file.replace(airflow_training_folder, local_training_path),
+            "trainval_file": trainval_file.replace(airflow_training_folder, local_training_path),
+            "train_tf_records": train_tf_record.replace(airflow_training_folder, local_training_path),
+            "val_tf_records": val_tf_record.replace(airflow_training_folder, local_training_path),
+        }
 
+        ti = kwargs["ti"]
+        ti.xcom_push(key="local_training_files", value=local_training_files)
 
+    
 def copy_base_model_to_training_folder(
     base_model_folder,
     base_model_csv,
     base_model,
-    video_source,
+    project_name,
     airflow_base_folder,
+    local_training_folder,
     gcp_base_bucket_url,
+    local_training,
     **kwargs,
 ):
     ti = kwargs["ti"]
     training_folders = ti.xcom_pull(
-        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
+        key="training_folders", task_ids=f"create_training_folder_tree_{project_name}_{base_model}"
     )
 
-    gcp_training_files = ti.xcom_pull(
-        key="gcp_training_files",
-        task_ids=f"copy_labelbox_output_data_to_training_folder_{video_source}_{base_model}",
-    )
+    if local_training == False:
+        gcp_training_files = ti.xcom_pull(
+            key="gcp_training_files",
+            task_ids=f"copy_labelbox_output_data_to_training_folder_{project_name}_{base_model}",
+        )
+    else:
+        local_training_files = ti.xcom_pull(
+            key="local_training_files",
+            task_ids=f"copy_labelbox_output_data_to_training_folder_{project_name}_{base_model}",
+        )
 
     base_models_df = pd.read_csv(base_model_csv)
 
@@ -344,43 +370,89 @@ def copy_base_model_to_training_folder(
 
     logging.info("Successfully removed pipeline.config file")
 
-    gcp_training_files["model_checkpoint"] = model_checkpoint.replace(
-        airflow_base_folder, gcp_base_bucket_url
-    )
+    if local_training == False:
+        gcp_training_files["model_checkpoint"] = model_checkpoint.replace(
+            airflow_base_folder, gcp_base_bucket_url
+        )
 
-    ti = kwargs["ti"]
-    ti.xcom_push(key="gcp_training_files", value=gcp_training_files)
+        ti = kwargs["ti"]
+        ti.xcom_push(key="gcp_training_files", value=gcp_training_files)
+
+    else:
+        local_training_files["model_checkpoint"] = model_checkpoint.replace(
+            airflow_base_folder, local_training_folder
+        )
+
+        ti = kwargs["ti"]
+        ti.xcom_push(key="local_training_files", value=local_training_files)
 
 
 def generate_model_config(
-    video_source, base_model, model_config_template, num_classes, **kwargs,
+    project_name, base_model, model_config_template, num_classes, local_training, epoch_count, batch_size, **kwargs,
 ):
 
     ti = kwargs["ti"]
     training_folders = ti.xcom_pull(
-        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
-    )
-    gcp_training_files = ti.xcom_pull(
-        key="gcp_training_files",
-        task_ids=f"copy_base_model_to_training_folder_{video_source}_{base_model}",
+        key="training_folders", task_ids=f"create_training_folder_tree_{project_name}_{base_model}"
     )
 
-    # Replacing placeholders in airflow variables for values
-    model_config_template = re.sub("NUM_CLASSES", str(num_classes), model_config_template)
-    model_config_template = re.sub(
-        "PRE_TRAINED_MODEL_CHECKPOINT_PATH",
-        gcp_training_files["model_checkpoint"],
-        model_config_template,
-    )
-    model_config_template = re.sub(
-        "LABEL_MAP_PATH", gcp_training_files["label_map_file"], model_config_template
-    )
-    model_config_template = re.sub(
-        "TRAIN_TF_RECORD_PATHS", str(gcp_training_files["train_tf_records"]), model_config_template
-    )
-    model_config_template = re.sub(
-        "VAL_TF_RECORD_PATHS", str(gcp_training_files["val_tf_records"]), model_config_template
-    )
+    if local_training == False:
+        gcp_training_files = ti.xcom_pull(
+        key="gcp_training_files",
+        task_ids=f"copy_base_model_to_training_folder_{project_name}_{base_model}",
+        )
+
+        # Replacing placeholders in airflow variables for values
+        model_config_template = re.sub("NUM_CLASSES", str(num_classes), model_config_template)
+        model_config_template = re.sub(
+            "PRE_TRAINED_MODEL_CHECKPOINT_PATH",
+            gcp_training_files["model_checkpoint"],
+            model_config_template,
+        )
+        model_config_template = re.sub(
+            "LABEL_MAP_PATH", gcp_training_files["label_map_file"], model_config_template
+        )
+        model_config_template = re.sub(
+            "TRAIN_TF_RECORD_PATH", str(gcp_training_files["train_tf_records"]), model_config_template
+        )
+        model_config_template = re.sub(
+            "VAL_TF_RECORD_PATH", str(gcp_training_files["val_tf_records"]), model_config_template
+        )
+        model_config_template = re.sub(
+            "TRAINING_EPOCH_COUNT", epoch_count, model_config_template
+        )
+        model_config_template = re.sub(
+            "TRAINING_BATCH_SIZE", batch_size, model_config_template
+        )
+    else:
+        local_training_files = ti.xcom_pull(
+        key="local_training_files",
+        task_ids=f"copy_base_model_to_training_folder_{project_name}_{base_model}",
+        )
+
+         # Replacing placeholders in airflow variables for values
+        model_config_template = re.sub("NUM_CLASSES", str(num_classes), model_config_template)
+        model_config_template = re.sub(
+            "PRE_TRAINED_MODEL_CHECKPOINT_PATH",
+            local_training_files["model_checkpoint"],
+            model_config_template,
+        )
+        model_config_template = re.sub(
+            "LABEL_MAP_PATH", local_training_files["label_map_file"], model_config_template
+        )
+        model_config_template = re.sub(
+            "TRAIN_TF_RECORD_PATH", str(local_training_files["train_tf_records"]), model_config_template
+        )
+        model_config_template = re.sub(
+            "VAL_TF_RECORD_PATH", str(local_training_files["val_tf_records"]), model_config_template
+        )
+        model_config_template = re.sub(
+            "TRAINING_EPOCH_COUNT", epoch_count, model_config_template
+        )
+        model_config_template = re.sub(
+            "TRAINING_BATCH_SIZE", batch_size, model_config_template
+        )
+
 
     try:
         config_file = os.path.join(training_folders["base_folder"], "pipeline.config")
@@ -394,10 +466,10 @@ def generate_model_config(
         raise e
 
 
-def archiving_training_folder(training_archiving_path, video_source, base_model, **kwargs):
+def archiving_training_folder(training_archiving_path, project_name, base_model, **kwargs):
     ti = kwargs["ti"]
     training_folders = ti.xcom_pull(
-        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
+        key="training_folders", task_ids=f"create_training_folder_tree_{project_name}_{base_model}"
     )
     print(training_archiving_path)
     print(training_folders)
@@ -413,33 +485,39 @@ def archiving_training_folder(training_archiving_path, video_source, base_model,
 
 
 def remove_raw_images_and_annotations_from_training_folder(
-    video_source, base_model, gcp_base_bucket_url, airflow_trainable_folder, **kwargs
+    project_name, base_model, gcp_base_bucket_url, airflow_trainable_folder, local_training, local_training_folder, **kwargs
 ):
     ti = kwargs["ti"]
     training_folders = ti.xcom_pull(
-        key="training_folders", task_ids=f"create_training_folder_tree_{video_source}_{base_model}"
+        key="training_folders", task_ids=f"create_training_folder_tree_{project_name}_{base_model}"
     )
     shutil.rmtree(training_folders["xmls_folder"])
     shutil.rmtree(training_folders["images_folder"])
     os.remove(os.path.join(training_folders["annotations_folder"], "trainval.txt"))
 
     training_folder = training_folders["base_folder"]
-
-    prepared_cmd = f"gsutil -m cp -r {training_folder} {gcp_base_bucket_url}"
-
     training_folder_name = file_ops.get_folder_name(training_folder)
 
-    json_data = {}
-    json_data["gcp_url"] = f"{gcp_base_bucket_url}/{training_folder_name}"
+    if (local_training == False):
+        prepared_cmd = f"gsutil -m cp -r {training_folder} {gcp_base_bucket_url}"
 
-    json_file = os.path.join(airflow_trainable_folder, f"{training_folder_name}.json")
-    with open(json_file, "w") as outfile:
-        json.dump(json_data, outfile, indent=4)
+        json_data = {}
+        json_data["gcp_url"] = f"{gcp_base_bucket_url}/{training_folder_name}"
 
-    ti.xcom_push(key="gcp_copy_cmd", value=prepared_cmd)
+        json_file = os.path.join(airflow_trainable_folder, f"{training_folder_name}.json")
+        with open(json_file, "w") as outfile:
+            json.dump(json_data, outfile, indent=4)
+
+        ti.xcom_push(key="gcp_copy_cmd", value=prepared_cmd)
+    else:
+        prepared_cmd = f"cp -r {training_folder} {local_training_folder}"
+        ti.xcom_push(key="local_copy_cmd", value=prepared_cmd)
 
     logging.info("Successfully deleted useless files for training")
 
+def check_local_training_condition(local_training, **kwargs):
+    if (local_training == False):
+        raise ValueError('gcp training')
 
 def clean_up_post_training_prep(folders, **kwargs):
 

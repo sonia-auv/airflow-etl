@@ -268,34 +268,40 @@ def create_data_rows(api_url, api_key, index, json_file, **kwargs):
         )
 
         for item in data:
+            for attempt in range(10):
+                try:
 
-            external_id = uuid.uuid1()
+                    external_id = uuid.uuid1()
 
-            res_str = client.execute(
-                """
-              mutation createDataRowFromAPI(
-              $image_url: String!, $external_id: String!, $dataset_id: ID!) {
-                createDataRow(
-                  data: {
-                    rowData: $image_url
-                    externalId: $external_id
-                    dataset: { connect: { id: $dataset_id } }
-                  }
-                ){
-                id
-                }
-              }
-              """,
-                {
-                    "dataset_id": dataset_id,
-                    "image_url": item["imageUrl"],
-                    "external_id": str(external_id),
-                },
-            )
+                    res_str = client.execute(
+                        """
+                      mutation createDataRowFromAPI(
+                      $image_url: String!, $external_id: String!, $dataset_id: ID!) {
+                        createDataRow(
+                          data: {
+                            rowData: $image_url
+                            externalId: $external_id
+                            dataset: { connect: { id: $dataset_id } }
+                          }
+                        ){
+                        id
+                        }
+                      }
+                      """,
+                        {
+                            "dataset_id": dataset_id,
+                            "image_url": item["imageUrl"],
+                            "external_id": str(external_id),
+                        },
+                    )
 
-            res = json.loads(res_str)
-            print(f"Data row added: {item['imageUrl']} - ID : {res['data']['createDataRow']['id']}")
-            # TODO: Handle error
+                    res = json.loads(res_str)
+                    print(f"Data row added: {item['imageUrl']} - ID : {res['data']['createDataRow']['id']}")
+
+                except:
+                    pass
+                else:
+                    break
         print("Added all row to dataset")
 
 

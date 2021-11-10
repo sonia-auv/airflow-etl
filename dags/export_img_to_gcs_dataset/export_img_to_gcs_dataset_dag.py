@@ -50,14 +50,13 @@ dag = DAG(
 
 create_data_bucket_cmd = f"gsutil ls -b {bucket_base_uri} || gsutil mb {bucket_base_uri}"
 create_data_bucket = BashOperator(
-    task_id="create_data_bucket", bash_command=create_data_bucket_cmd, provide_context=True, dag=dag
+    task_id="create_data_bucket", bash_command=create_data_bucket_cmd, dag=dag
 )
 
 set_data_bucket_acl_cmd = f"gsutil defacl ch -u AllUsers:R {bucket_base_uri}"
 set_data_bucket_acl = BashOperator(
     task_id="set_data_bucket_acl",
     bash_command=set_data_bucket_acl_cmd,
-    provide_context=True,
     trigger_rule="all_success",
     dag=dag,
 )
@@ -66,7 +65,6 @@ export_images_to_gcs_dataset_cmd = f"gsutil -m cp -r {AIRFLOW_IMAGE_FOLDER} {buc
 export_images_to_gcs_dataset = BashOperator(
     task_id="export_images_to_gcs",
     bash_command=export_images_to_gcs_dataset_cmd,
-    provide_context=True,
     trigger_rule="all_success",
     dag=dag,
 )

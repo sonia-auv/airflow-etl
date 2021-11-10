@@ -38,7 +38,7 @@ services:
       - POSTGRES_DB
       - POSTGRES_HOST
       - POSTGRES_PORT
-      - SSH_AUTH_SOCK=$SSH_AUTH_SOCK
+      - SSH_AUTH_SOCK
     volumes:
       - ${AIRFLOW_DAG_DIR}:/home/airflow/dags
       - $PWD/data:/home/airflow/data
