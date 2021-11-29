@@ -35,6 +35,7 @@ def __get_projects(client):
     for project in res["data"]["projects"]:
         if not project["deleted"]:
             new_res.append(project)
+    print(new_res)
     return new_res
 
 
