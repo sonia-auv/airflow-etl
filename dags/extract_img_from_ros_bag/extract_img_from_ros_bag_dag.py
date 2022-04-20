@@ -29,7 +29,7 @@ HOST_DIR_BAG_FOLDER = HOST_ROOT_FOLDER + BASE_DATA_FOLDER + "bags"
 HOST_DIR_IMAGE_FOLDER = HOST_ROOT_FOLDER + BASE_DATA_FOLDER + "images"
 
 BAG_EXTENSION = ".bag"
-TOPICS = ["/camera_array/front/image_raw/compressed", "/camera_array/bottom/image_raw/compressed"]
+TOPICS = ["/camera_array/front/image_raw/compressed", "/camera_array/bottom/image_raw/compressed", "/front_simulation/compressed"]
 
 slack_webhook_token = BaseHook.get_connection("slack").password
 

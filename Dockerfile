@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:1.15.2-gpu-py3
+FROM tensorflow/tensorflow:2.6.0-gpu
 
 ARG BUILD_DATE
 ARG BUILD_ENV
@@ -49,7 +49,7 @@ RUN set -ex \
     && apt-get upgrade -yqq \
     && apt-get install -yqq --no-install-recommends \
     $buildDeps \
-    python-minimal \
+    python3-minimal \
     freetds-bin \
     build-essential \
     default-libmysqlclient-dev \
@@ -105,9 +105,9 @@ RUN apt-get update -yqq \
     && chown -R airflow: ${TENSORFLOW_OBJECT_DETECTION_HOME} \
     && git clone https://github.com/tensorflow/models.git ${TENSORFLOW_OBJECT_DETECTION_HOME} \
     && (cd ${TENSORFLOW_OBJECT_DETECTION_RESEARCH} && protoc object_detection/protos/*.proto --python_out=.) \
-    && (cd ${TENSORFLOW_OBJECT_DETECTION_RESEARCH} && cp object_detection/packages/tf1/setup.py ./) \
+    && (cd ${TENSORFLOW_OBJECT_DETECTION_RESEARCH} && cp object_detection/packages/tf2/setup.py ./) \
     && (cd ${TENSORFLOW_OBJECT_DETECTION_RESEARCH} && python -m pip install .) \
-    && python ${TENSORFLOW_OBJECT_DETECTION_RESEARCH}/object_detection/builders/model_builder_tf1_test.py \
+    && python ${TENSORFLOW_OBJECT_DETECTION_RESEARCH}/object_detection/builders/model_builder_tf2_test.py \
     && chmod +x ${TENSORFLOW_OBJECT_DETECTION_RESEARCH}/object_detection/dataset_tools/create_pycocotools_package.sh \
     && rm -rf \
     /var/lib/apt/lists/* \
@@ -134,8 +134,10 @@ RUN chown -R airflow: ${AIRFLOW_HOME}
 # Copying our docker entrypoint
 COPY scripts/entrypoint.sh /entrypoint.sh
 
+RUN pip3 install typing-extensions~=4.1.0
+
 EXPOSE 8080
 
-USER ${SONIA_USER}
+# USER ${SONIA_USER}
 WORKDIR ${AIRFLOW_HOME}
 ENTRYPOINT ["/entrypoint.sh"]

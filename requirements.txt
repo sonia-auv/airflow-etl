@@ -1,5 +1,4 @@
-
-apache-airflow[crypto,postgres,gcp,docker,slack]~=2.1.4
+apache-airflow[crypto,postgres,gcp,docker,slack]~=2.2.5
 labelbox~=2.0.1
 graphqlclient~=0.2.4
 lxml~=4.4.1

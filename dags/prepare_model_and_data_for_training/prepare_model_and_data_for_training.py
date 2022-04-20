@@ -27,6 +27,8 @@ def __parse_downloaded_model_file_list_response(response):
         if "http://download.tensorflow.org/models/object_detection/" in link.attrs["href"]:
             model_name = link.text
             model_name = model_name.replace("☆", "")
+            model_name = model_name.replace(" ", "_")
+            model_name = model_name.lower()
             model_name = model_name.strip()
 
             model_url = link.attrs["href"]
@@ -352,13 +354,29 @@ def copy_base_model_to_training_folder(
 
     base_models_df = pd.read_csv(base_model_csv)
 
+    print(base_models_df)
+    
+    #find a cleanest way
+    modelList = []
+    for model in base_models_df["model_name"]:
+        modelList.append(model.replace(' ', '_').lower())
+    base_models_df["model_name"] = modelList
+
+    print(base_models_df)
+
     model_df = base_models_df.loc[base_models_df["model_name"] == base_model]
 
     base_model_folder_name = model_df.iloc[0]["model_folder_name"]
 
-    model_folder = os.path.join(base_model_folder, base_model_folder_name)
+    model_folder = os.path.join(base_model_folder, base_model_folder_name, "checkpoint")
+    pipeline_folder = os.path.join(base_model_folder, base_model_folder_name)
+
+    logging.info("model folder: " + model_folder)
+    logging.info("pipeline folder: " + pipeline_folder)
+    logging.info("training folders: " + training_folders["base_model_folder"])
 
     file_ops.copy_files_from_folder(model_folder, training_folders["base_model_folder"])
+    file_ops.copy_files_from_folder(pipeline_folder, training_folders["base_model_folder"])
 
     logging.info("Successfully copied all base model file to training folder")
 
@@ -366,7 +384,7 @@ def copy_base_model_to_training_folder(
 
     os.remove(pipeline_file)
 
-    model_checkpoint = os.path.join(training_folders["base_model_folder"], "model.ckpt")
+    model_checkpoint = os.path.join(training_folders["base_model_folder"], "ckpt-0")
 
     logging.info("Successfully removed pipeline.config file")
 
@@ -382,6 +400,8 @@ def copy_base_model_to_training_folder(
         local_training_files["model_checkpoint"] = model_checkpoint.replace(
             airflow_base_folder, local_training_folder
         )
+        local_training_files["model_checkpoint"] = local_training_files["model_checkpoint"].replace("/training", "")
+
 
         ti = kwargs["ti"]
         ti.xcom_push(key="local_training_files", value=local_training_files)
