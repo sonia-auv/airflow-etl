@@ -234,6 +234,8 @@ def copy_files_from_folder(source_dir, dest_dir):
     files = glob(os.path.join(source_dir, "*.*"))
     for file in files:
         if os.path.isfile(file):
+            print(file)
+            print(dest_dir)
             shutil.copy2(file, dest_dir)
 
 

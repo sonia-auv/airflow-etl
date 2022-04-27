@@ -63,16 +63,17 @@ for file in os.listdir(f"{AIRFLOW_LOCAL_TRAINING_FOLDER}"):
     cd_obj_detect_api_cmd = f"cd {TENSORFLOW_OBJECT_DETECTION_RESEARCH_FOLDER}"
     job_dir = AIRFLOW_LOCAL_TRAINING_FOLDER + "/" + training_name
     packages = "dist/object_detection-0.1.tar.gz,slim/dist/slim-0.1.tar.gz,/tmp/pycocotools/pycocotools-2.0.tar.gz"
-    module_name = "object_detection.model_main"
+    module_name = "object_detection.model_main_tf2"
     model_dir = job_dir + "/train_data/"
     pipeline_config_path = f"{job_dir}/pipeline.config"
     checkpoint_dir = job_dir + "/eval_data/"
+    frozen_dir = model_dir + "/frozen_path/"
 
     training_task_name = f"train_{training_name}"
     eval_task_name = f"eval_{training_name}"
 
-    train_model_on_local_gpu_cmd = f"{cd_obj_detect_api_cmd} && python3 -m {module_name} --job-dir={job_dir} --package-path {packages} --model_dir={model_dir} --pipeline_config_path={pipeline_config_path}"
-    
+    train_model_on_local_gpu_cmd = f"{cd_obj_detect_api_cmd} && python3 -m {module_name} --job-dir={job_dir} --package-path {packages} --model_dir={model_dir} --pipeline_config_path={pipeline_config_path} --alsologtostderr"
+    #python3 -m object_detection.model_main_tf2 --job-dir=/home/airflow/data/local_training/simulateur2022_test_ssd_mobilenet_v2_fpnlite_640x640_20220417T151027 --package-path dist/object_detection-0.1.tar.gz,slim/dist/slim-0.1.tar.gz,/tmp/pycocotools/pycocotools-2.0.tar.gz --model_dir=/home/airflow/data/local_training/simulateur2022_test_ssd_mobilenet_v2_fpnlite_640x640_20220417T151027/train_data/ --pipeline_config_path=/home/airflow/data/local_training/simulateur2022_test_ssd_mobilenet_v2_fpnlite_640x640_20220417T151027/pipeline.config --alsologtostderr 
     #train_model_on_local_gpu_cmd = f"{cd_obj_detect_api_cmd} && gcloud ai-platform local train --module-name {module_name} --job-dir={job_dir} --package-path {packages} -- --model_dir={model_dir} --pipeline_config_path={pipeline_config_path}"
 
     train_model_on_local_gpu = BashOperator(
@@ -108,16 +109,15 @@ for file in os.listdir(f"{AIRFLOW_LOCAL_TRAINING_FOLDER}"):
         dag=dag,
     )
 
-    # export_frozen_graph_cmd = f"python object_detection/export_inference_graph.py --input_type image_tensor --pipeline_config_path {downloaded_model_pipeline_config_path} --trained_checkpoint_prefix {trained_checkpoint_prefix} --output_directory {frozen_graph_export_directory}"
+    export_frozen_graph_cmd = f"python object_detection/exporter_main_v2.py --input_type image_tensor --pipeline_config_path {pipeline_config_path} --trained_checkpoint_dir {model_dir} --output_directory {frozen_dir}"
 
-    """
     generate_model_frozen_graph_cmd = f"{cd_obj_detect_api_cmd} && {export_frozen_graph_cmd} "
     generate_model_frozen_graph = BashOperator(
         task_id="generate_model_frozen_graphl" + training_name,
         bash_command=generate_model_frozen_graph_cmd,
         dag=dag,
     )
-    """
+    
     tensorboard_cmd = f"tensorboard --logdir {model_dir}:{checkpoint_dir}"
     notify_slack_channel_with_tensorboard_cmd = slack.task_notify_training_in_progress(
         dag=dag, training_name=training_name, tensorboard_cmd=tensorboard_cmd
@@ -132,7 +132,7 @@ for file in os.listdir(f"{AIRFLOW_LOCAL_TRAINING_FOLDER}"):
     # TODO: Export model to git or docker image for deploy ?
     start_task >> package_tensorflow_libs_with_dependencies
     package_tensorflow_libs_with_dependencies >> train_model_on_local_gpu
-    train_model_on_local_gpu >> [delay_train_log_task, delay_eval_task]
+    train_model_on_local_gpu >> generate_model_frozen_graph >> [delay_train_log_task, delay_eval_task]
     delay_train_log_task >> notify_slack_channel_with_tensorboard_cmd
     delay_eval_task >> eval_model_on_local_gpu >> delay_eval_log_task >> notify_slack_channel_with_tensorboard_cmd
     notify_slack_channel_with_tensorboard_cmd >> end_task

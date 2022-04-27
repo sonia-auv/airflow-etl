@@ -1,7 +1,8 @@
 version: "3.7"
 services:
   airflow-postgres:
-    image: postgres:12
+    restart: always
+    image: postgres:12.10
     hostname: airflow-postgres
     environment:
       - POSTGRES_USER
@@ -9,6 +10,7 @@ services:
       - POSTGRES_DB
       - POSTGRES_PORT
       - PGDATA=/var/lib/postgresql/data
+      - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
       - pg-data:/var/lib/postgresql/data
       - pg-log:/var/log/postgresql
@@ -22,10 +24,13 @@ services:
     hostname: airflow-webserver
     deploy:
       resources:
+        limits:
+          cpus: "3.0"
+          memory: 10240M
         reservations:
           devices:
           - driver: nvidia
-            device_ids: ['0']
+          #  device_ids: ['0']
             capabilities: [gpu]
     restart: always
     depends_on:
@@ -39,6 +44,7 @@ services:
       - POSTGRES_HOST
       - POSTGRES_PORT
       - SSH_AUTH_SOCK
+      - NVIDIA_VISIBLE_DEVICES=all
     volumes:
       - ${AIRFLOW_DAG_DIR}:/home/airflow/dags
       - $PWD/data:/home/airflow/data
@@ -50,7 +56,7 @@ services:
     command: webserver
     healthcheck:
       test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
-      interval: 30s
+      interval: 120s
       timeout: 30s
       retries: 3
 volumes:

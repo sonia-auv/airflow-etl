@@ -272,7 +272,6 @@ def create_data_rows(api_url, api_key, index, json_file, **kwargs):
                 try:
 
                     external_id = uuid.uuid1()
-
                     res_str = client.execute(
                         """
                       mutation createDataRowFromAPI(
@@ -294,12 +293,12 @@ def create_data_rows(api_url, api_key, index, json_file, **kwargs):
                             "external_id": str(external_id),
                         },
                     )
-
+                    print(res_str)
                     res = json.loads(res_str)
                     print(f"Data row added: {item['imageUrl']} - ID : {res['data']['createDataRow']['id']}")
 
-                except:
-                    pass
+                except Exception as error:
+                    print(f"The connection has failed // {error}")
                 else:
                     break
         print("Added all row to dataset")

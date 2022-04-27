@@ -108,21 +108,21 @@ create_data_bucket = BashOperator(
     dag=dag,
 )
 
-clean_up_post_training_prep = PythonOperator(
-    task_id="clean_up_post_training_prep",
-    python_callable=prepare_model_and_data_for_training.clean_up_post_training_prep,
-    op_kwargs={
-        "folders": [
-            AIRFLOW_JSON_FOLDER,
-            AIRFLOW_LABELBOX_FOLDER,
-            AIRFLOW_TF_RECORD_FOLDER,
-            AIRFLOW_JSON_FOLDER,
-            AIRFLOW_TRAINING_FOLDER,
-        ]
-    },
-    trigger_rule=TriggerRule.ONE_SUCCESS,
-    dag=dag,
-)
+# clean_up_post_training_prep = PythonOperator(
+#     task_id="clean_up_post_training_prep",
+#     python_callable=prepare_model_and_data_for_training.clean_up_post_training_prep,
+#     op_kwargs={
+#         "folders": [
+#             AIRFLOW_JSON_FOLDER,
+#             AIRFLOW_LABELBOX_FOLDER,
+#             AIRFLOW_TF_RECORD_FOLDER,
+#             AIRFLOW_JSON_FOLDER,
+#             AIRFLOW_TRAINING_FOLDER,
+#         ]
+#     },
+#     trigger_rule=TriggerRule.ONE_SUCCESS,
+#     dag=dag,
+# )
 
 upload_to_gcp_tasks = []
 upload_local_tasks = []
@@ -295,5 +295,5 @@ for project in project_struct:
             else:
                 upload_local_tasks[index - 1] >> task
 
-clean_up_post_training_prep.set_upstream(upload_to_gcp_tasks[-1])
-clean_up_post_training_prep.set_upstream(upload_local_tasks[-1])
+# clean_up_post_training_prep.set_upstream(upload_to_gcp_tasks[-1])
+# clean_up_post_training_prep.set_upstream(upload_local_tasks[-1])
