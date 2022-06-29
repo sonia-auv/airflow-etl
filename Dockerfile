@@ -29,7 +29,10 @@ ENV TENSORFLOW_OBJECT_DETECTION_SLIM=${TENSORFLOW_OBJECT_DETECTION_RESEARCH}/sli
 ENV PYTHONPATH=${PYTHONPATH}:${TENSORFLOW_OBJECT_DETECTION_RESEARCH}:${TENSORFLOW_OBJECT_DETECTION_SLIM}
 ENV TF_CPP_MIN_LOG_LEVEL 3
 
+# solve nvidia pubkey change
+COPY ./cuda/cuda-keyring_1.0-1_all.deb cuda-keyring_1.0-1_all.deb
 
+RUN rm /etc/apt/sources.list.d/cuda.list && rm /etc/apt/sources.list.d/nvidia-ml.list && dpkg -i cuda-keyring_1.0-1_all.deb
 
 RUN set -ex \
     && buildDeps=' \
@@ -138,6 +141,6 @@ RUN pip3 install typing-extensions~=4.1.0
 
 EXPOSE 8080
 
-# USER ${SONIA_USER}
+USER ${SONIA_USER}
 WORKDIR ${AIRFLOW_HOME}
 ENTRYPOINT ["/entrypoint.sh"]

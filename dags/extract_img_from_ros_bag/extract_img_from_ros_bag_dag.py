@@ -29,7 +29,7 @@ HOST_DIR_BAG_FOLDER = HOST_ROOT_FOLDER + BASE_DATA_FOLDER + "bags"
 HOST_DIR_IMAGE_FOLDER = HOST_ROOT_FOLDER + BASE_DATA_FOLDER + "images"
 
 BAG_EXTENSION = ".bag"
-TOPICS = ["/camera_array/front/image_raw/compressed", "/camera_array/bottom/image_raw/compressed", "/front_simulation/compressed"]
+TOPICS = ["/camera_array/front/image_raw/compressed", "/camera_array/bottom/image_raw/compressed", "/proc_simulation/front/compressed", "/proc_simulation/bottom/compressed"]
 
 slack_webhook_token = BaseHook.get_connection("slack").password
 
@@ -68,7 +68,7 @@ with DAG(
         force_pull=True,
         auto_remove=True,
         command=extract_image_command,
-        api_version="1.37",
+        api_version="auto",
         docker_url="unix://var/run/docker.sock",
         mounts=[
             Mount(source=HOST_DIR_BAG_FOLDER, target="/home/sonia/bags", type="bind"),

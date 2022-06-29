@@ -101,7 +101,7 @@ for project in project_structure:
             api_version="1.37",
             docker_url="unix://var/run/docker.sock",
             mounts=[Mount(source=input_folder, target="/input",type="bind"), Mount(source=output_folder, target="/output",type="bind")],
-            network_mode="bridge",
+            network_mode="host",
             trigger_rule="all_success",
             dag=dag,
         )

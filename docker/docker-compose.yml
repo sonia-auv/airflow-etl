@@ -48,8 +48,9 @@ services:
     volumes:
       - ${AIRFLOW_DAG_DIR}:/home/airflow/dags
       - $PWD/data:/home/airflow/data
-      - $PWD/logs:/home//airflow/logs
+      - $PWD/logs:/home/airflow/logs
       - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp:/tmp
       - $SSH_AUTH_SOCK:$SSH_AUTH_SOCK
     ports:
       - "4080:8080"

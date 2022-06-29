@@ -284,17 +284,11 @@ def copy_labelbox_output_data_to_training(
     for tf_record_file in tf_record_files:
 
         if (tf_record_file).endswith("train.record"):
-            train_tf_records.append(tf_record_file)
+            train_tf_records.append((training_folders["tf_record_folder"] + "/" + (tf_record_file.split("/"))[-1]).replace("training/", ''))
         else:
-            val_tf_records.append(tf_record_file)
+            val_tf_records.append((training_folders["tf_record_folder"] + "/" + (tf_record_file.split("/"))[-1]).replace("training/", ''))
 
         shutil.copy2(tf_record_file, training_folders["tf_record_folder"])
-    
-    train_tf_records_split = train_tf_records[0].split("/")
-    val_tf_records_split = val_tf_records[0].split("/")
-    
-    val_tf_record = training_folders["tf_record_folder"] + "/" + val_tf_records_split[-1]
-    train_tf_record = training_folders["tf_record_folder"] + "/" + train_tf_records_split[-1]
 
     if local_training == False:
         gcp_training_files = {
@@ -317,8 +311,14 @@ def copy_labelbox_output_data_to_training(
         local_training_files = {
             "label_map_file": labelmap_file.replace(airflow_training_folder, local_training_path),
             "trainval_file": trainval_file.replace(airflow_training_folder, local_training_path),
-            "train_tf_records": train_tf_record.replace(airflow_training_folder, local_training_path),
-            "val_tf_records": val_tf_record.replace(airflow_training_folder, local_training_path),
+             "train_tf_records": [
+                tf_record.replace(airflow_base_folder, local_training_path)
+                for tf_record in train_tf_records
+            ],
+            "val_tf_records": [
+                tf_record.replace(airflow_base_folder, local_training_path)
+                for tf_record in val_tf_records
+            ]
         }
 
         ti = kwargs["ti"]
@@ -450,6 +450,15 @@ def generate_model_config(
         task_ids=f"copy_base_model_to_training_folder_{project_name}_{base_model}",
         )
 
+        # format train_tf_records and val_tf_records
+        train_str = ""
+        eval_str = ""
+        for train in local_training_files["train_tf_records"]:
+            train_str += ("input_path: \"" + train + "\"\n")
+        
+        for eval in local_training_files["val_tf_records"]:
+            eval_str += ("input_path: \"" + eval + "\"\n")
+
          # Replacing placeholders in airflow variables for values
         model_config_template = re.sub("NUM_CLASSES", str(num_classes), model_config_template)
         model_config_template = re.sub(
@@ -461,10 +470,10 @@ def generate_model_config(
             "LABEL_MAP_PATH", local_training_files["label_map_file"], model_config_template
         )
         model_config_template = re.sub(
-            "TRAIN_TF_RECORD_PATH", str(local_training_files["train_tf_records"]), model_config_template
+            "TRAIN_TF_RECORD_PATH", train_str, model_config_template
         )
         model_config_template = re.sub(
-            "VAL_TF_RECORD_PATH", str(local_training_files["val_tf_records"]), model_config_template
+            "VAL_TF_RECORD_PATH", eval_str, model_config_template
         )
         model_config_template = re.sub(
             "TRAINING_EPOCH_COUNT", epoch_count, model_config_template

@@ -90,7 +90,7 @@ for file in os.listdir(f"{AIRFLOW_LOCAL_TRAINING_FOLDER}"):
         task_id="delay_eval_" + training_name, bash_command="sleep 6m", dag=dag
     )
 
-    eval_model_on_local_gpu_cmd = f"{cd_obj_detect_api_cmd} && python3 -m {module_name} --job-dir={job_dir} --package-path {packages} --model_dir={model_dir} --pipeline_config_path={pipeline_config_path} --checkpoint_dir={model_dir} --eval_training_data=True --run_once=True"
+    eval_model_on_local_gpu_cmd = f"{cd_obj_detect_api_cmd} && python3 -m {module_name} --job-dir={job_dir} --package-path {packages} --model_dir={model_dir} --pipeline_config_path={pipeline_config_path} --checkpoint_dir={model_dir} --eval_training_data=True"
 
     eval_model_on_local_gpu = BashOperator(
         task_id="eval_model_" + training_name + "_on_local_gpu",
