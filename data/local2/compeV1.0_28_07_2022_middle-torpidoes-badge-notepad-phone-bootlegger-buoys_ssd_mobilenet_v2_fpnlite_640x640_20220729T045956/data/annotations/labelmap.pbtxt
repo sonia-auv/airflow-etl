@@ -1,0 +1,32 @@
+item {
+  id: 1
+  name: 'Gun'
+}
+item {
+  id: 2
+  name: 'Badge'
+}
+item {
+  id: 3
+  name: 'Bootlegger'
+}
+item {
+  id: 4
+  name: 'G-Man'
+}
+item {
+  id: 5
+  name: 'Barrel'
+}
+item {
+  id: 6
+  name: 'Whiskey'
+}
+item {
+  id: 7
+  name: 'Phone'
+}
+item {
+  id: 8
+  name: 'Notepad'
+}
