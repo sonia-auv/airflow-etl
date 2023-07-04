@@ -52,7 +52,7 @@ RUN set -ex \
     && apt-get upgrade -yqq \
     && apt-get install -yqq --no-install-recommends \
     $buildDeps \
-    python3-minimal \
+    python3.6 \
     freetds-bin \
     build-essential \
     default-libmysqlclient-dev \
@@ -102,8 +102,6 @@ RUN apt-get update -yqq \
     protobuf-compiler \
     python3-pil \
     python3-tk \
-    python3-opencv \
-    && pip install opencv-python \
     && mkdir -p ${TENSORFLOW_OBJECT_DETECTION_HOME} \
     && chown -R airflow: ${TENSORFLOW_OBJECT_DETECTION_HOME} \
     && git clone https://github.com/tensorflow/models.git ${TENSORFLOW_OBJECT_DETECTION_HOME} \
