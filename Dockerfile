@@ -92,6 +92,10 @@ RUN set -ex \
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt 
 
+RUN apt-get update && apt-get install -y cmake
+RUN curl -LO https://github.com/Kitware/CMake/releases/download/v3.21.3/cmake-3.21.3-linux-x86_64.tar.gz \
+    && tar xf cmake-3.21.3-linux-x86_64.tar.gz --strip-components=1 -C /usr/local
+
 # Intalling tensorflow object detection framework
 RUN apt-get update -yqq \
     && apt-get upgrade -yqq \

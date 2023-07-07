@@ -11,7 +11,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 
 from train_models_eGPU import train_models_eGPU
-from utils import file_ops, slack
+from utils import file_ops #, slack
 
 AIRFLOW_BASE_FOLDER = "/home/airflow/"
 AIRFLOW_DATA_FOLDER = os.path.join(AIRFLOW_BASE_FOLDER, "data")
@@ -31,7 +31,7 @@ default_args = {
     "email": ["club.sonia@etsmtl.net"],
     "email_on_failure": False,
     "email_on_retry": False,
-    "on_failure_callback": slack.task_fail_slack_alert,
+   # "on_failure_callback": slack.task_fail_slack_alert,
     "retries": 0,
 }
 
@@ -119,9 +119,9 @@ for file in os.listdir(f"{AIRFLOW_LOCAL_TRAINING_FOLDER}"):
     )
     
     tensorboard_cmd = f"tensorboard --logdir {model_dir}:{checkpoint_dir}"
-    notify_slack_channel_with_tensorboard_cmd = slack.task_notify_training_in_progress(
-        dag=dag, training_name=training_name, tensorboard_cmd=tensorboard_cmd
-    )
+    #notify_slack_channel_with_tensorboard_cmd = slack.task_notify_training_in_progress(
+    #    dag=dag, training_name=training_name, tensorboard_cmd=tensorboard_cmd
+    #)
 
     # TODO: Create frozen_graph post training ---
     # TODO: Extract model name from training_name
@@ -133,6 +133,6 @@ for file in os.listdir(f"{AIRFLOW_LOCAL_TRAINING_FOLDER}"):
     start_task >> package_tensorflow_libs_with_dependencies
     package_tensorflow_libs_with_dependencies >> train_model_on_local_gpu
     train_model_on_local_gpu >> generate_model_frozen_graph >> [delay_train_log_task, delay_eval_task]
-    delay_train_log_task >> notify_slack_channel_with_tensorboard_cmd
-    delay_eval_task >> eval_model_on_local_gpu >> delay_eval_log_task >> notify_slack_channel_with_tensorboard_cmd
-    notify_slack_channel_with_tensorboard_cmd >> end_task
+   # delay_train_log_task >> notify_slack_channel_with_tensorboard_cmd
+   # delay_eval_task >> eval_model_on_local_gpu >> delay_eval_log_task >> notify_slack_channel_with_tensorboard_cmd
+ #   notify_slack_channel_with_tensorboard_cmd >> end_task

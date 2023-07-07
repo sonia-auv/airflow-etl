@@ -13,7 +13,7 @@ from airflow.operators.python_operator import PythonOperator
 from docker.types import Mount
 
 from export_labeled_dataset_and_create_tf_record import export_labeled_dataset_and_create_tf_record
-from utils import file_ops, slack
+#from utils import file_ops, slack
 
 HOST_ROOT_FOLDER = os.environ["HOST_ROOT_FOLDER"]
 HOST_DATA_FOLDER = HOST_ROOT_FOLDER + "/data/"
@@ -33,7 +33,7 @@ AIRFLOW_TF_RECORD_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "tfrecord")
 
 labelbox_api_url = BaseHook.get_connection("labelbox").host
 labelbox_api_key = BaseHook.get_connection("labelbox").password
-slack_webhook_token = BaseHook.get_connection("slack").password
+#slack_webhook_token = BaseHook.get_connection("slack").password
 
 ontology = json.loads(Variable.get("ontology"))
 
@@ -49,7 +49,7 @@ default_args = {
     "email": ["club.sonia@etsmtl.net"],
     "email_on_failure": False,
     "email_on_retry": False,
-    "on_failure_callback": slack.task_fail_slack_alert,
+    #"on_failure_callback": slack.task_fail_slack_alert,
     "retries": 0,
 }
 

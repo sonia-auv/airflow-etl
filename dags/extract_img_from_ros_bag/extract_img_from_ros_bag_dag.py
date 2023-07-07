@@ -11,14 +11,14 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.docker_operator import DockerOperator
 from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
 from airflow.contrib.sensors.file_sensor import FileSensor
-from airflow.operators.slack_operator import SlackAPIPostOperator
+#from airflow.operators.slack_operator import SlackAPIPostOperator
 from airflow.models import Variable
 from airflow.hooks.base_hook import BaseHook
 from docker.types import Mount
 
 from extract_img_from_ros_bag import extract_img_from_ros_bag
 from utils import file_ops
-from utils import slack
+#from utils import slack
 
 
 HOST_ROOT_FOLDER = os.environ["HOST_ROOT_FOLDER"]
@@ -31,9 +31,6 @@ HOST_DIR_IMAGE_FOLDER = HOST_ROOT_FOLDER + BASE_DATA_FOLDER + "images"
 BAG_EXTENSION = ".bag"
 TOPICS = ["/camera_array/front/image_raw/compressed", "/camera_array/bottom/image_raw/compressed", "/proc_simulation/front/compressed", "/proc_simulation/bottom/compressed"]
 
-slack_webhook_token = BaseHook.get_connection("slack").password
-
-
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
@@ -42,7 +39,7 @@ default_args = {
     "schedule_interval": "None",
     "email_on_failure": False,
     "email_on_retry": False,
-    "on_failure_callback": slack.task_fail_slack_alert,
+    #"on_failure_callback": slack.task_fail_slack_alert,
     "retries": 0,
 }
 

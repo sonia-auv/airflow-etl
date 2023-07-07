@@ -10,7 +10,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import BranchPythonOperator, PythonOperator
 
 from prepare_model_and_data_for_training import prepare_model_and_data_for_training
-from utils import file_ops, slack
+from utils import file_ops #, slack
 import json
 
 BASE_AIRFLOW_FOLDER = "/home/airflow"
@@ -33,7 +33,7 @@ default_args = {
     "email": ["club.sonia@etsmtl.net"],
     "email_on_failure": False,
     "email_on_retry": False,
-    "on_failure_callback": slack.task_fail_slack_alert,
+    #"on_failure_callback": slack.task_fail_slack_alert,
     "retries": 0,
 }
 

@@ -24,7 +24,7 @@ AIRFLOW_JSON_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "json")
 
 labelbox_api_url = BaseHook.get_connection("labelbox").host
 labelbox_api_key = BaseHook.get_connection("labelbox").password
-slack_webhook_token = BaseHook.get_connection("slack").password
+#slack_webhook_token = BaseHook.get_connection("slack").password
 
 
 bucket_name = Variable.get("bucket_name")
@@ -40,7 +40,7 @@ default_args = {
     "email": ["club.sonia@etsmtl.net"],
     "email_on_failure": False,
     "email_on_retry": False,
-    "on_failure_callback": slack.task_fail_slack_alert,
+    #"on_failure_callback": slack.task_fail_slack_alert,
     "retries": 0,
 }
 

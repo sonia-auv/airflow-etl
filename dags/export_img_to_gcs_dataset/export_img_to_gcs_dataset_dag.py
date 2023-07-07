@@ -10,10 +10,10 @@ from airflow.hooks.base_hook import BaseHook
 from airflow.models import Variable
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import BranchPythonOperator, PythonOperator
-from airflow.operators.slack_operator import SlackAPIPostOperator
+#from airflow.operators.slack_operator import SlackAPIPostOperator
 
 from export_img_to_gcs_dataset import export_img_to_gcs_dataset
-from utils import slack
+#from utils import slack
 
 
 BASE_AIRFLOW_FOLDER = "/home/airflow/"
@@ -24,7 +24,7 @@ AIRFLOW_JSON_FOLDER = os.path.join(AIRFLOW_DATA_FOLDER, "json")
 
 GCP_STORAGE_BASE = "https://storage.googleapis.com/"
 
-slack_webhook_token = BaseHook.get_connection("slack").password
+#slack_webhook_token = BaseHook.get_connection("slack").password
 bucket_name = Variable.get("bucket_name")
 
 
@@ -35,7 +35,7 @@ default_args = {
     "email": ["club.sonia@etsmtl.net"],
     "email_on_failure": False,
     "email_on_retry": False,
-    "on_failure_callback": slack.task_fail_slack_alert,
+    #"on_failure_callback": slack.task_fail_slack_alert,
     "retries": 0,
 }
 
